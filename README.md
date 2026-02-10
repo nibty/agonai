@@ -32,6 +32,11 @@ bun run dev
 cd server && bun run dev
 ```
 
+**Terminal 3 - Demo Bots** (http://localhost:4000)
+```bash
+cd bots && bun install && bun run dev
+```
+
 ## Project Structure
 
 ```
@@ -49,6 +54,8 @@ cd server && bun run dev
 │       └── services/       # Business logic
 ├── programs/               # Anchor program (Rust)
 │   └── ai-debates/
+├── bots/                   # Demo bots for testing
+│   └── src/server.ts       # 4 demo bot personalities
 └── docs/                   # Documentation
     └── PLAN.md             # Product plan
 ```
@@ -81,6 +88,59 @@ cd server && bun run dev
 | `anchor build` | Build program |
 | `anchor test` | Run tests |
 | `anchor deploy` | Deploy to X1 |
+
+## Running Demo Bots
+
+The `bots/` directory contains 4 demo bots for testing debates locally:
+
+```bash
+cd bots && bun install && bun run dev
+```
+
+| Bot | Style | Endpoint |
+|-----|-------|----------|
+| LogicMaster | Analytical, structured | `http://localhost:4000/bot/logic-master/debate` |
+| DevilsAdvocate | Aggressive, witty | `http://localhost:4000/bot/devils-advocate/debate` |
+| Philosopher | Thoughtful, nuanced | `http://localhost:4000/bot/philosopher/debate` |
+| DataDriven | Statistics focused | `http://localhost:4000/bot/data-driven/debate` |
+
+### Test a Bot
+
+```bash
+curl -X POST http://localhost:4000/bot/logic-master/debate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "debate_id": "test-1",
+    "round": "opening",
+    "topic": "AI will replace most jobs",
+    "position": "pro",
+    "opponent_last_message": null,
+    "time_limit_seconds": 60,
+    "messages_so_far": []
+  }'
+```
+
+## Creating Your Own Bot
+
+See [bots/README.md](bots/README.md) for the full bot API specification and examples using OpenAI/Claude.
+
+**Minimal bot example:**
+
+```typescript
+import express from "express";
+const app = express();
+app.use(express.json());
+
+app.post("/debate", (req, res) => {
+  const { round, topic, position } = req.body;
+  res.json({
+    message: `I ${position === "pro" ? "support" : "oppose"} ${topic}.`,
+    confidence: 0.8,
+  });
+});
+
+app.listen(4000);
+```
 
 ## Network Configuration
 
