@@ -563,7 +563,7 @@ export function ArenaPage() {
   return (
     <div className="flex flex-col gap-4 lg:h-[calc(100vh-theme(spacing.16)-theme(spacing.16))] lg:flex-row">
       {/* Left Sidebar - Score & Voting */}
-      <div className="flex w-full flex-shrink-0 flex-col gap-3 lg:w-72">
+      <div className="flex w-full flex-shrink-0 flex-col gap-3 lg:w-72 lg:overflow-y-auto">
         {/* Match Info Card */}
         <div className="rounded-xl border border-arena-border/50 bg-gradient-to-b from-arena-card to-arena-bg p-4">
           <div className="mb-3 flex items-center justify-between text-xs text-arena-text-dim">
@@ -649,6 +649,54 @@ export function ArenaPage() {
           />
         </div>
 
+        {/* Voting Panel */}
+        {debate?.roundStatus === "voting" && (
+          <div className="rounded-lg border border-arena-accent/50 bg-arena-accent/5 p-3">
+            <div className="mb-2 flex items-center justify-between text-sm">
+              <span className="font-medium text-arena-text">Vote Now - {debate.currentRound}</span>
+              <span className="text-xs text-arena-text-muted">{votingTimeLeft}s</span>
+            </div>
+
+            {/* Time progress bar */}
+            <div className="mb-3 h-1.5 overflow-hidden rounded-full bg-arena-bg/50">
+              <div
+                className="h-full rounded-full bg-arena-accent transition-all duration-1000 ease-linear"
+                style={{ width: `${votingDuration > 0 ? (votingTimeLeft / votingDuration) * 100 : 0}%` }}
+              />
+            </div>
+
+            {connected ? (
+              <div className="flex gap-2">
+                <Button
+                  variant="pro"
+                  size="sm"
+                  disabled={hasVoted}
+                  onClick={() => handleVote("pro")}
+                  className={`flex-1 ${hasVoted && selectedVote !== "pro" ? "opacity-40" : ""}`}
+                >
+                  PRO {hasVoted && selectedVote === "pro" && "✓"}
+                </Button>
+                <Button
+                  variant="con"
+                  size="sm"
+                  disabled={hasVoted}
+                  onClick={() => handleVote("con")}
+                  className={`flex-1 ${hasVoted && selectedVote !== "con" ? "opacity-40" : ""}`}
+                >
+                  CON {hasVoted && selectedVote === "con" && "✓"}
+                </Button>
+              </div>
+            ) : (
+              <div className="text-center text-xs text-arena-text-muted">Connect wallet to vote</div>
+            )}
+            {hasVoted && (
+              <div className="mt-2 text-center text-xs text-arena-text-muted">
+                Current: {currentVotes.pro} - {currentVotes.con}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Format Info */}
         {preset && (
           <div className="rounded-xl border border-arena-border/50 bg-arena-card/50 p-4">
@@ -696,54 +744,6 @@ export function ArenaPage() {
                 })}
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Voting Panel */}
-        {debate?.roundStatus === "voting" && (
-          <div className="rounded-lg border border-arena-accent/50 bg-arena-accent/5 p-3">
-            <div className="mb-2 flex items-center justify-between text-sm">
-              <span className="font-medium text-arena-text">Vote Now - {debate.currentRound}</span>
-              <span className="text-xs text-arena-text-muted">{votingTimeLeft}s</span>
-            </div>
-
-            {/* Time progress bar */}
-            <div className="mb-3 h-1.5 overflow-hidden rounded-full bg-arena-bg/50">
-              <div
-                className="h-full rounded-full bg-arena-accent transition-all duration-1000 ease-linear"
-                style={{ width: `${votingDuration > 0 ? (votingTimeLeft / votingDuration) * 100 : 0}%` }}
-              />
-            </div>
-
-            {connected ? (
-              <div className="flex gap-2">
-                <Button
-                  variant="pro"
-                  size="sm"
-                  disabled={hasVoted}
-                  onClick={() => handleVote("pro")}
-                  className={`flex-1 ${hasVoted && selectedVote !== "pro" ? "opacity-40" : ""}`}
-                >
-                  PRO {hasVoted && selectedVote === "pro" && "✓"}
-                </Button>
-                <Button
-                  variant="con"
-                  size="sm"
-                  disabled={hasVoted}
-                  onClick={() => handleVote("con")}
-                  className={`flex-1 ${hasVoted && selectedVote !== "con" ? "opacity-40" : ""}`}
-                >
-                  CON {hasVoted && selectedVote === "con" && "✓"}
-                </Button>
-              </div>
-            ) : (
-              <div className="text-center text-xs text-arena-text-muted">Connect wallet to vote</div>
-            )}
-            {hasVoted && (
-              <div className="mt-2 text-center text-xs text-arena-text-muted">
-                Current: {currentVotes.pro} - {currentVotes.con}
-              </div>
-            )}
           </div>
         )}
 
