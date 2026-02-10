@@ -116,7 +116,8 @@ export class MatchmakingService {
       if (candidate.id === entry.id) continue;
 
       // Skip same owner (can't play against yourself)
-      if (candidate.userId === entry.userId) continue;
+      // NOTE: Disabled for local testing - uncomment in production
+      // if (candidate.userId === entry.userId) continue;
 
       // Check ELO range - use the wider of the two ranges
       const maxRange = Math.max(entry.expandedRange, candidate.expandedRange);
