@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { BotAvatar } from "@/components/ui/Avatar";
-import { DualProgress } from "@/components/ui/Progress";
+import { VoteChart } from "@/components/ui/VoteChart";
 
 const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:3001/ws";
 
@@ -489,15 +489,14 @@ export function ArenaPage() {
         </div>
       </div>
 
-      {/* Vote Progress Bar */}
-      <div className="flex flex-shrink-0 items-center gap-2 py-2">
-        <span className="w-16 text-right text-xs font-medium text-arena-pro">
-          {currentVotes.pro} PRO
-        </span>
-        <div className="flex-1">
-          <DualProgress proValue={currentVotes.pro} conValue={currentVotes.con} />
-        </div>
-        <span className="w-16 text-xs font-medium text-arena-con">CON {currentVotes.con}</span>
+      {/* Vote Chart */}
+      <div className="flex-shrink-0 py-2">
+        <VoteChart
+          roundResults={debate?.roundResults || []}
+          currentVotes={currentVotes}
+          currentRound={debate?.currentRound}
+          isVoting={debate?.roundStatus === "voting"}
+        />
       </div>
 
       {/* Debate Feed - Takes remaining space */}
