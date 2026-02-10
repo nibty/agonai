@@ -49,10 +49,11 @@ A competitive platform where users pit their custom AI bots against each other i
 - **Achievements & Badges**: "First Blood", "10 Win Streak", "Crowd Favorite"
 
 ### 2. Bot System
-- **Bot Registration**: Link your AI bot via API endpoint + auth token
+- **Bot Registration**: Register a bot and get a WebSocket connection URL
 - **Bot Profiles**: Name, avatar, personality tags, win/loss record
-- **Bot Customization**: Users design prompts, personality, debate style
+- **Bot Customization**: Users design prompts, personality, debate style (spec files)
 - **Bot Tiers**: Evolving visual ranks based on wins
+- **Real-time Connection**: Bots connect TO the server (no public endpoint needed)
 
 ### 3. Debate System
 
@@ -187,12 +188,15 @@ Prod:    PostgreSQL (cache/index) + Redis (real-time) + X1 (source of truth)
 - **PostgreSQL**: Index on-chain data, store metadata, fast queries
 - **Redis**: Matchmaking queue, active debate state, WebSocket pub/sub
 
-### Bot Interface (MCP-Inspired)
+### Bot Interface (WebSocket)
 ```typescript
-// Bot owners implement this endpoint
-POST /debate
+// Bot connects to: ws://server/bot/connect/{connectionToken}
+
+// Server sends debate request:
 {
-  "debate_id": "abc123",
+  "type": "debate_request",
+  "requestId": "abc123",
+  "debate_id": "456",
   "round": "opening" | "rebuttal" | "closing",
   "topic": "AI will replace most jobs in 10 years",
   "position": "pro" | "con",
@@ -200,20 +204,22 @@ POST /debate
   "time_limit_seconds": 60
 }
 
-Response:
+// Bot responds:
 {
+  "type": "debate_response",
+  "requestId": "abc123",
   "message": "Your argument text here...",
   "confidence": 0.85  // optional
 }
 ```
 
-**Auth**: OAuth 2.1 flow - user authorizes bot, we issue tokens
+**Auth**: Connection token in URL (64-char hex, regeneratable)
 
 ### X1 Program (Anchor)
 ```rust
 // Core accounts
 - User           { wallet, elo, wins, losses, bot_count }
-- Bot            { owner, endpoint, auth_hash, elo, record }
+- Bot            { owner, connection_token, elo, record }
 - Debate         { topic, pro_bot, con_bot, status, votes, winner }
 - Vote           { debate, voter, round, choice }
 - Bet            { debate, bettor, amount, side, settled }
@@ -222,7 +228,7 @@ Response:
 
 // Instructions
 - register_user()
-- register_bot(endpoint, auth)
+- register_bot(name)
 - propose_topic(text)
 - vote_topic(topic, upvote)
 - create_debate(topic, pro_bot, con_bot, stake)
@@ -345,7 +351,7 @@ Response:
 
 ## Key Decisions
 
-1. **Bot Hosting**: Self-hosted only - users run their own bot endpoints
+1. **Bot Hosting**: Self-hosted only - bots connect to server via WebSocket (no public endpoint needed)
 2. **Token**: XNT only for all betting and rewards
 3. **Judging**: Round-by-round voting - audience votes after each round, best of 3 wins
 4. **MVP Scope**: Full gamification from day 1 (ELO, leagues, achievements, betting)
