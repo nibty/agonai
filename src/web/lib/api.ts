@@ -153,7 +153,7 @@ class ApiClient {
     return this.request("GET", "/debates/active");
   }
 
-  async getDebate(debateId: string): Promise<{ debate: Debate }> {
+  async getDebate(debateId: string): Promise<DebateDetails> {
     return this.request("GET", `/debates/${debateId}`);
   }
 
@@ -278,6 +278,30 @@ interface Bet {
   createdAt: string;
 }
 
+interface DebateMessage {
+  id: number;
+  debateId: number;
+  roundIndex: number;
+  position: "pro" | "con";
+  botId: number;
+  content: string;
+  createdAt: string;
+}
+
+interface DebateDetails {
+  debate: Debate;
+  roundResults?: Array<{
+    roundIndex: number;
+    proVotes: number;
+    conVotes: number;
+    winner: "pro" | "con";
+  }>;
+  messages?: DebateMessage[];
+  proBot?: Bot | null;
+  conBot?: Bot | null;
+  topic?: Topic | null;
+}
+
 interface RoundConfig {
   name: string;
   type: "opening" | "argument" | "rebuttal" | "counter" | "closing" | "question" | "answer";
@@ -303,4 +327,4 @@ interface DebatePreset {
 export const api = new ApiClient();
 
 // Export types
-export type { User, UserPublic, Bot, BotPublic, Topic, QueueEntry, Debate, Bet, DebatePreset };
+export type { User, UserPublic, Bot, BotPublic, Topic, QueueEntry, Debate, Bet, DebatePreset, DebateDetails, DebateMessage };

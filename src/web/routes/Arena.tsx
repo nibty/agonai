@@ -4,8 +4,8 @@ import { useWallet } from "@/hooks/useWallet";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { BotAvatar } from "@/components/ui/Avatar";
 import { VoteChart } from "@/components/ui/VoteChart";
+import { api } from "@/lib/api";
 
 const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:3001/ws";
 
@@ -61,28 +61,38 @@ function MessageBubble({ message, botName }: { message: DebateMessage; botName: 
   return (
     <div className={`flex ${isPro ? "justify-start" : "justify-end"}`}>
       <div
-        className={`max-w-[90%] ${isPro ? "order-1" : "order-2"} flex gap-2 ${
+        className={`max-w-[85%] ${isPro ? "order-1" : "order-2"} flex gap-3 ${
           isPro ? "" : "flex-row-reverse"
         }`}
       >
-        <BotAvatar size="sm" alt={botName} tier={3} className="flex-shrink-0" />
-        <div>
-          <div className={`mb-1 flex items-center gap-1.5 ${isPro ? "" : "justify-end"}`}>
+        <div
+          className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+            isPro
+              ? "bg-gradient-to-br from-arena-pro to-emerald-600 text-white shadow-lg shadow-arena-pro/20"
+              : "bg-gradient-to-br from-arena-con to-rose-600 text-white shadow-lg shadow-arena-con/20"
+          }`}
+        >
+          {botName.charAt(0).toUpperCase()}
+        </div>
+        <div className="flex-1">
+          <div className={`mb-1.5 flex items-center gap-2 ${isPro ? "" : "justify-end"}`}>
             <span
-              className={`text-xs font-medium ${isPro ? "text-arena-pro" : "text-arena-con"}`}
+              className={`text-sm font-semibold ${isPro ? "text-arena-pro" : "text-arena-con"}`}
             >
               {botName}
             </span>
-            <span className="text-[10px] uppercase text-gray-500">{message.round}</span>
+            <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] uppercase text-gray-400">
+              {message.round}
+            </span>
           </div>
           <div
-            className={`rounded-lg border px-3 py-2 ${
+            className={`rounded-xl border-2 px-4 py-3 shadow-lg ${
               isPro
-                ? "border-arena-pro/30 bg-arena-pro/5"
-                : "border-arena-con/30 bg-arena-con/5"
+                ? "border-arena-pro/40 bg-gradient-to-br from-arena-pro/15 to-arena-pro/5 shadow-arena-pro/10"
+                : "border-arena-con/40 bg-gradient-to-br from-arena-con/15 to-arena-con/5 shadow-arena-con/10"
             }`}
           >
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-200">
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-100">
               {message.content}
             </p>
           </div>
@@ -115,6 +125,7 @@ export function ArenaPage() {
 
   const wsRef = useRef<WebSocket | null>(null);
   const votingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const messageIdCounter = useRef(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const speechQueueRef = useRef<{ text: string; position: "pro" | "con" }[]>([]);
   const speakRef = useRef<((text: string, position: "pro" | "con") => void) | null>(null);
@@ -242,10 +253,11 @@ export function ArenaPage() {
             content: string;
           };
           setTypingBot(null);
+          messageIdCounter.current += 1;
           setMessages((prev) => [
             ...prev,
             {
-              id: `${Date.now()}-${payload.position}`,
+              id: `msg-${messageIdCounter.current}-${payload.position}`,
               round: payload.round,
               position: payload.position,
               botId: payload.botId,
@@ -346,6 +358,89 @@ export function ArenaPage() {
     },
     []
   );
+
+  // Fetch debate data via REST API on mount (for completed debates or initial load)
+  useEffect(() => {
+    if (!debateId) return;
+
+    const fetchDebateData = async () => {
+      try {
+        const data = await api.getDebate(debateId);
+
+        // Set debate state
+        if (data.debate) {
+          setDebate({
+            id: String(data.debate.id),
+            topic: data.topic?.text || data.debate.topic || "",
+            status: data.debate.status,
+            currentRound: "",
+            currentRoundIndex: data.debate.currentRoundIndex,
+            roundStatus: data.debate.roundStatus,
+            roundResults: (data.roundResults || data.debate.roundResults || []).map((r) => ({
+              round: `Round ${r.roundIndex + 1}`,
+              proVotes: r.proVotes,
+              conVotes: r.conVotes,
+              winner: r.winner,
+            })),
+            winner: data.debate.winner,
+            stake: data.debate.stake,
+            spectatorCount: data.debate.spectatorCount,
+          });
+        }
+
+        // Set bot info
+        if (data.proBot) {
+          setProBot({
+            id: String(data.proBot.id),
+            ownerId: String(data.proBot.ownerId),
+            name: data.proBot.name,
+            elo: data.proBot.elo,
+            wins: data.proBot.wins,
+            losses: data.proBot.losses,
+            isActive: data.proBot.isActive,
+          });
+        }
+        if (data.conBot) {
+          setConBot({
+            id: String(data.conBot.id),
+            ownerId: String(data.conBot.ownerId),
+            name: data.conBot.name,
+            elo: data.conBot.elo,
+            wins: data.conBot.wins,
+            losses: data.conBot.losses,
+            isActive: data.conBot.isActive,
+          });
+        }
+
+        // Set topic info
+        if (data.topic) {
+          setTopic({
+            id: String(data.topic.id),
+            text: data.topic.text,
+            category: data.topic.category,
+          });
+        }
+
+        // Set messages (for completed debates)
+        if (data.messages && data.messages.length > 0) {
+          setMessages(
+            data.messages.map((m, idx) => ({
+              id: `msg-${m.id || idx}`,
+              round: `Round ${m.roundIndex + 1}`,
+              position: m.position,
+              botId: String(m.botId),
+              content: m.content,
+              timestamp: new Date(m.createdAt),
+            }))
+          );
+        }
+      } catch (err) {
+        console.error("Failed to fetch debate data:", err);
+      }
+    };
+
+    void fetchDebateData();
+  }, [debateId]);
 
   useEffect(() => {
     if (!debateId) return;
@@ -448,7 +543,7 @@ export function ArenaPage() {
       {/* Left Sidebar - Score & Voting */}
       <div className="flex w-full flex-shrink-0 flex-col gap-3 lg:w-72">
         {/* Match Info Card */}
-        <div className="rounded-lg border border-arena-border/50 bg-arena-card/50 p-3">
+        <div className="rounded-xl border border-arena-border/50 bg-gradient-to-b from-arena-card to-arena-bg p-4">
           <div className="mb-3 flex items-center justify-between text-xs text-gray-500">
             <Link to="/queue" className="transition-colors hover:text-white">
               ← Back
@@ -456,47 +551,56 @@ export function ArenaPage() {
             <div className="flex items-center gap-2">
               {debate?.status === "in_progress" && <Badge variant="live">LIVE</Badge>}
               {debate?.status === "completed" && <Badge variant="outline">DONE</Badge>}
-              <span>{debate?.spectatorCount || 0} watching</span>
+              <span className="flex items-center gap-1">
+                <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-arena-accent"></span>
+                {debate?.spectatorCount || 0}
+              </span>
             </div>
           </div>
 
           {/* Topic */}
-          <div className="mb-3 text-center">
+          <div className="mb-4 text-center">
             {topic && (
-              <span className="text-[10px] font-medium uppercase tracking-wider text-gray-500">
+              <span className="mb-1 inline-block rounded-full bg-arena-accent/20 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-arena-accent">
                 {topic.category}
               </span>
             )}
-            <h1 className="text-sm font-semibold text-white">
+            <h1 className="text-base font-bold text-white">
               {topic?.text || debate?.topic || "Loading..."}
             </h1>
-            <span className="text-[10px] text-gray-500">{(debate?.stake || 0).toLocaleString()} XNT</span>
+            <span className="text-xs text-gray-500">{(debate?.stake || 0).toLocaleString()} XNT staked</span>
           </div>
 
           {/* Bots vs */}
-          <div className="flex items-center justify-between rounded bg-arena-bg/50 p-2">
-            <div className="flex items-center gap-2">
-              <BotAvatar size="sm" alt={proBot?.name || "Pro"} tier={3} />
-              <div>
-                <div className="text-xs font-medium text-arena-pro">{proBot?.name || "Pro"}</div>
+          <div className="flex items-center justify-between gap-2 rounded-lg bg-arena-bg/80 px-3 py-4">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-arena-pro to-emerald-600 text-sm font-bold text-white shadow-md shadow-arena-pro/20">
+                {(proBot?.name || "P").charAt(0)}
+              </div>
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold text-arena-pro">{proBot?.name || "Pro"}</div>
                 <div className="text-[10px] text-gray-500">{proBot?.elo || "---"}</div>
               </div>
             </div>
-            <div className="text-lg font-bold text-white">
-              {proWins} - {conWins}
+            <div className="flex flex-shrink-0 flex-col items-center px-2">
+              <div className="text-2xl font-black tabular-nums text-white">
+                {proWins}<span className="mx-1 text-gray-600">-</span>{conWins}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="text-right">
-                <div className="text-xs font-medium text-arena-con">{conBot?.name || "Con"}</div>
+            <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+              <div className="min-w-0 text-right">
+                <div className="truncate text-sm font-semibold text-arena-con">{conBot?.name || "Con"}</div>
                 <div className="text-[10px] text-gray-500">{conBot?.elo || "---"}</div>
               </div>
-              <BotAvatar size="sm" alt={conBot?.name || "Con"} tier={3} />
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-arena-con to-rose-600 text-sm font-bold text-white shadow-md shadow-arena-con/20">
+                {(conBot?.name || "C").charAt(0)}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Chart */}
-        <div className="rounded-lg border border-arena-border/50 bg-arena-card/50 p-3">
+        <div className="rounded-xl border border-arena-border/50 bg-arena-card/50 p-4">
           <VoteChart
             roundResults={debate?.roundResults || []}
             currentVotes={currentVotes}
@@ -618,12 +722,33 @@ export function ArenaPage() {
 
               {typingBot && (
                 <div className={`flex ${typingBot === "pro" ? "justify-start" : "justify-end"}`}>
-                  <div className="flex items-center gap-2 text-xs text-gray-400">
-                    <span>{typingBot === "pro" ? proBot?.name : conBot?.name} is typing</span>
-                    <span className="flex gap-0.5">
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400" style={{ animationDelay: "0ms" }} />
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400" style={{ animationDelay: "150ms" }} />
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400" style={{ animationDelay: "300ms" }} />
+                  <div
+                    className={`flex items-center gap-3 rounded-full px-4 py-2 text-sm ${
+                      typingBot === "pro"
+                        ? "bg-arena-pro/10 text-arena-pro"
+                        : "bg-arena-con/10 text-arena-con"
+                    }`}
+                  >
+                    <span className="font-medium">{typingBot === "pro" ? proBot?.name : conBot?.name}</span>
+                    <span className="flex gap-1">
+                      <span
+                        className={`h-2 w-2 animate-bounce rounded-full ${
+                          typingBot === "pro" ? "bg-arena-pro" : "bg-arena-con"
+                        }`}
+                        style={{ animationDelay: "0ms" }}
+                      />
+                      <span
+                        className={`h-2 w-2 animate-bounce rounded-full ${
+                          typingBot === "pro" ? "bg-arena-pro" : "bg-arena-con"
+                        }`}
+                        style={{ animationDelay: "150ms" }}
+                      />
+                      <span
+                        className={`h-2 w-2 animate-bounce rounded-full ${
+                          typingBot === "pro" ? "bg-arena-pro" : "bg-arena-con"
+                        }`}
+                        style={{ animationDelay: "300ms" }}
+                      />
                     </span>
                   </div>
                 </div>

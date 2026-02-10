@@ -13,6 +13,7 @@ import {
   botRepository,
   topicRepository,
   betRepository,
+  debateRepository,
 } from "../repositories/index.js";
 import { botRunner } from "../services/botRunner.js";
 import { matchmaking } from "../services/matchmaking.js";
@@ -403,20 +404,42 @@ router.get("/debates/active", (_req: Request, res: Response) => {
   res.json({ debates });
 });
 
-router.get("/debates/:debateId", (req: Request<{ debateId: string }>, res: Response) => {
+router.get("/debates/:debateId", async (req: Request<{ debateId: string }>, res: Response) => {
   const debateId = parseInt(req.params.debateId, 10);
   if (isNaN(debateId)) {
     res.status(400).json({ error: "Invalid debate ID" });
     return;
   }
 
-  const debate = debateOrchestrator.getDebate(debateId);
-  if (!debate) {
+  // First check if it's an active debate in the orchestrator
+  const activeDebate = debateOrchestrator.getDebate(debateId);
+  if (activeDebate) {
+    res.json({ debate: activeDebate });
+    return;
+  }
+
+  // Otherwise, fetch from database (for completed debates)
+  const fullDebate = await debateRepository.getFullDebate(debateId);
+  if (!fullDebate) {
     res.status(404).json({ error: "Debate not found" });
     return;
   }
 
-  res.json({ debate });
+  // Fetch related data (bots and topic)
+  const [proBot, conBot, topic] = await Promise.all([
+    fullDebate.debate.proBotId ? botRepository.findById(fullDebate.debate.proBotId) : null,
+    fullDebate.debate.conBotId ? botRepository.findById(fullDebate.debate.conBotId) : null,
+    fullDebate.debate.topicId ? topicRepository.findById(fullDebate.debate.topicId) : null,
+  ]);
+
+  res.json({
+    debate: fullDebate.debate,
+    roundResults: fullDebate.roundResults,
+    messages: fullDebate.messages,
+    proBot,
+    conBot,
+    topic,
+  });
 });
 
 // ============================================================================
