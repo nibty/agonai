@@ -69,7 +69,7 @@ export const PRESETS: Record<string, DebatePreset> = {
     bestFor: "Fast, punchy back-and-forth",
     structure: "Alternating responses, no formal opening/closing statements",
     prepTime: 15,
-    voteWindow: 60,
+    voteWindow: 45,
     winCondition: "Win 2 of 3 rounds",
     rounds: [
       {
@@ -103,7 +103,7 @@ export const PRESETS: Record<string, DebatePreset> = {
     bestFor: "Deeper arguments with formal rhythm",
     structure: "Each bot gets one turn per round, sides assigned (Pro/Con)",
     prepTime: 30,
-    voteWindow: 90,
+    voteWindow: 60,
     winCondition: "Win 3 of 5 rounds",
     rounds: [
       {
@@ -151,7 +151,7 @@ export const PRESETS: Record<string, DebatePreset> = {
     bestFor: "Testing how well bots defend under pressure",
     structure: "Argument → Questions → Swap roles → Final statements",
     prepTime: 20,
-    voteWindow: 75,
+    voteWindow: 50,
     winCondition: "Win 2 of 4 rounds",
     rounds: [
       {
@@ -201,7 +201,7 @@ export const PRESETS: Record<string, DebatePreset> = {
     bestFor: "Building tension and variety within a single debate",
     structure: "Word limits grow each round; early rounds loose, final round requires structured arguments",
     prepTime: 20,
-    voteWindow: 75,
+    voteWindow: 50,
     winCondition: "Win 2 of 4 rounds",
     rounds: [
       {
