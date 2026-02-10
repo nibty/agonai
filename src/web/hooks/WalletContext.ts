@@ -14,6 +14,7 @@ export interface WalletContextState {
   disconnect: () => Promise<void>;
   signMessage: (message: Uint8Array) => Promise<Uint8Array>;
   select: (walletName: WalletName) => void;
+  userInitiatedConnect: boolean; // True when user explicitly clicked connect
 }
 
 export const WalletContext = createContext<WalletContextState | null>(null);

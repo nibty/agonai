@@ -14,7 +14,7 @@ interface AuthState {
 const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { connected, publicKey, signMessage, disconnect } = useWallet();
+  const { connected, publicKey, signMessage, disconnect, userInitiatedConnect } = useWallet();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -91,13 +91,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Auto-authenticate when wallet connects (only once per connection)
+  // Auto-authenticate when user explicitly connects wallet (not on page reload auto-connect)
   useEffect(() => {
-    if (connected && publicKey && !isAuthenticated && !isAuthenticating && !hasTriedAutoAuth.current) {
+    if (connected && publicKey && userInitiatedConnect && !isAuthenticated && !isAuthenticating && !hasTriedAutoAuth.current) {
       hasTriedAutoAuth.current = true;
       void authenticate();
     }
-  }, [connected, publicKey, isAuthenticated, isAuthenticating, authenticate]);
+  }, [connected, publicKey, userInitiatedConnect, isAuthenticated, isAuthenticating, authenticate]);
 
   // Reset auto-auth flag and clear auth state when wallet disconnects
   useEffect(() => {

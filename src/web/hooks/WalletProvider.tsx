@@ -1,4 +1,4 @@
-import { useMemo, useCallback, type ReactNode } from "react";
+import { useMemo, useCallback, useState, useEffect, type ReactNode } from "react";
 import {
   ConnectionProvider,
   WalletProvider as SolanaWalletProvider,
@@ -30,8 +30,17 @@ function WalletContextProvider({ children }: WalletContextProviderProps) {
     signMessage: solanaSignMessage,
   } = useSolanaWallet();
   const { setVisible } = useWalletModal();
+  const [userInitiatedConnect, setUserInitiatedConnect] = useState(false);
+
+  // Reset flag when disconnected
+  useEffect(() => {
+    if (!connected) {
+      setUserInitiatedConnect(false);
+    }
+  }, [connected]);
 
   const connect = useCallback(async (): Promise<void> => {
+    setUserInitiatedConnect(true);
     setVisible(true);
   }, [setVisible]);
 
@@ -61,8 +70,9 @@ function WalletContextProvider({ children }: WalletContextProviderProps) {
       disconnect,
       signMessage,
       select,
+      userInitiatedConnect,
     }),
-    [connected, connecting, publicKey, wallet, connection, connect, disconnect, signMessage, select]
+    [connected, connecting, publicKey, wallet, connection, connect, disconnect, signMessage, select, userInitiatedConnect]
   );
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
@@ -77,7 +87,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
   return (
     <ConnectionProvider endpoint={X1_RPC_ENDPOINT} config={{ commitment: "confirmed" }}>
-      <SolanaWalletProvider wallets={wallets}>
+      <SolanaWalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>
           <WalletContextProvider>{children}</WalletContextProvider>
         </WalletModalProvider>
