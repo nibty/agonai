@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "bun run --hot src/server.ts",
     "start": "bun run src/server.ts",
-    "claude": "bun run --hot src/claude-bot.ts"
+    "claude": "bun run --hot src/claude-bot.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
