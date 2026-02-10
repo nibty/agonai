@@ -17,14 +17,7 @@ const app = express();
 // CORS configuration - allow any localhost port in development
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or curl)
-      if (!origin) return callback(null, true);
-      // Allow any localhost origin
-      if (origin.startsWith("http://localhost:")) return callback(null, true);
-      // Block other origins
-      callback(new Error("Not allowed by CORS"));
-    },
+    origin: true,
     credentials: true,
   })
 );
