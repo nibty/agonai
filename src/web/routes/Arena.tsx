@@ -410,9 +410,9 @@ export function ArenaPage() {
   const conWins = debate?.roundResults.filter((r) => r.winner === "con").length || 0;
 
   return (
-    <div className="flex h-[calc(100vh-theme(spacing.16)-theme(spacing.16))] gap-4">
+    <div className="flex flex-col gap-4 lg:h-[calc(100vh-theme(spacing.16)-theme(spacing.16))] lg:flex-row">
       {/* Left Sidebar - Score & Voting */}
-      <div className="flex w-72 flex-shrink-0 flex-col gap-3">
+      <div className="flex w-full flex-shrink-0 flex-col gap-3 lg:w-72">
         {/* Match Info Card */}
         <div className="rounded-lg border border-arena-border/50 bg-arena-card/50 p-3">
           <div className="mb-3 flex items-center justify-between text-xs text-gray-500">
@@ -554,7 +554,7 @@ export function ArenaPage() {
         </div>
 
         {/* Messages */}
-        <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg border border-arena-border/50 bg-arena-card/30">
+        <div className="relative min-h-[400px] flex-1 overflow-hidden rounded-lg border border-arena-border/50 bg-arena-card/30 lg:min-h-0">
           <div className="absolute inset-0 overflow-y-auto p-4">
             <div className="space-y-3">
               {messages.length === 0 && (
