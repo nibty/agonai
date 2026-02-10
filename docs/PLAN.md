@@ -278,38 +278,45 @@ Response:
 
 ## Implementation Phases
 
-### Phase 1: Foundation (Week 1-2)
-- [ ] React project setup (Vite + TypeScript + Tailwind)
-- [ ] X1 wallet integration
-- [ ] Basic UI components (Button, Card, Dialog, etc.)
-- [ ] User profile with wallet connection
-- [ ] Simple landing page
+### Phase 1: Foundation (Week 1-2) ✅ COMPLETE
+- [x] React project setup (Vite + TypeScript + Tailwind)
+- [x] X1 wallet integration
+- [x] Basic UI components (Button, Card, Dialog, etc.)
+- [x] User profile with wallet connection
+- [x] Simple landing page
 
-### Phase 2: Core Debate (Week 3-4)
-- [ ] Bot registration flow
-- [ ] Backend API + WebSocket server
-- [ ] Bot calling system with timeouts
-- [ ] Basic debate view with streaming text
-- [ ] Simple voting mechanism
+### Phase 2: Core Debate (Week 3-4) ⚠️ STRUCTURE ONLY
+- [x] Bot registration flow (UI only - not connected to backend)
+- [x] Backend API + WebSocket server (code exists, not connected to frontend)
+- [x] Bot calling system with timeouts (botRunner.ts exists)
+- [ ] Basic debate view with streaming text (uses mock data)
+- [ ] Simple voting mechanism (not functional)
+- [ ] **TODO: Wire frontend API calls to backend**
+- [ ] **TODO: Connect WebSocket for real-time updates**
 
-### Phase 3: Anchor Program (Week 5-6)
+### Phase 3: Anchor Program (Week 5-6) ⚠️ CODE WRITTEN, NOT DEPLOYED
 - [ ] User/Bot registration on-chain
 - [ ] Debate creation + settlement
 - [ ] Voting on-chain
 - [ ] Basic betting/staking
+- [ ] **TODO: Deploy to X1 devnet**
+- [ ] **TODO: Write Anchor tests**
+- [ ] **TODO: Integrate with backend**
 
-### Phase 4: Matchmaking & ELO (Week 7)
-- [ ] ELO calculation system
-- [ ] Matchmaking queue
-- [ ] Ranked mode
+### Phase 4: Matchmaking & ELO (Week 7) ⚠️ BACKEND ONLY
+- [x] ELO calculation system (23 tests passing)
+- [x] Matchmaking queue (backend logic exists)
+- [ ] Ranked mode (not connected to frontend)
+- [ ] **TODO: Connect queue UI to backend WebSocket**
 
-### Phase 5: Gamification (Week 8)
-- [ ] Leagues & ranks
-- [ ] Achievements
-- [ ] Leaderboards
-- [ ] Profile customization
+### Phase 5: Gamification (Week 8) ⚠️ UI ONLY
+- [x] Leagues & ranks (UI displays mock data)
+- [x] Achievements (UI shows badges)
+- [x] Leaderboards (page exists with mock data)
+- [x] Profile customization (UI only)
+- [ ] **TODO: Fetch real data from backend/on-chain**
 
-### Phase 6: Polish (Week 9-10)
+### Phase 6: Polish (Week 9-10) ❌ NOT STARTED
 - [ ] Animations & effects
 - [ ] Topic submission system
 - [ ] Tournament mode
