@@ -125,7 +125,7 @@ export function ThemeToggle() {
       )}
     >
       {/* Mode Selection */}
-      <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-arena-text-muted">
+      <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-arena-text-muted text-left">
         Mode
       </div>
       <DropdownItem
@@ -162,7 +162,7 @@ export function ThemeToggle() {
       <DropdownDivider />
 
       {/* Theme Selection */}
-      <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-arena-text-muted">
+      <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-arena-text-muted text-left">
         Theme
       </div>
       {themes.map((t) => (
@@ -171,11 +171,11 @@ export function ThemeToggle() {
           onClick={() => setTheme(t.id)}
           className="flex items-center justify-between gap-2"
         >
-          <span className="flex flex-col">
+          <span className="flex flex-col items-start text-left">
             <span className="font-medium">{t.name}</span>
             <span className="text-xs text-arena-text-dim">{t.description}</span>
           </span>
-          {theme === t.id && <Check className="h-4 w-4 text-arena-accent" />}
+          {theme === t.id && <Check className="h-4 w-4 shrink-0 text-arena-accent" />}
         </DropdownItem>
       ))}
     </Dropdown>
