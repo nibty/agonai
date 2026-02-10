@@ -135,7 +135,7 @@ export function ArenaPage() {
   const wsRef = useRef<WebSocket | null>(null);
   const votingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const messageIdCounter = useRef(0);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const speechQueueRef = useRef<{ text: string; position: "pro" | "con" }[]>([]);
   const speakRef = useRef<((text: string, position: "pro" | "con") => void) | null>(null);
   const processQueueRef = useRef<() => void>(() => {});
@@ -211,7 +211,13 @@ export function ArenaPage() {
   }, [speak]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: "smooth",
+      });
+    }
   }, [messages]);
 
   const handleWSMessage = useCallback(
@@ -870,7 +876,7 @@ export function ArenaPage() {
 
         {/* Messages */}
         <div className="relative min-h-[400px] flex-1 overflow-hidden rounded-lg border border-arena-border/50 bg-arena-card/30 lg:min-h-0">
-          <div className="absolute inset-0 overflow-y-auto p-4 scrollbar-hide">
+          <div ref={messagesContainerRef} className="absolute inset-0 overflow-y-auto p-4 scrollbar-hide">
             <div className="space-y-3">
               {messages.length === 0 && (
                 <div className="flex h-full items-center justify-center py-20 text-sm text-arena-text-dim">
@@ -921,7 +927,6 @@ export function ArenaPage() {
                 </div>
               )}
 
-              <div ref={messagesEndRef} />
             </div>
           </div>
         </div>
