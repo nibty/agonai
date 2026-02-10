@@ -92,10 +92,10 @@ export const debates = pgTable("debates", {
     .references(() => topics.id),
   proBotId: integer("pro_bot_id")
     .notNull()
-    .references(() => bots.id),
+    .references(() => bots.id, { onDelete: "cascade" }),
   conBotId: integer("con_bot_id")
     .notNull()
-    .references(() => bots.id),
+    .references(() => bots.id, { onDelete: "cascade" }),
   status: varchar("status", { length: 20 }).notNull().default("pending"),
   currentRoundIndex: integer("current_round_index").notNull().default(0),
   roundStatus: varchar("round_status", { length: 20 }).notNull().default("pending"),
@@ -139,7 +139,7 @@ export const debateMessages = pgTable("debate_messages", {
   position: varchar("position", { length: 3 }).notNull(),
   botId: integer("bot_id")
     .notNull()
-    .references(() => bots.id),
+    .references(() => bots.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

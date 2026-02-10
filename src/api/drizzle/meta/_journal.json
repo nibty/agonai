@@ -15,6 +15,13 @@
       "when": 1770743597313,
       "tag": "0001_famous_nocturne",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1770746402150,
+      "tag": "0002_crazy_hammerhead",
+      "breakpoints": true
     }
   ]
 }
