@@ -10,12 +10,22 @@ interface VoteChartProps {
   currentVotes?: { pro: number; con: number } | undefined;
   currentRound?: string | undefined;
   isVoting?: boolean | undefined;
+  totalRounds?: number | undefined;
 }
 
-export function VoteChart({ roundResults, currentVotes, currentRound, isVoting }: VoteChartProps) {
+export function VoteChart({
+  roundResults,
+  currentVotes,
+  currentRound,
+  isVoting,
+  totalRounds = 7,
+}: VoteChartProps) {
   // Calculate cumulative score: +1 for pro win, -1 for con win
   const scores: { round: string; score: number; winner?: "pro" | "con" }[] = [];
   let cumulative = 0;
+
+  // Start with 0
+  scores.push({ round: "Start", score: 0 });
 
   for (const result of roundResults) {
     cumulative += result.winner === "pro" ? 1 : -1;
@@ -26,143 +36,130 @@ export function VoteChart({ roundResults, currentVotes, currentRound, isVoting }
   if (isVoting && currentRound && currentVotes) {
     const total = currentVotes.pro + currentVotes.con;
     if (total > 0) {
-      // Show partial score based on current vote ratio
       const proRatio = currentVotes.pro / total;
-      const partialScore = proRatio > 0.5 ? 0.5 : -0.5;
+      const partialScore = (proRatio - 0.5) * 2 * 0.8; // -0.8 to +0.8 based on vote ratio
       scores.push({ round: currentRound, score: cumulative + partialScore });
-    } else {
-      scores.push({ round: currentRound, score: cumulative });
     }
   }
 
-  // Chart dimensions
-  const width = 100;
-  const height = 60;
-  const padding = { left: 5, right: 5, top: 10, bottom: 15 };
-  const chartWidth = width - padding.left - padding.right;
-  const chartHeight = height - padding.top - padding.bottom;
+  // Chart config
+  const chartHeight = 80;
+  const maxScore = Math.ceil(totalRounds / 2) + 1;
 
-  // Calculate max range (at least 2 for scale)
-  const maxScore = Math.max(2, ...scores.map((s) => Math.abs(s.score)));
+  // Calculate Y position (0 = center, positive = up, negative = down)
+  const getY = (score: number) => {
+    const normalized = score / maxScore;
+    return chartHeight / 2 - normalized * (chartHeight / 2 - 8);
+  };
 
-  // Generate path points
-  const points = scores.map((s, i) => {
-    const x = padding.left + (scores.length > 1 ? (i / (scores.length - 1)) * chartWidth : chartWidth / 2);
-    const y = padding.top + chartHeight / 2 - (s.score / maxScore) * (chartHeight / 2);
-    return { x, y, ...s };
-  });
-
-  // Create SVG path
-  const linePath =
-    points.length > 0
-      ? `M ${points.map((p) => `${p.x},${p.y}`).join(" L ")}`
-      : "";
-
-  // Create area paths (above and below center line)
-  const centerY = padding.top + chartHeight / 2;
-  const areaPathPro =
-    points.length > 0
-      ? `M ${padding.left},${centerY} L ${points.map((p) => `${p.x},${Math.min(p.y, centerY)}`).join(" L ")} L ${points[points.length - 1]?.x},${centerY} Z`
-      : "";
-  const areaPathCon =
-    points.length > 0
-      ? `M ${padding.left},${centerY} L ${points.map((p) => `${p.x},${Math.max(p.y, centerY)}`).join(" L ")} L ${points[points.length - 1]?.x},${centerY} Z`
-      : "";
+  const proWins = roundResults.filter((r) => r.winner === "pro").length;
+  const conWins = roundResults.filter((r) => r.winner === "con").length;
 
   return (
     <div className="w-full">
-      <svg viewBox={`0 0 ${width} ${height}`} className="h-16 w-full" preserveAspectRatio="none">
-        {/* Grid lines */}
-        <line
-          x1={padding.left}
-          y1={centerY}
-          x2={width - padding.right}
-          y2={centerY}
-          stroke="currentColor"
-          strokeOpacity={0.2}
-          strokeWidth={0.5}
+      {/* Labels */}
+      <div className="mb-1 flex items-center justify-between text-xs">
+        <span className="font-medium text-arena-pro">PRO {proWins > 0 && `+${proWins}`}</span>
+        <span className="text-gray-500">Round {roundResults.length + (isVoting ? 1 : 0)} / {totalRounds}</span>
+        <span className="font-medium text-arena-con">CON {conWins > 0 && `+${conWins}`}</span>
+      </div>
+
+      {/* Chart */}
+      <div className="relative rounded border border-arena-border/30 bg-arena-bg/50" style={{ height: chartHeight }}>
+        {/* Pro zone (top half) */}
+        <div
+          className="absolute inset-x-0 top-0 bg-arena-pro/10"
+          style={{ height: chartHeight / 2 }}
         />
 
-        {/* Pro area (green, above center) */}
-        {points.length > 0 && (
-          <path d={areaPathPro} fill="rgb(74, 222, 128)" fillOpacity={0.3} />
-        )}
+        {/* Con zone (bottom half) */}
+        <div
+          className="absolute inset-x-0 bottom-0 bg-arena-con/10"
+          style={{ height: chartHeight / 2 }}
+        />
 
-        {/* Con area (red, below center) */}
-        {points.length > 0 && (
-          <path d={areaPathCon} fill="rgb(248, 113, 113)" fillOpacity={0.3} />
-        )}
+        {/* Center line */}
+        <div
+          className="absolute inset-x-0 border-t border-dashed border-gray-600"
+          style={{ top: chartHeight / 2 }}
+        />
 
-        {/* Line */}
-        {points.length > 0 && (
-          <path
-            d={linePath}
-            fill="none"
-            stroke="white"
-            strokeWidth={1.5}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        )}
-
-        {/* Points */}
-        {points.map((p, i) => (
-          <circle
-            key={i}
-            cx={p.x}
-            cy={p.y}
-            r={2.5}
-            fill={p.winner === "pro" ? "rgb(74, 222, 128)" : p.winner === "con" ? "rgb(248, 113, 113)" : "white"}
-            stroke="white"
-            strokeWidth={0.5}
-          />
-        ))}
-
-        {/* Round labels */}
-        {points.map((p, i) => (
-          <text
-            key={i}
-            x={p.x}
-            y={height - 3}
-            textAnchor="middle"
-            fontSize={6}
-            fill="currentColor"
-            fillOpacity={0.5}
-          >
-            {i + 1}
-          </text>
-        ))}
-
-        {/* Y-axis labels */}
-        <text
-          x={2}
-          y={padding.top + 3}
-          fontSize={5}
-          fill="rgb(74, 222, 128)"
-          fillOpacity={0.7}
+        {/* Line chart */}
+        <svg
+          className="absolute inset-0 h-full w-full"
+          preserveAspectRatio="none"
+          viewBox={`0 0 100 ${chartHeight}`}
         >
-          PRO
-        </text>
-        <text
-          x={2}
-          y={height - padding.bottom - 1}
-          fontSize={5}
-          fill="rgb(248, 113, 113)"
-          fillOpacity={0.7}
-        >
-          CON
-        </text>
-      </svg>
+          {/* Draw connecting lines */}
+          {scores.length > 1 &&
+            scores.slice(1).map((point, i) => {
+              const prev = scores[i];
+              const x1 = (i / (scores.length - 1)) * 100;
+              const x2 = ((i + 1) / (scores.length - 1)) * 100;
+              const y1 = getY(prev.score);
+              const y2 = getY(point.score);
 
-      {/* Legend showing current totals */}
-      <div className="mt-1 flex justify-between text-xs">
-        <span className="text-arena-pro">
-          PRO: {roundResults.filter((r) => r.winner === "pro").length} rounds
-        </span>
-        <span className="text-arena-con">
-          CON: {roundResults.filter((r) => r.winner === "con").length} rounds
-        </span>
+              return (
+                <line
+                  key={`line-${i}`}
+                  x1={x1}
+                  y1={y1}
+                  x2={x2}
+                  y2={y2}
+                  stroke="white"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                />
+              );
+            })}
+        </svg>
+
+        {/* Points (as positioned divs for better rendering) */}
+        {scores.map((point, i) => {
+          const x = scores.length > 1 ? (i / (scores.length - 1)) * 100 : 50;
+          const y = getY(point.score);
+          const isCurrentVoting = i === scores.length - 1 && isVoting;
+
+          return (
+            <div
+              key={`point-${i}-${point.round}`}
+              className={`absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white ${
+                point.winner === "pro"
+                  ? "bg-arena-pro"
+                  : point.winner === "con"
+                    ? "bg-arena-con"
+                    : isCurrentVoting
+                      ? "animate-pulse bg-yellow-400"
+                      : "bg-gray-500"
+              }`}
+              style={{
+                left: `${x}%`,
+                top: y,
+              }}
+            />
+          );
+        })}
       </div>
+
+      {/* Current vote display */}
+      {isVoting && currentVotes && (
+        <div className="mt-2 flex items-center gap-2">
+          <div className="h-2 flex-1 overflow-hidden rounded-full bg-arena-con/30">
+            <div
+              className="h-full bg-arena-pro transition-all duration-300"
+              style={{
+                width:
+                  currentVotes.pro + currentVotes.con > 0
+                    ? `${(currentVotes.pro / (currentVotes.pro + currentVotes.con)) * 100}%`
+                    : "50%",
+              }}
+            />
+          </div>
+          <span className="text-xs text-gray-400">
+            {currentVotes.pro} - {currentVotes.con}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
