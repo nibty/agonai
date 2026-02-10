@@ -1,7 +1,29 @@
 import { useEffect, useState } from "react";
 import { Moon, Sun, Monitor, Palette, Check } from "lucide-react";
 import { Dropdown, DropdownItem, DropdownDivider } from "flowbite-react";
+import type { CustomFlowbiteTheme } from "flowbite-react";
 import { cn } from "@/lib/utils";
+
+const dropdownTheme: CustomFlowbiteTheme["dropdown"] = {
+  floating: {
+    base: "z-10 w-fit divide-y divide-arena-border rounded-lg shadow-lg focus:outline-none",
+    content: "py-1 text-sm !text-arena-text",
+    divider: "my-1 h-px !bg-arena-border",
+    header: "block px-4 py-2 text-sm !text-arena-text",
+    hidden: "invisible opacity-0",
+    item: {
+      container: "",
+      base: "flex w-full cursor-pointer items-center justify-start px-4 py-2 text-sm !text-arena-text hover:!bg-arena-border/50 focus:!bg-arena-border/50 focus:outline-none",
+      icon: "mr-2 h-4 w-4",
+    },
+    style: {
+      dark: "!bg-arena-card !text-arena-text !border-arena-border",
+      light: "!border-arena-border !bg-arena-card !text-arena-text",
+      auto: "!border-arena-border !bg-arena-card !text-arena-text",
+    },
+    target: "w-fit",
+  },
+};
 
 type Mode = "light" | "dark" | "system";
 type Theme = "arena" | "default" | "enterprise" | "minimal" | "mono" | "playful" | "cyber" | "sunset" | "ocean" | "lavender" | "forest";
@@ -87,6 +109,7 @@ export function ThemeToggle() {
     <Dropdown
       label=""
       dismissOnClick={true}
+      theme={dropdownTheme}
       renderTrigger={() => (
         <button
           className={cn(

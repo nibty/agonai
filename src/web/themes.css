@@ -397,3 +397,76 @@
   --arena-gold: 45 93% 47%;
   --arena-silver: 100 8% 60%;
 }
+
+/* ============================================
+   FLOWBITE COMPONENT OVERRIDES
+   Override Flowbite defaults to use theme colors
+   ============================================ */
+
+/* Dropdown menu styling - high specificity override */
+html.dark [role="menu"],
+html.light [role="menu"],
+html [role="menu"] {
+  background-color: hsl(var(--arena-card)) !important;
+  border-color: hsl(var(--arena-border)) !important;
+  color: hsl(var(--arena-text)) !important;
+}
+
+/* Override Flowbite's dark mode gray background */
+html.dark .dark\:bg-gray-700 {
+  background-color: hsl(var(--arena-card)) !important;
+}
+
+html.dark .dark\:text-white {
+  color: hsl(var(--arena-text)) !important;
+}
+
+html.dark .dark\:text-gray-200 {
+  color: hsl(var(--arena-text)) !important;
+}
+
+/* Dropdown items */
+html [role="menuitem"],
+html.dark [role="menuitem"] {
+  color: hsl(var(--arena-text)) !important;
+}
+
+html [role="menuitem"]:hover,
+html.dark [role="menuitem"]:hover,
+html.dark .dark\:hover\:bg-gray-600:hover {
+  background-color: hsl(var(--arena-border) / 0.5) !important;
+  color: hsl(var(--arena-text)) !important;
+}
+
+/* Dropdown dividers */
+html [role="menu"] hr,
+html.dark .dark\:bg-gray-600 {
+  background-color: hsl(var(--arena-border)) !important;
+}
+
+/* Tooltip styling */
+html [role="tooltip"],
+html.dark [role="tooltip"] {
+  background-color: hsl(var(--arena-card)) !important;
+  border-color: hsl(var(--arena-border)) !important;
+  color: hsl(var(--arena-text)) !important;
+}
+
+/* Select/input styling */
+select,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+textarea {
+  background-color: hsl(var(--arena-card)) !important;
+  border-color: hsl(var(--arena-border)) !important;
+  color: hsl(var(--arena-text)) !important;
+}
+
+select:focus,
+input:focus,
+textarea:focus {
+  border-color: hsl(var(--arena-accent)) !important;
+  --tw-ring-color: hsl(var(--arena-accent) / 0.3) !important;
+}
