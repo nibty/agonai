@@ -70,7 +70,7 @@ export const PRESETS: Record<string, DebatePreset> = {
     structure: "Alternating responses, no formal opening/closing statements",
     prepTime: 15,
     voteWindow: 45,
-    winCondition: "Win 2 of 3 rounds",
+    winCondition: "Win 3 of 5 rounds",
     rounds: [
       {
         name: "Round 1",
@@ -93,6 +93,20 @@ export const PRESETS: Record<string, DebatePreset> = {
         wordLimit: { min: 30, max: 75 },
         timeLimit: 30,
       },
+      {
+        name: "Round 4",
+        type: "argument",
+        speaker: "both",
+        wordLimit: { min: 30, max: 75 },
+        timeLimit: 30,
+      },
+      {
+        name: "Round 5",
+        type: "argument",
+        speaker: "both",
+        wordLimit: { min: 30, max: 75 },
+        timeLimit: 30,
+      },
     ],
   },
 
@@ -104,7 +118,7 @@ export const PRESETS: Record<string, DebatePreset> = {
     structure: "Each bot gets one turn per round, sides assigned (Pro/Con)",
     prepTime: 30,
     voteWindow: 60,
-    winCondition: "Win 3 of 5 rounds",
+    winCondition: "Win 4 of 7 rounds",
     rounds: [
       {
         name: "Opening",
@@ -114,7 +128,14 @@ export const PRESETS: Record<string, DebatePreset> = {
         timeLimit: 45,
       },
       {
-        name: "Argument",
+        name: "Argument 1",
+        type: "argument",
+        speaker: "both",
+        wordLimit: { min: 50, max: 100 },
+        timeLimit: 30,
+      },
+      {
+        name: "Argument 2",
         type: "argument",
         speaker: "both",
         wordLimit: { min: 50, max: 100 },
@@ -130,6 +151,13 @@ export const PRESETS: Record<string, DebatePreset> = {
       {
         name: "Counter-Rebuttal",
         type: "counter",
+        speaker: "both",
+        wordLimit: { min: 50, max: 100 },
+        timeLimit: 30,
+      },
+      {
+        name: "Final Rebuttal",
+        type: "rebuttal",
         speaker: "both",
         wordLimit: { min: 50, max: 100 },
         timeLimit: 30,
@@ -152,8 +180,22 @@ export const PRESETS: Record<string, DebatePreset> = {
     structure: "Argument → Questions → Swap roles → Final statements",
     prepTime: 20,
     voteWindow: 50,
-    winCondition: "Win 2 of 4 rounds",
+    winCondition: "Win 4 of 7 rounds",
     rounds: [
+      {
+        name: "Pro Opening",
+        type: "opening",
+        speaker: "pro",
+        wordLimit: { min: 50, max: 100 },
+        timeLimit: 30,
+      },
+      {
+        name: "Con Opening",
+        type: "opening",
+        speaker: "con",
+        wordLimit: { min: 50, max: 100 },
+        timeLimit: 30,
+      },
       {
         name: "Pro Argument",
         type: "argument",
@@ -202,7 +244,7 @@ export const PRESETS: Record<string, DebatePreset> = {
     structure: "Word limits grow each round; early rounds loose, final round requires structured arguments",
     prepTime: 20,
     voteWindow: 50,
-    winCondition: "Win 2 of 4 rounds",
+    winCondition: "Win 4 of 6 rounds",
     rounds: [
       {
         name: "Warm Up",
@@ -212,11 +254,25 @@ export const PRESETS: Record<string, DebatePreset> = {
         timeLimit: 20,
       },
       {
+        name: "Getting Started",
+        type: "argument",
+        speaker: "both",
+        wordLimit: { min: 40, max: 75 },
+        timeLimit: 25,
+      },
+      {
         name: "Building",
         type: "argument",
         speaker: "both",
         wordLimit: { min: 50, max: 100 },
         timeLimit: 30,
+      },
+      {
+        name: "Heating Up",
+        type: "argument",
+        speaker: "both",
+        wordLimit: { min: 60, max: 110 },
+        timeLimit: 35,
       },
       {
         name: "Intensifying",
