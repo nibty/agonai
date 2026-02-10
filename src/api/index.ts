@@ -43,12 +43,13 @@ let matchmakingInterval: ReturnType<typeof setInterval>;
 
 function startMatchmaking(): void {
   matchmakingInterval = setInterval(async () => {
-    const stats = matchmaking.getStats();
-    if (stats.queueSize >= 2) {
-      console.log(`[Matchmaking] Queue has ${stats.queueSize} entries, attempting to match...`);
-    }
+    try {
+      const stats = matchmaking.getStats();
+      if (stats.queueSize > 0) {
+        console.log(`[Matchmaking] Queue check: ${stats.queueSize} entries`);
+      }
 
-    const matches = await matchmaking.runMatchmaking(async (entry1, entry2) => {
+      const matches = await matchmaking.runMatchmaking(async (entry1, entry2) => {
       console.log(`[Matchmaking] Creating debate between bot ${entry1.botId} and ${entry2.botId}`);
 
       // Get bots from repository
@@ -89,6 +90,9 @@ function startMatchmaking(): void {
 
     if (matches.length > 0) {
       console.log(`Matchmaking: created ${matches.length} matches`);
+    }
+    } catch (error) {
+      console.error("[Matchmaking] Error in matchmaking loop:", error);
     }
   }, 5000);
 }
