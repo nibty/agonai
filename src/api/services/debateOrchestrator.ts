@@ -38,7 +38,7 @@ interface DebateState {
       roundName: string;
       proVotes: number;
       conVotes: number;
-      winner: DebatePosition;
+      winner: DebatePosition | null; // null = tie
     }>;
     winner: DebatePosition | null;
     stake: number;
@@ -399,7 +399,8 @@ export class DebateOrchestratorService {
     // Tally final votes from database
     const { proVotes, conVotes } = await debateRepository.countRoundVotes(state.debate.id, roundIndex);
 
-    const winner: DebatePosition = proVotes >= conVotes ? "pro" : "con";
+    // Determine winner (null if tie)
+    const winner: DebatePosition | null = proVotes > conVotes ? "pro" : conVotes > proVotes ? "con" : null;
 
     const result = {
       roundIndex,
@@ -420,11 +421,12 @@ export class DebateOrchestratorService {
       winner,
     });
 
-    // Calculate overall score
+    // Calculate overall score (ties don't count)
     const overallScore = { pro: 0, con: 0 };
     for (const r of state.debate.roundResults) {
       if (r.winner === "pro") overallScore.pro++;
-      else overallScore.con++;
+      else if (r.winner === "con") overallScore.con++;
+      // ties (winner === null) don't add to either score
     }
 
     // Broadcast round ended
@@ -476,27 +478,33 @@ export class DebateOrchestratorService {
    * Complete the debate and determine overall winner
    */
   private async completeDebate(state: DebateState): Promise<void> {
-    // Count round wins
+    // Count round wins (ties don't count)
     let proWins = 0;
     let conWins = 0;
 
     for (const result of state.debate.roundResults) {
       if (result.winner === "pro") proWins++;
-      else conWins++;
+      else if (result.winner === "con") conWins++;
+      // ties (winner === null) don't add to either score
     }
 
-    const winner: DebatePosition = proWins >= conWins ? "pro" : "con";
-    const winnerBot = winner === "pro" ? state.proBot : state.conBot;
-    const loserBot = winner === "pro" ? state.conBot : state.proBot;
+    // Determine overall winner (null if tied)
+    const winner: DebatePosition | null = proWins > conWins ? "pro" : conWins > proWins ? "con" : null;
 
-    // Calculate ELO changes
-    const eloChanges = calculateMatchEloChanges(winnerBot.elo, loserBot.elo);
+    // Calculate ELO changes (only if there's a winner)
+    let eloChanges = { winner: { oldElo: 0, newElo: 0, change: 0 }, loser: { oldElo: 0, newElo: 0, change: 0 } };
+    if (winner) {
+      const winnerBot = winner === "pro" ? state.proBot : state.conBot;
+      const loserBot = winner === "pro" ? state.conBot : state.proBot;
+      eloChanges = calculateMatchEloChanges(winnerBot.elo, loserBot.elo);
 
-    // Update bots ELO in database
-    await Promise.all([
-      botRepository.updateStats(winnerBot.id, true, eloChanges.winner.change),
-      botRepository.updateStats(loserBot.id, false, eloChanges.loser.change),
-    ]);
+      // Update bots ELO in database
+      await Promise.all([
+        botRepository.updateStats(winnerBot.id, true, eloChanges.winner.change),
+        botRepository.updateStats(loserBot.id, false, eloChanges.loser.change),
+      ]);
+    }
+    // If tied, no ELO changes
 
     // Settle bets
     const payouts = await betRepository.settleBets(state.debate.id, winner);
@@ -517,9 +525,12 @@ export class DebateOrchestratorService {
     const endPayload: DebateEndedPayload = {
       winner,
       finalScore: { pro: proWins, con: conWins },
-      eloChanges: {
+      eloChanges: winner ? {
         proBot: winner === "pro" ? eloChanges.winner : eloChanges.loser,
         conBot: winner === "con" ? eloChanges.winner : eloChanges.loser,
+      } : {
+        proBot: { oldElo: state.proBot.elo, newElo: state.proBot.elo, change: 0 },
+        conBot: { oldElo: state.conBot.elo, newElo: state.conBot.elo, change: 0 },
       },
       payouts,
     };

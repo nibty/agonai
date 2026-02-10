@@ -1,0 +1,1 @@
+ALTER TABLE "round_results" ALTER COLUMN "winner" DROP NOT NULL;

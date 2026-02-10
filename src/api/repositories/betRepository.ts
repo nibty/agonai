@@ -51,10 +51,22 @@ export const betRepository = {
 
   async settleBets(
     debateId: number,
-    winner: DebatePosition
+    winner: DebatePosition | null
   ): Promise<{ bettorId: number; amount: number }[]> {
     const debateBets = await this.getByDebate(debateId);
     const payouts: { bettorId: number; amount: number }[] = [];
+
+    // If tie (no winner), refund all bets
+    if (winner === null) {
+      for (const bet of debateBets) {
+        payouts.push({ bettorId: bet.bettorId, amount: bet.amount });
+        await db
+          .update(bets)
+          .set({ settled: true, payout: bet.amount })
+          .where(eq(bets.id, bet.id));
+      }
+      return payouts;
+    }
 
     // Calculate total pool and winning pool
     let totalPool = 0;

@@ -2,7 +2,7 @@ interface RoundResult {
   round: string;
   proVotes: number;
   conVotes: number;
-  winner: "pro" | "con";
+  winner: "pro" | "con" | null; // null = tie
 }
 
 interface VoteChartProps {
@@ -20,15 +20,17 @@ export function VoteChart({
   isVoting,
   totalRounds = 7,
 }: VoteChartProps) {
-  // Calculate cumulative score: +1 for pro win, -1 for con win
-  const scores: { round: string; score: number; winner?: "pro" | "con" }[] = [];
+  // Calculate cumulative score: +1 for pro win, -1 for con win, 0 for tie
+  const scores: { round: string; score: number; winner?: "pro" | "con" | null }[] = [];
   let cumulative = 0;
 
   // Start with 0
   scores.push({ round: "Start", score: 0 });
 
   for (const result of roundResults) {
-    cumulative += result.winner === "pro" ? 1 : -1;
+    if (result.winner === "pro") cumulative += 1;
+    else if (result.winner === "con") cumulative -= 1;
+    // ties don't change the score
     scores.push({ round: result.round, score: cumulative, winner: result.winner });
   }
 
@@ -158,7 +160,9 @@ export function VoteChart({
                     ? "h-4 w-4 border-arena-card bg-arena-con shadow-lg shadow-arena-con/50"
                     : isCurrentVoting
                       ? "h-5 w-5 animate-pulse border-arena-voting/80 bg-arena-voting shadow-lg shadow-arena-voting/50"
-                      : "h-3 w-3 border-arena-card/50 bg-arena-accent"
+                      : point.winner === null && i > 0
+                        ? "h-4 w-4 border-arena-card bg-arena-text-muted shadow-lg shadow-arena-text-muted/30"
+                        : "h-3 w-3 border-arena-card/50 bg-arena-accent"
               }`}
               style={{
                 left: `${x}%`,

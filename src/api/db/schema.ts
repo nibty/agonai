@@ -122,7 +122,7 @@ export const roundResults = pgTable(
     roundIndex: integer("round_index").notNull(),
     proVotes: integer("pro_votes").notNull().default(0),
     conVotes: integer("con_votes").notNull().default(0),
-    winner: varchar("winner", { length: 3 }).notNull(),
+    winner: varchar("winner", { length: 3 }), // null = tie
   },
   (table) => [unique("debate_round_unique").on(table.debateId, table.roundIndex)]
 );

@@ -120,7 +120,7 @@ export interface RoundResult {
   roundName: string;
   proVotes: number;
   conVotes: number;
-  winner: DebatePosition;
+  winner: DebatePosition | null; // null = tie
 }
 
 export interface Debate {
@@ -317,13 +317,13 @@ export interface RoundEndedPayload {
     roundName: string;
     proVotes: number;
     conVotes: number;
-    winner: DebatePosition;
+    winner: DebatePosition | null; // null = tie
   };
   overallScore: { pro: number; con: number };
 }
 
 export interface DebateEndedPayload {
-  winner: DebatePosition;
+  winner: DebatePosition | null; // null = tie
   finalScore: { pro: number; con: number };
   eloChanges: {
     proBot: { oldElo: number; newElo: number; change: number };
