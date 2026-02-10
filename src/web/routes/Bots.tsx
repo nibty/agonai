@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useWallet } from "@/hooks/useWallet";
@@ -362,8 +362,22 @@ function BotDetailsModal({
 }
 
 export function BotsPage() {
-  const { connected, connect } = useWallet();
-  const { isAuthenticated } = useAuth();
+  const { connected, connecting, connect } = useWallet();
+  const { isAuthenticated, isAuthenticating } = useAuth();
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  // Give wallet time to auto-connect on page load
+  useEffect(() => {
+    const timer = setTimeout(() => setIsInitializing(false), 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Clear initializing once we know the state
+  useEffect(() => {
+    if (connected || isAuthenticated) {
+      setIsInitializing(false);
+    }
+  }, [connected, isAuthenticated]);
   const queryClient = useQueryClient();
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [selectedBot, setSelectedBot] = useState<DisplayBot | null>(null);
@@ -400,6 +414,22 @@ export function BotsPage() {
       setSelectedBot(null);
     },
   });
+
+  // Show loading while wallet is initializing or connecting
+  if (isInitializing || connecting || isAuthenticating) {
+    return (
+      <div className="mx-auto max-w-lg py-16 text-center">
+        <Card>
+          <CardContent className="py-12">
+            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-arena-accent border-t-transparent"></div>
+            <p className="text-arena-text-muted">
+              {connecting ? "Connecting wallet..." : isAuthenticating ? "Authenticating..." : "Loading..."}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!connected) {
     return (
