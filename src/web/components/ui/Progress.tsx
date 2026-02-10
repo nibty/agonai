@@ -25,7 +25,7 @@ const progressVariants = cva("relative w-full overflow-hidden rounded-full bg-ar
 const indicatorVariants = cva("h-full w-full flex-1 transition-all duration-300 ease-in-out", {
   variants: {
     variant: {
-      default: "bg-gray-400",
+      default: "bg-arena-text-muted",
       accent: "bg-arena-accent",
       pro: "bg-arena-pro",
       con: "bg-arena-con",

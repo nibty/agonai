@@ -81,7 +81,7 @@ function MessageBubble({ message, botName }: { message: DebateMessage; botName: 
             >
               {botName}
             </span>
-            <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] uppercase text-gray-400">
+            <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] uppercase text-arena-text-muted">
               {message.round}
             </span>
           </div>
@@ -92,7 +92,7 @@ function MessageBubble({ message, botName }: { message: DebateMessage; botName: 
                 : "border-arena-con/40 bg-gradient-to-br from-arena-con/15 to-arena-con/5 shadow-arena-con/10"
             }`}
           >
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-100">
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-arena-text">
               {message.content}
             </p>
           </div>
@@ -516,7 +516,7 @@ export function ArenaPage() {
       <div className="flex min-h-[50vh] items-center justify-center">
         <Card className="p-8 text-center">
           <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-arena-accent border-t-transparent"></div>
-          <p className="text-gray-400">Connecting to debate...</p>
+          <p className="text-arena-text-muted">Connecting to debate...</p>
         </Card>
       </div>
     );
@@ -544,7 +544,7 @@ export function ArenaPage() {
       <div className="flex w-full flex-shrink-0 flex-col gap-3 lg:w-72">
         {/* Match Info Card */}
         <div className="rounded-xl border border-arena-border/50 bg-gradient-to-b from-arena-card to-arena-bg p-4">
-          <div className="mb-3 flex items-center justify-between text-xs text-gray-500">
+          <div className="mb-3 flex items-center justify-between text-xs text-arena-text-dim">
             <Link to="/queue" className="transition-colors hover:text-white">
               ← Back
             </Link>
@@ -568,7 +568,7 @@ export function ArenaPage() {
             <h1 className="text-base font-bold text-white">
               {topic?.text || debate?.topic || "Loading..."}
             </h1>
-            <span className="text-xs text-gray-500">{(debate?.stake || 0).toLocaleString()} XNT staked</span>
+            <span className="text-xs text-arena-text-dim">{(debate?.stake || 0).toLocaleString()} XNT staked</span>
           </div>
 
           {/* Bots vs */}
@@ -579,18 +579,18 @@ export function ArenaPage() {
               </div>
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold text-arena-pro">{proBot?.name || "Pro"}</div>
-                <div className="text-[10px] text-gray-500">{proBot?.elo || "---"}</div>
+                <div className="text-[10px] text-arena-text-dim">{proBot?.elo || "---"}</div>
               </div>
             </div>
             <div className="flex flex-shrink-0 flex-col items-center px-2">
               <div className="text-2xl font-black tabular-nums text-white">
-                {proWins}<span className="mx-1 text-gray-600">-</span>{conWins}
+                {proWins}<span className="mx-1 text-arena-text-dim">-</span>{conWins}
               </div>
             </div>
             <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
               <div className="min-w-0 text-right">
                 <div className="truncate text-sm font-semibold text-arena-con">{conBot?.name || "Con"}</div>
-                <div className="text-[10px] text-gray-500">{conBot?.elo || "---"}</div>
+                <div className="text-[10px] text-arena-text-dim">{conBot?.elo || "---"}</div>
               </div>
               <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-arena-con to-rose-600 text-sm font-bold text-white shadow-md shadow-arena-con/20">
                 {(conBot?.name || "C").charAt(0)}
@@ -614,7 +614,7 @@ export function ArenaPage() {
           <div className="rounded-lg border border-arena-accent/50 bg-arena-accent/5 p-3">
             <div className="mb-2 flex items-center justify-between text-sm">
               <span className="font-medium text-white">Vote Now - {debate.currentRound}</span>
-              <span className="text-xs text-gray-400">{votingTimeLeft}s</span>
+              <span className="text-xs text-arena-text-muted">{votingTimeLeft}s</span>
             </div>
 
             {/* Time progress bar */}
@@ -647,10 +647,10 @@ export function ArenaPage() {
                 </Button>
               </div>
             ) : (
-              <div className="text-center text-xs text-gray-400">Connect wallet to vote</div>
+              <div className="text-center text-xs text-arena-text-muted">Connect wallet to vote</div>
             )}
             {hasVoted && (
-              <div className="mt-2 text-center text-xs text-gray-400">
+              <div className="mt-2 text-center text-xs text-arena-text-muted">
                 Current: {currentVotes.pro} - {currentVotes.con}
               </div>
             )}
@@ -669,7 +669,7 @@ export function ArenaPage() {
             <div className="text-sm font-semibold text-white">
               {debate.winner === "pro" ? proBot?.name : conBot?.name} Wins!
             </div>
-            <div className="text-xs text-gray-400">
+            <div className="text-xs text-arena-text-muted">
               Final: {proWins} - {conWins}
             </div>
           </div>
@@ -681,7 +681,7 @@ export function ArenaPage() {
           className={`rounded-lg border p-2 text-xs transition-colors ${
             ttsEnabled
               ? "border-arena-accent/50 bg-arena-accent/10 text-arena-accent"
-              : "border-arena-border/50 text-gray-500 hover:text-gray-300"
+              : "border-arena-border/50 text-arena-text-dim hover:text-gray-300"
           }`}
         >
           {ttsEnabled ? (isSpeaking ? "🔊 Speaking..." : "🔊 TTS On") : "🔇 TTS Off"}
@@ -692,9 +692,9 @@ export function ArenaPage() {
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Current Round Indicator */}
         <div className="mb-2 flex items-center justify-center gap-2 text-xs">
-          <span className="text-gray-500">{debate?.currentRound || "Waiting..."}</span>
+          <span className="text-arena-text-dim">{debate?.currentRound || "Waiting..."}</span>
           {debate?.roundStatus === "bot_responding" && (
-            <span className="text-yellow-500">● Bots debating</span>
+            <span className="text-arena-voting">● Bots debating</span>
           )}
           {debate?.roundStatus === "voting" && (
             <span className="text-arena-accent">● Voting open</span>
@@ -706,7 +706,7 @@ export function ArenaPage() {
           <div className="absolute inset-0 overflow-y-auto p-4 scrollbar-hide">
             <div className="space-y-3">
               {messages.length === 0 && (
-                <div className="flex h-full items-center justify-center py-20 text-sm text-gray-500">
+                <div className="flex h-full items-center justify-center py-20 text-sm text-arena-text-dim">
                   Waiting for debate to start...
                 </div>
               )}

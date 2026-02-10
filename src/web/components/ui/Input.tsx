@@ -10,7 +10,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         type={type}
         className={cn(
           "flex h-10 w-full rounded-lg border border-arena-border bg-arena-card px-3 py-2 text-sm text-white",
-          "placeholder:text-gray-500",
+          "placeholder:text-arena-text-dim",
           "focus:border-transparent focus:outline-none focus:ring-2 focus:ring-arena-accent",
           "disabled:cursor-not-allowed disabled:opacity-50",
           className
@@ -32,7 +32,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
       <textarea
         className={cn(
           "flex min-h-[80px] w-full rounded-lg border border-arena-border bg-arena-card px-3 py-2 text-sm text-white",
-          "placeholder:text-gray-500",
+          "placeholder:text-arena-text-dim",
           "focus:border-transparent focus:outline-none focus:ring-2 focus:ring-arena-accent",
           "disabled:cursor-not-allowed disabled:opacity-50",
           className

@@ -24,6 +24,24 @@
     --input: 240 3.7% 15.9%;
     --ring: 239 84% 67%;
     --radius: 0.5rem;
+
+    /* Arena theme colors
+     * These CSS variables enable easy theming. To create a new theme,
+     * override these variables in a new class or media query.
+     */
+    --arena-bg: 240 33% 4%;
+    --arena-card: 240 20% 8%;
+    --arena-border: 240 24% 15%;
+    --arena-accent: 239 84% 67%;
+    --arena-accent-light: 250 84% 75%;
+    --arena-pro: 142 71% 45%;
+    --arena-con: 0 84% 60%;
+    --arena-text: 0 0% 98%;
+    --arena-text-muted: 240 5% 65%;
+    --arena-text-dim: 240 5% 45%;
+    --arena-voting: 48 96% 53%;
+    --arena-gold: 45 93% 47%;
+    --arena-silver: 210 11% 71%;
   }
 }
 

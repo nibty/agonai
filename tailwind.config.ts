@@ -53,14 +53,21 @@ export default {
           900: "#0c4a6e",
           950: "#082f49",
         },
-        // Arena theme
+        // Arena theme (CSS variable-based for theming)
         arena: {
-          bg: "#0a0a0f",
-          card: "#12121a",
-          border: "#1e1e2e",
-          accent: "#6366f1",
-          pro: "#22c55e",
-          con: "#ef4444",
+          bg: "hsl(var(--arena-bg))",
+          card: "hsl(var(--arena-card))",
+          border: "hsl(var(--arena-border))",
+          accent: "hsl(var(--arena-accent))",
+          "accent-light": "hsl(var(--arena-accent-light))",
+          pro: "hsl(var(--arena-pro))",
+          con: "hsl(var(--arena-con))",
+          text: "hsl(var(--arena-text))",
+          "text-muted": "hsl(var(--arena-text-muted))",
+          "text-dim": "hsl(var(--arena-text-dim))",
+          voting: "hsl(var(--arena-voting))",
+          gold: "hsl(var(--arena-gold))",
+          silver: "hsl(var(--arena-silver))",
         },
       },
       borderRadius: {

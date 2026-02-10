@@ -63,7 +63,7 @@ export function VoteChart({
           <span className="inline-block h-2 w-2 rounded-full bg-arena-pro"></span>
           PRO {proWins > 0 && <span className="rounded bg-arena-pro/20 px-1">{`+${proWins}`}</span>}
         </span>
-        <span className="rounded-full bg-white/10 px-2 py-0.5 text-gray-400">
+        <span className="rounded-full bg-white/10 px-2 py-0.5 text-arena-text-muted">
           Round {roundResults.length + (isVoting ? 1 : 0)} / {totalRounds}
         </span>
         <span className="flex items-center gap-1.5 font-semibold text-arena-con">
@@ -102,11 +102,11 @@ export function VoteChart({
           preserveAspectRatio="none"
           viewBox={`0 0 100 ${chartHeight}`}
         >
-          {/* Gradient definitions */}
+          {/* Gradient definitions - using CSS variable colors */}
           <defs>
             <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#6366f1" />
-              <stop offset="100%" stopColor="#8b5cf6" />
+              <stop offset="0%" stopColor="hsl(var(--arena-accent))" />
+              <stop offset="100%" stopColor="hsl(250 84% 67%)" />
             </linearGradient>
             <filter id="glow">
               <feGaussianBlur stdDeviation="2" result="coloredBlur" />
@@ -157,7 +157,7 @@ export function VoteChart({
                   : point.winner === "con"
                     ? "h-4 w-4 border-white bg-arena-con shadow-lg shadow-arena-con/50"
                     : isCurrentVoting
-                      ? "h-5 w-5 animate-pulse border-yellow-300 bg-yellow-400 shadow-lg shadow-yellow-400/50"
+                      ? "h-5 w-5 animate-pulse border-arena-voting/80 bg-arena-voting shadow-lg shadow-arena-voting/50"
                       : "h-3 w-3 border-white/50 bg-arena-accent"
               }`}
               style={{

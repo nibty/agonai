@@ -58,7 +58,7 @@ export interface CardDescriptionProps extends HTMLAttributes<HTMLParagraphElemen
 
 const CardDescription = forwardRef<HTMLParagraphElement, CardDescriptionProps>(
   ({ className, ...props }, ref) => (
-    <p ref={ref} className={cn("text-sm text-gray-400", className)} {...props} />
+    <p ref={ref} className={cn("text-sm text-arena-text-muted", className)} {...props} />
   )
 );
 CardDescription.displayName = "CardDescription";

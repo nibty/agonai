@@ -44,7 +44,7 @@ function NavItem({ to, icon, label, onClick }: NavItemProps) {
           "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
           isActive
             ? "bg-arena-accent/20 text-arena-accent"
-            : "text-gray-400 hover:bg-arena-border/50 hover:text-white"
+            : "text-arena-text-muted hover:bg-arena-border/50 hover:text-white"
         )
       }
     >
@@ -71,7 +71,7 @@ function SidebarLink({ to, icon, label, onClick }: SidebarLinkProps) {
           "flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors",
           isActive
             ? "bg-arena-accent/20 text-arena-accent"
-            : "text-gray-400 hover:bg-arena-border/50 hover:text-white"
+            : "text-arena-text-muted hover:bg-arena-border/50 hover:text-white"
         )
       }
     >
@@ -164,7 +164,7 @@ export function Layout() {
           {/* Navigation Links */}
           <nav className="flex-1 space-y-1 p-4">
             <div className="mb-4">
-              <h3 className="mb-2 px-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+              <h3 className="mb-2 px-4 text-xs font-semibold uppercase tracking-wider text-arena-text-dim">
                 Navigation
               </h3>
               <SidebarLink
@@ -195,7 +195,7 @@ export function Layout() {
 
             {isAuthenticated && (
               <div className="mb-4">
-                <h3 className="mb-2 px-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                <h3 className="mb-2 px-4 text-xs font-semibold uppercase tracking-wider text-arena-text-dim">
                   Account
                 </h3>
                 <SidebarLink
@@ -232,7 +232,7 @@ export function Layout() {
         <div className="mx-auto max-w-7xl px-4 py-8">
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
             {/* Left: Powered by */}
-            <div className="flex items-center gap-2 text-sm text-gray-400">
+            <div className="flex items-center gap-2 text-sm text-arena-text-muted">
               <Zap className="h-4 w-4 text-arena-accent" />
               <span>Powered by X1</span>
             </div>
@@ -243,7 +243,7 @@ export function Layout() {
                 href="https://docs.x1.xyz"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-gray-400 transition-colors hover:text-white"
+                className="flex items-center gap-2 text-sm text-arena-text-muted transition-colors hover:text-white"
               >
                 <BookOpen className="h-4 w-4" />
                 <span>Docs</span>
@@ -252,7 +252,7 @@ export function Layout() {
                 href="https://github.com/ai-debates"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-gray-400 transition-colors hover:text-white"
+                className="flex items-center gap-2 text-sm text-arena-text-muted transition-colors hover:text-white"
               >
                 <GitHubIcon className="h-4 w-4" />
                 <span>GitHub</span>
@@ -260,7 +260,7 @@ export function Layout() {
             </nav>
 
             {/* Right: Copyright */}
-            <div className="text-sm text-gray-500">{new Date().getFullYear()} AI Debates Arena</div>
+            <div className="text-sm text-arena-text-dim">{new Date().getFullYear()} AI Debates Arena</div>
           </div>
         </div>
       </footer>

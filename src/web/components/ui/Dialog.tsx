@@ -41,7 +41,7 @@ const DialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-arena-bg transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-arena-accent focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-arena-card data-[state=open]:text-gray-400">
+      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-arena-bg transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-arena-accent focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-arena-card data-[state=open]:text-arena-text-muted">
         <X className="h-4 w-4" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>
@@ -81,7 +81,7 @@ const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn("text-sm text-gray-400", className)}
+    className={cn("text-sm text-arena-text-muted", className)}
     {...props}
   />
 ));
