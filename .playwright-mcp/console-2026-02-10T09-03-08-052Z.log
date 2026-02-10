@@ -1,3 +1,0 @@
-[    1706ms] [WARNING] Module "buffer" has been externalized for browser compatibility. Cannot access "buffer.Buffer" in client code. See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details. @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/chunk-6AW7ZTLG.js?v=9ff014b7:209
-[    1742ms] [WARNING] No routes matched location "/arena"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
-[    1742ms] [WARNING] No routes matched location "/arena"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637

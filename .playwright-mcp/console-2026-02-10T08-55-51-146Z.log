@@ -1,2 +1,0 @@
-[     379ms] [WARNING] Module "buffer" has been externalized for browser compatibility. Cannot access "buffer.Buffer" in client code. See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details. @ http://localhost:5174/node_modules/.vite/deps/chunk-4JDALLM7.js?v=e3f71bb4:1791
-[     451ms] [WARNING] WebSocket connection to 'ws://localhost:3001/ws' failed: WebSocket is closed before the connection is established. @ http://localhost:5174/routes/Arena.tsx?t=1770713641386:331

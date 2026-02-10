@@ -37,3 +37,5 @@ bun.lockb
 target
 .anchor
 programs/**/Cargo.lock
+*.png
+.playwright-mcp/
