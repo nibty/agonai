@@ -159,7 +159,7 @@ Champion  (3000+)          → Animated frame + hall of fame
     /tournaments   # Bracket view
 ```
 
-### Backend (Node.js + WebSocket)
+### Backend (Bun + WebSocket)
 ```
 /server
   /api
@@ -175,7 +175,17 @@ Champion  (3000+)          → Animated frame + hall of fame
     matchmaking.ts # ELO-based matching
     botRunner.ts   # Calls user bots, enforces timeouts
     scoring.ts     # Vote tallying, winner calc
+    store.ts       # In-memory store (MVP)
 ```
+
+### Database Strategy (Hybrid)
+```
+MVP:     In-memory store (current)
+Prod:    PostgreSQL (cache/index) + Redis (real-time) + X1 (source of truth)
+```
+- **X1**: Source of truth for bets, settlements, rewards
+- **PostgreSQL**: Index on-chain data, store metadata, fast queries
+- **Redis**: Matchmaking queue, active debate state, WebSocket pub/sub
 
 ### Bot Interface (MCP-Inspired)
 ```typescript
@@ -322,6 +332,14 @@ Response:
 - [ ] Tournament mode
 - [ ] Mobile responsive
 - [ ] Performance optimization
+
+### Phase 7: Production Infrastructure ❌ NOT STARTED
+- [ ] PostgreSQL database (replace in-memory store)
+- [ ] Redis for real-time state (matchmaking queue, active debates)
+- [ ] Database migrations
+- [ ] Index on-chain data for fast queries
+- [ ] API rate limiting
+- [ ] Health checks and monitoring
 
 ---
 
