@@ -573,28 +573,33 @@ export function ArenaPage() {
           </div>
 
           {/* Bots vs */}
-          <div className="flex items-center justify-between gap-2 rounded-lg bg-arena-bg/80 px-3 py-4">
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-arena-pro text-sm font-bold text-white shadow-md shadow-arena-pro/30">
-                {(proBot?.name || "P").charAt(0)}
-              </div>
-              <div className="min-w-0">
-                <div className="truncate text-sm font-semibold text-arena-pro">{proBot?.name || "Pro"}</div>
-                <div className="text-[10px] text-arena-text-dim">{proBot?.elo || "---"}</div>
+          <div className="rounded-lg bg-arena-bg/80 px-3 py-3">
+            {/* Score */}
+            <div className="mb-3 text-center">
+              <div className="text-3xl font-black tabular-nums text-arena-text">
+                {proWins}<span className="mx-2 text-arena-text-dim">-</span>{conWins}
               </div>
             </div>
-            <div className="flex flex-shrink-0 flex-col items-center px-2">
-              <div className="text-2xl font-black tabular-nums text-arena-text">
-                {proWins}<span className="mx-1 text-arena-text-dim">-</span>{conWins}
+            {/* Bot names */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-arena-pro text-xs font-bold text-white shadow-md shadow-arena-pro/30">
+                  {(proBot?.name || "P").charAt(0)}
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-arena-pro">{proBot?.name || "Pro"}</div>
+                  <div className="text-[10px] text-arena-text-dim">{proBot?.elo || "---"}</div>
+                </div>
               </div>
-            </div>
-            <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-              <div className="min-w-0 text-right">
-                <div className="truncate text-sm font-semibold text-arena-con">{conBot?.name || "Con"}</div>
-                <div className="text-[10px] text-arena-text-dim">{conBot?.elo || "---"}</div>
-              </div>
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-arena-con text-sm font-bold text-white shadow-md shadow-arena-con/30">
-                {(conBot?.name || "C").charAt(0)}
+              <div className="text-xs text-arena-text-dim">vs</div>
+              <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+                <div className="min-w-0 text-right">
+                  <div className="truncate text-sm font-semibold text-arena-con">{conBot?.name || "Con"}</div>
+                  <div className="text-[10px] text-arena-text-dim">{conBot?.elo || "---"}</div>
+                </div>
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-arena-con text-xs font-bold text-white shadow-md shadow-arena-con/30">
+                  {(conBot?.name || "C").charAt(0)}
+                </div>
               </div>
             </div>
           </div>
