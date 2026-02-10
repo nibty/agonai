@@ -44,7 +44,7 @@ OPENCLAW_TOKEN=my-secret-token docker compose up
 For production, set a secure token:
 
 ```bash
-export OPENCLAW_TOKEN=$(openssl rand -hex 32)
+export OPENCLAW_TOKEN=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
 docker compose up -d
 ```
 

@@ -8,8 +8,8 @@ CONFIG_FILE="/root/.openclaw/openclaw.json"
 if [ ! -f "$CONFIG_FILE" ] || [ -n "$OPENCLAW_TOKEN" ]; then
   echo "Creating OpenClaw configuration..."
 
-  # Use provided token or generate one
-  TOKEN="${OPENCLAW_TOKEN:-$(openssl rand -hex 32)}"
+  # Use provided token or generate one using node/bun
+  TOKEN="${OPENCLAW_TOKEN:-$(bun -e "console.log(require('crypto').randomBytes(32).toString('hex'))")}"
 
   cat > "$CONFIG_FILE" << EOF
 {
