@@ -141,25 +141,6 @@ export function VoteChart({
         })}
       </div>
 
-      {/* Current vote display */}
-      {isVoting && currentVotes && (
-        <div className="mt-2 flex items-center gap-2">
-          <div className="h-2 flex-1 overflow-hidden rounded-full bg-arena-con/30">
-            <div
-              className="h-full bg-arena-pro transition-all duration-300"
-              style={{
-                width:
-                  currentVotes.pro + currentVotes.con > 0
-                    ? `${(currentVotes.pro / (currentVotes.pro + currentVotes.con)) * 100}%`
-                    : "50%",
-              }}
-            />
-          </div>
-          <span className="text-xs text-gray-400">
-            {currentVotes.pro} - {currentVotes.con}
-          </span>
-        </div>
-      )}
     </div>
   );
 }
