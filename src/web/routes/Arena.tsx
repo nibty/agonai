@@ -513,8 +513,21 @@ export function ArenaPage() {
   useEffect(() => {
     if (!debateId) return;
 
+    // Don't try to connect if already failed (prevents infinite loop)
+    if (connectionStatus === "disconnected" && error) return;
+
     let isMounted = true;
-    const ws = new WebSocket(WS_URL);
+    let ws: WebSocket;
+
+    try {
+      ws = new WebSocket(WS_URL);
+    } catch (err) {
+      console.error("Failed to create WebSocket:", err);
+      setError("Failed to connect to debate server");
+      setConnectionStatus("disconnected");
+      return;
+    }
+
     wsRef.current = ws;
 
     ws.onopen = () => {
@@ -546,11 +559,9 @@ export function ArenaPage() {
 
     ws.onerror = () => {
       if (!isMounted) return;
-      setConnectionStatus((prev) => {
-        if (prev === "connected") return prev;
-        setError("WebSocket connection failed");
-        return "disconnected";
-      });
+      console.error("WebSocket error - URL:", WS_URL);
+      setError("WebSocket connection failed");
+      setConnectionStatus("disconnected");
     };
 
     return () => {
@@ -560,7 +571,7 @@ export function ArenaPage() {
         clearInterval(votingTimerRef.current);
       }
     };
-  }, [debateId, publicKey, handleWSMessage]);
+  }, [debateId, publicKey, handleWSMessage, connectionStatus, error]);
 
   const handleVote = (position: "pro" | "con") => {
     if (!connected || !debateId || hasVoted || !debate) return;
