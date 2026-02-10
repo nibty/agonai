@@ -572,9 +572,9 @@ export function ArenaPage() {
     }
   };
 
-  // Check if current user owns one of the bots
+  // Check if current user owns one of the bots (compare as strings to handle type differences)
   const userOwnsBotInDebate = userId && (
-    proBot?.ownerId === userId || conBot?.ownerId === userId
+    proBot?.ownerId === String(userId) || conBot?.ownerId === String(userId)
   );
 
   if (connectionStatus === "connecting") {
