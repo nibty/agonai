@@ -8,12 +8,24 @@ import { debateOrchestrator } from "./services/debateOrchestrator.js";
 import * as store from "./services/store.js";
 
 const PORT = parseInt(process.env["PORT"] ?? "3001");
-const CORS_ORIGIN = process.env["CORS_ORIGIN"] ?? "http://localhost:5173";
 
 // Initialize Express
 const app = express();
 
-app.use(cors({ origin: CORS_ORIGIN, credentials: true }));
+// CORS configuration - allow any localhost port in development
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin) return callback(null, true);
+      // Allow any localhost origin
+      if (origin.startsWith("http://localhost:")) return callback(null, true);
+      // Block other origins
+      callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 // API routes
