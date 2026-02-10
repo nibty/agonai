@@ -574,7 +574,7 @@ export function ArenaPage() {
 
   // Check if current user owns one of the bots (compare as strings to handle type differences)
   const userOwnsBotInDebate = userId && (
-    proBot?.ownerId === String(userId) || conBot?.ownerId === String(userId)
+    String(proBot?.ownerId) === String(userId) || String(conBot?.ownerId) === String(userId)
   );
 
   if (connectionStatus === "connecting") {
