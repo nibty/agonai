@@ -472,13 +472,19 @@ export class DebateOrchestratorService {
     roundIndex: number,
     walletAddress: string,
     choice: DebatePosition
-  ): Promise<boolean> {
+  ): Promise<{ success: boolean; error?: string }> {
     const state = this.activeDebates.get(debateId);
-    if (!state) return false;
+    if (!state) {
+      return { success: false, error: "Debate not active" };
+    }
 
     // Check if voting is active for this round
-    if (state.debate.currentRoundIndex !== roundIndex) return false;
-    if (state.debate.roundStatus !== "voting") return false;
+    if (state.debate.currentRoundIndex !== roundIndex) {
+      return { success: false, error: `Wrong round (expected ${state.debate.currentRoundIndex}, got ${roundIndex})` };
+    }
+    if (state.debate.roundStatus !== "voting") {
+      return { success: false, error: `Voting not open (status: ${state.debate.roundStatus})` };
+    }
 
     // Look up or create user by wallet address
     const user = await userRepository.findOrCreate(walletAddress);
@@ -491,7 +497,11 @@ export class DebateOrchestratorService {
       choice,
     });
 
-    return vote !== null;
+    if (!vote) {
+      return { success: false, error: "Already voted this round" };
+    }
+
+    return { success: true };
   }
 
   /**

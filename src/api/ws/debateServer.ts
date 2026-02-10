@@ -242,14 +242,14 @@ export class DebateWebSocketServer {
       return;
     }
 
-    const success = await debateOrchestrator.submitVote(
+    const voteResult = await debateOrchestrator.submitVote(
       debateId,
       roundIndex,
       client.userId,
       choice
     );
 
-    if (success) {
+    if (voteResult.success) {
       client.ws.send(
         JSON.stringify({
           type: "vote_accepted",
@@ -260,7 +260,7 @@ export class DebateWebSocketServer {
       client.ws.send(
         JSON.stringify({
           type: "error",
-          payload: { code: "VOTE_FAILED", message: "Vote could not be submitted" },
+          payload: { code: "VOTE_FAILED", message: voteResult.error || "Vote could not be submitted" },
         })
       );
     }
