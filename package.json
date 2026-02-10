@@ -34,7 +34,8 @@
     "db:migrate": "bun run src/api/scripts/migrate.ts",
     "db:seed": "bun run src/api/scripts/seed.ts",
     "db:clear": "bun run src/api/scripts/clear.ts",
-    "db:studio": "cd src/api && bunx drizzle-kit studio"
+    "db:studio": "cd src/api && bunx drizzle-kit studio",
+    "docs": "bun run scripts/serve-docs.ts"
   },
   "dependencies": {
     "@solana/wallet-adapter-base": "^0.9.23",
