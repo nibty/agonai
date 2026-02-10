@@ -61,7 +61,7 @@ function MessageBubble({ message, botName }: { message: DebateMessage; botName: 
   return (
     <div className={`flex ${isPro ? "justify-start" : "justify-end"}`}>
       <div
-        className={`max-w-[85%] ${isPro ? "order-1" : "order-2"} flex gap-3 ${
+        className={`max-w-[90%] ${isPro ? "order-1" : "order-2"} flex gap-2 ${
           isPro ? "" : "flex-row-reverse"
         }`}
       >
@@ -117,7 +117,7 @@ export function ArenaPage() {
   const speakRef = useRef<((text: string, position: "pro" | "con") => void) | null>(null);
   const processQueueRef = useRef<() => void>(() => {});
 
-  // Process TTS queue - uses ref to avoid circular dependency
+  // Process TTS queue
   processQueueRef.current = () => {
     const item = speechQueueRef.current.shift();
     if (!item) {
@@ -129,20 +129,15 @@ export function ArenaPage() {
     const { text, position } = item;
 
     const utterance = new SpeechSynthesisUtterance(text);
-
-    // Get available voices
     const voices = window.speechSynthesis.getVoices();
 
-    // Try to use different voices for pro/con
     if (position === "pro") {
-      // Try to find a male voice for pro
       const maleVoice = voices.find(
         (v) => v.name.includes("Male") || v.name.includes("David") || v.name.includes("James")
       );
       if (maleVoice) utterance.voice = maleVoice;
       utterance.pitch = 1.0;
     } else {
-      // Try to find a female voice for con
       const femaleVoice = voices.find(
         (v) =>
           v.name.includes("Female") || v.name.includes("Samantha") || v.name.includes("Victoria")
@@ -151,22 +146,19 @@ export function ArenaPage() {
       utterance.pitch = 1.1;
     }
 
-    utterance.rate = 1.1; // Slightly faster
+    utterance.rate = 1.1;
     utterance.onend = () => processQueueRef.current();
     utterance.onerror = () => processQueueRef.current();
 
     window.speechSynthesis.speak(utterance);
   };
 
-  // Text-to-speech function
   const speak = useCallback(
     (text: string, position: "pro" | "con") => {
       if (!ttsEnabled || typeof window === "undefined" || !window.speechSynthesis) return;
 
-      // Add to queue
       speechQueueRef.current.push({ text, position });
 
-      // If not currently speaking, start processing queue
       if (!isSpeaking) {
         processQueueRef.current();
       }
@@ -174,17 +166,15 @@ export function ArenaPage() {
     [ttsEnabled, isSpeaking]
   );
 
-  // Load voices when available
   useEffect(() => {
     if (typeof window !== "undefined" && window.speechSynthesis) {
-      window.speechSynthesis.getVoices(); // Trigger voice loading
+      window.speechSynthesis.getVoices();
       window.speechSynthesis.onvoiceschanged = () => {
         window.speechSynthesis.getVoices();
       };
     }
   }, []);
 
-  // Stop speech when TTS is disabled
   useEffect(() => {
     if (!ttsEnabled && typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.cancel();
@@ -193,17 +183,14 @@ export function ArenaPage() {
     }
   }, [ttsEnabled]);
 
-  // Keep speak ref updated
   useEffect(() => {
     speakRef.current = speak;
   }, [speak]);
 
-  // Scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Handle WebSocket messages
   const handleWSMessage = useCallback(
     (msg: { type: string; payload?: unknown; debateId?: string }) => {
       console.log("WS message:", msg.type, msg.payload);
@@ -263,7 +250,6 @@ export function ArenaPage() {
               timestamp: new Date(),
             },
           ]);
-          // Speak the message (uses ref to avoid dependency issues)
           speakRef.current?.(payload.content, payload.position);
           break;
         }
@@ -330,7 +316,6 @@ export function ArenaPage() {
     []
   );
 
-  // WebSocket connection
   useEffect(() => {
     if (!debateId) return;
 
@@ -342,7 +327,6 @@ export function ArenaPage() {
       if (!isMounted) return;
       setConnectionStatus("connected");
       setError(null);
-      // Join the debate
       ws.send(
         JSON.stringify({
           type: "join_debate",
@@ -398,7 +382,6 @@ export function ArenaPage() {
     );
   };
 
-  // Loading state
   if (connectionStatus === "connecting") {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
@@ -410,7 +393,6 @@ export function ArenaPage() {
     );
   }
 
-  // Error state
   if (error || connectionStatus === "disconnected") {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
@@ -424,138 +406,76 @@ export function ArenaPage() {
     );
   }
 
+  const proWins = debate?.roundResults.filter((r) => r.winner === "pro").length || 0;
+  const conWins = debate?.roundResults.filter((r) => r.winner === "con").length || 0;
+
   return (
-    <div className="flex h-[calc(100vh-theme(spacing.16)-theme(spacing.16))] flex-col">
-      {/* Compact Header Bar */}
-      <div className="flex flex-shrink-0 items-center justify-between border-b border-arena-border/50 pb-2">
-        <div className="flex items-center gap-4">
-          <Link to="/queue" className="text-sm text-gray-400 transition-colors hover:text-white">
-            ← Back
-          </Link>
-          <div className="h-4 w-px bg-arena-border" />
-          {debate?.status === "in_progress" && <Badge variant="live">LIVE</Badge>}
-          {debate?.status === "completed" && <Badge variant="outline">COMPLETED</Badge>}
-          <span className="text-xs text-gray-500">{debate?.spectatorCount || 0} watching</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setTtsEnabled(!ttsEnabled)}
-            className={`rounded px-2 py-1 text-xs transition-colors ${
-              ttsEnabled
-                ? "bg-arena-accent/20 text-arena-accent"
-                : "text-gray-500 hover:text-gray-300"
-            }`}
-          >
-            {ttsEnabled ? (isSpeaking ? "Speaking..." : "TTS On") : "TTS Off"}
-          </button>
-        </div>
-      </div>
-
-      {/* Topic + Bots Row */}
-      <div className="flex flex-shrink-0 items-center gap-4 border-b border-arena-border/30 py-3">
-        {/* PRO Bot */}
-        <div className="flex items-center gap-2">
-          <BotAvatar size="sm" alt={proBot?.name || "Pro"} tier={3} />
-          <div className="text-sm">
-            <span className="font-semibold text-arena-pro">{proBot?.name || "Pro Bot"}</span>
-            <span className="ml-1.5 text-xs text-gray-500">{proBot?.elo || "---"}</span>
+    <div className="flex h-[calc(100vh-theme(spacing.16)-theme(spacing.16))] gap-4">
+      {/* Left Sidebar - Score & Voting */}
+      <div className="flex w-72 flex-shrink-0 flex-col gap-3">
+        {/* Match Info Card */}
+        <div className="rounded-lg border border-arena-border/50 bg-arena-card/50 p-3">
+          <div className="mb-3 flex items-center justify-between text-xs text-gray-500">
+            <Link to="/queue" className="transition-colors hover:text-white">
+              ← Back
+            </Link>
+            <div className="flex items-center gap-2">
+              {debate?.status === "in_progress" && <Badge variant="live">LIVE</Badge>}
+              {debate?.status === "completed" && <Badge variant="outline">DONE</Badge>}
+              <span>{debate?.spectatorCount || 0} watching</span>
+            </div>
           </div>
-        </div>
 
-        {/* Topic - Center */}
-        <div className="flex min-w-0 flex-1 flex-col items-center text-center">
-          {topic && (
-            <span className="text-[10px] font-medium uppercase tracking-wider text-gray-500">
-              {topic.category}
-            </span>
-          )}
-          <h1 className="max-w-2xl truncate text-sm font-semibold text-white">
-            {topic?.text || debate?.topic || "Loading..."}
-          </h1>
-          <div className="flex items-center gap-3 text-[10px] text-gray-500">
-            <span className="uppercase">{debate?.currentRound || "pending"}</span>
-            <span className="h-1 w-1 rounded-full bg-gray-600" />
-            <span>{(debate?.stake || 0).toLocaleString()} XNT</span>
-          </div>
-        </div>
-
-        {/* CON Bot */}
-        <div className="flex items-center gap-2">
-          <div className="text-right text-sm">
-            <span className="font-semibold text-arena-con">{conBot?.name || "Con Bot"}</span>
-            <span className="ml-1.5 text-xs text-gray-500">{conBot?.elo || "---"}</span>
-          </div>
-          <BotAvatar size="sm" alt={conBot?.name || "Con"} tier={3} />
-        </div>
-      </div>
-
-      {/* Vote Chart */}
-      <div className="flex-shrink-0 py-2">
-        <VoteChart
-          roundResults={debate?.roundResults || []}
-          currentVotes={currentVotes}
-          currentRound={debate?.currentRound}
-          isVoting={debate?.roundStatus === "voting"}
-        />
-      </div>
-
-      {/* Debate Feed - Takes remaining space */}
-      <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg border border-arena-border/50 bg-arena-card/50">
-        <div className="absolute inset-0 overflow-y-auto p-4">
-          <div className="space-y-4">
-            {messages.length === 0 && (
-              <div className="flex h-full items-center justify-center py-20 text-sm text-gray-500">
-                Waiting for debate to start...
-              </div>
-            )}
-            {messages.map((message) => (
-              <MessageBubble
-                key={message.id}
-                message={message}
-                botName={
-                  message.position === "pro" ? proBot?.name || "Pro Bot" : conBot?.name || "Con Bot"
-                }
-              />
-            ))}
-
-            {/* Typing indicator */}
-            {typingBot && (
-              <div className={`flex ${typingBot === "pro" ? "justify-start" : "justify-end"}`}>
-                <div className="flex items-center gap-2 text-xs text-gray-400">
-                  <span>{typingBot === "pro" ? proBot?.name : conBot?.name} is typing</span>
-                  <span className="flex gap-0.5">
-                    <span
-                      className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400"
-                      style={{ animationDelay: "0ms" }}
-                    />
-                    <span
-                      className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400"
-                      style={{ animationDelay: "150ms" }}
-                    />
-                    <span
-                      className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400"
-                      style={{ animationDelay: "300ms" }}
-                    />
-                  </span>
-                </div>
-              </div>
-            )}
-
-            <div ref={messagesEndRef} />
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Bar: Voting or Results */}
-      <div className="flex-shrink-0 pt-3">
-        {/* Voting Section */}
-        {debate?.roundStatus === "voting" && (
-          <div className="flex items-center justify-between rounded-lg border border-arena-accent/50 bg-arena-accent/5 px-4 py-3">
-            <div className="text-sm">
-              <span className="font-medium text-white">Vote Now</span>
-              <span className="ml-2 text-xs text-gray-400">
-                {hasVoted ? `Voted ${selectedVote?.toUpperCase()}` : debate.currentRound}
+          {/* Topic */}
+          <div className="mb-3 text-center">
+            {topic && (
+              <span className="text-[10px] font-medium uppercase tracking-wider text-gray-500">
+                {topic.category}
               </span>
+            )}
+            <h1 className="text-sm font-semibold text-white">
+              {topic?.text || debate?.topic || "Loading..."}
+            </h1>
+            <span className="text-[10px] text-gray-500">{(debate?.stake || 0).toLocaleString()} XNT</span>
+          </div>
+
+          {/* Bots vs */}
+          <div className="flex items-center justify-between rounded bg-arena-bg/50 p-2">
+            <div className="flex items-center gap-2">
+              <BotAvatar size="sm" alt={proBot?.name || "Pro"} tier={3} />
+              <div>
+                <div className="text-xs font-medium text-arena-pro">{proBot?.name || "Pro"}</div>
+                <div className="text-[10px] text-gray-500">{proBot?.elo || "---"}</div>
+              </div>
+            </div>
+            <div className="text-lg font-bold text-white">
+              {proWins} - {conWins}
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="text-right">
+                <div className="text-xs font-medium text-arena-con">{conBot?.name || "Con"}</div>
+                <div className="text-[10px] text-gray-500">{conBot?.elo || "---"}</div>
+              </div>
+              <BotAvatar size="sm" alt={conBot?.name || "Con"} tier={3} />
+            </div>
+          </div>
+        </div>
+
+        {/* Chart */}
+        <div className="rounded-lg border border-arena-border/50 bg-arena-card/50 p-3">
+          <VoteChart
+            roundResults={debate?.roundResults || []}
+            currentVotes={currentVotes}
+            currentRound={debate?.currentRound}
+            isVoting={debate?.roundStatus === "voting"}
+          />
+        </div>
+
+        {/* Voting Panel */}
+        {debate?.roundStatus === "voting" && (
+          <div className="rounded-lg border border-arena-accent/50 bg-arena-accent/5 p-3">
+            <div className="mb-2 text-center text-sm font-medium text-white">
+              Vote Now - {debate.currentRound}
             </div>
             {connected ? (
               <div className="flex gap-2">
@@ -564,22 +484,27 @@ export function ArenaPage() {
                   size="sm"
                   disabled={hasVoted}
                   onClick={() => handleVote("pro")}
-                  className={hasVoted && selectedVote !== "pro" ? "opacity-40" : ""}
+                  className={`flex-1 ${hasVoted && selectedVote !== "pro" ? "opacity-40" : ""}`}
                 >
-                  PRO
+                  PRO {hasVoted && selectedVote === "pro" && "✓"}
                 </Button>
                 <Button
                   variant="con"
                   size="sm"
                   disabled={hasVoted}
                   onClick={() => handleVote("con")}
-                  className={hasVoted && selectedVote !== "con" ? "opacity-40" : ""}
+                  className={`flex-1 ${hasVoted && selectedVote !== "con" ? "opacity-40" : ""}`}
                 >
-                  CON
+                  CON {hasVoted && selectedVote === "con" && "✓"}
                 </Button>
               </div>
             ) : (
-              <span className="text-xs text-gray-400">Connect wallet to vote</span>
+              <div className="text-center text-xs text-gray-400">Connect wallet to vote</div>
+            )}
+            {hasVoted && (
+              <div className="mt-2 text-center text-xs text-gray-400">
+                Current: {currentVotes.pro} - {currentVotes.con}
+              </div>
             )}
           </div>
         )}
@@ -587,35 +512,83 @@ export function ArenaPage() {
         {/* Winner Banner */}
         {debate?.status === "completed" && debate.winner && (
           <div
-            className={`rounded-lg border px-4 py-3 text-center ${
+            className={`rounded-lg border p-3 text-center ${
               debate.winner === "pro"
                 ? "border-arena-pro/50 bg-arena-pro/10"
                 : "border-arena-con/50 bg-arena-con/10"
             }`}
           >
-            <span className="font-semibold text-white">
+            <div className="text-sm font-semibold text-white">
               {debate.winner === "pro" ? proBot?.name : conBot?.name} Wins!
-            </span>
-            <span className="ml-2 text-sm text-gray-400">
-              {debate.roundResults.filter((r) => r.winner === "pro").length} -{" "}
-              {debate.roundResults.filter((r) => r.winner === "con").length}
-            </span>
+            </div>
+            <div className="text-xs text-gray-400">
+              Final: {proWins} - {conWins}
+            </div>
           </div>
         )}
 
-        {/* Round Results - Compact inline */}
-        {debate && debate.roundResults.length > 0 && debate.status !== "completed" && (
-          <div className="flex items-center justify-center gap-4 pt-2 text-xs text-gray-500">
-            {debate.roundResults.map((result, index) => (
-              <div key={index} className="flex items-center gap-1">
-                <span className="capitalize">{result.round}:</span>
-                <span className={result.winner === "pro" ? "text-arena-pro" : "text-arena-con"}>
-                  {result.winner.toUpperCase()}
-                </span>
-              </div>
-            ))}
+        {/* TTS Toggle */}
+        <button
+          onClick={() => setTtsEnabled(!ttsEnabled)}
+          className={`rounded-lg border p-2 text-xs transition-colors ${
+            ttsEnabled
+              ? "border-arena-accent/50 bg-arena-accent/10 text-arena-accent"
+              : "border-arena-border/50 text-gray-500 hover:text-gray-300"
+          }`}
+        >
+          {ttsEnabled ? (isSpeaking ? "🔊 Speaking..." : "🔊 TTS On") : "🔇 TTS Off"}
+        </button>
+      </div>
+
+      {/* Main Content - Debate Feed */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Current Round Indicator */}
+        <div className="mb-2 flex items-center justify-center gap-2 text-xs">
+          <span className="text-gray-500">{debate?.currentRound || "Waiting..."}</span>
+          {debate?.roundStatus === "bot_responding" && (
+            <span className="text-yellow-500">● Bots debating</span>
+          )}
+          {debate?.roundStatus === "voting" && (
+            <span className="text-arena-accent">● Voting open</span>
+          )}
+        </div>
+
+        {/* Messages */}
+        <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg border border-arena-border/50 bg-arena-card/30">
+          <div className="absolute inset-0 overflow-y-auto p-4">
+            <div className="space-y-3">
+              {messages.length === 0 && (
+                <div className="flex h-full items-center justify-center py-20 text-sm text-gray-500">
+                  Waiting for debate to start...
+                </div>
+              )}
+              {messages.map((message) => (
+                <MessageBubble
+                  key={message.id}
+                  message={message}
+                  botName={
+                    message.position === "pro" ? proBot?.name || "Pro Bot" : conBot?.name || "Con Bot"
+                  }
+                />
+              ))}
+
+              {typingBot && (
+                <div className={`flex ${typingBot === "pro" ? "justify-start" : "justify-end"}`}>
+                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                    <span>{typingBot === "pro" ? proBot?.name : conBot?.name} is typing</span>
+                    <span className="flex gap-0.5">
+                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400" style={{ animationDelay: "0ms" }} />
+                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400" style={{ animationDelay: "150ms" }} />
+                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400" style={{ animationDelay: "300ms" }} />
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
