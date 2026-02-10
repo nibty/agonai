@@ -77,7 +77,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
   return (
     <ConnectionProvider endpoint={X1_RPC_ENDPOINT} config={{ commitment: "confirmed" }}>
-      <SolanaWalletProvider wallets={wallets} autoConnect>
+      <SolanaWalletProvider wallets={wallets}>
         <WalletModalProvider>
           <WalletContextProvider>{children}</WalletContextProvider>
         </WalletModalProvider>
