@@ -63,7 +63,7 @@ export function VoteChart({
           <span className="inline-block h-2 w-2 rounded-full bg-arena-pro"></span>
           PRO {proWins > 0 && <span className="rounded bg-arena-pro/20 px-1">{`+${proWins}`}</span>}
         </span>
-        <span className="rounded-full bg-white/10 px-2 py-0.5 text-arena-text-muted">
+        <span className="rounded-full bg-arena-border/50 px-2 py-0.5 text-arena-text-muted">
           Round {roundResults.length + (isVoting ? 1 : 0)} / {totalRounds}
         </span>
         <span className="flex items-center gap-1.5 font-semibold text-arena-con">
@@ -88,13 +88,13 @@ export function VoteChart({
 
         {/* Center line */}
         <div
-          className="absolute inset-x-0 border-t border-white/20"
+          className="absolute inset-x-0 border-t border-arena-text/20"
           style={{ top: chartHeight / 2 }}
         />
 
         {/* Grid lines */}
-        <div className="absolute inset-x-0 border-t border-white/5" style={{ top: chartHeight / 4 }} />
-        <div className="absolute inset-x-0 border-t border-white/5" style={{ top: (chartHeight * 3) / 4 }} />
+        <div className="absolute inset-x-0 border-t border-arena-text/5" style={{ top: chartHeight / 4 }} />
+        <div className="absolute inset-x-0 border-t border-arena-text/5" style={{ top: (chartHeight * 3) / 4 }} />
 
         {/* Line chart */}
         <svg
@@ -106,7 +106,7 @@ export function VoteChart({
           <defs>
             <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="hsl(var(--arena-accent))" />
-              <stop offset="100%" stopColor="hsl(250 84% 67%)" />
+              <stop offset="100%" stopColor="hsl(var(--arena-accent-light))" />
             </linearGradient>
             <filter id="glow">
               <feGaussianBlur stdDeviation="2" result="coloredBlur" />
@@ -153,12 +153,12 @@ export function VoteChart({
               key={`point-${i}-${point.round}`}
               className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 ${
                 point.winner === "pro"
-                  ? "h-4 w-4 border-white bg-arena-pro shadow-lg shadow-arena-pro/50"
+                  ? "h-4 w-4 border-arena-card bg-arena-pro shadow-lg shadow-arena-pro/50"
                   : point.winner === "con"
-                    ? "h-4 w-4 border-white bg-arena-con shadow-lg shadow-arena-con/50"
+                    ? "h-4 w-4 border-arena-card bg-arena-con shadow-lg shadow-arena-con/50"
                     : isCurrentVoting
                       ? "h-5 w-5 animate-pulse border-arena-voting/80 bg-arena-voting shadow-lg shadow-arena-voting/50"
-                      : "h-3 w-3 border-white/50 bg-arena-accent"
+                      : "h-3 w-3 border-arena-card/50 bg-arena-accent"
               }`}
               style={{
                 left: `${x}%`,

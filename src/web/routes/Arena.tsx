@@ -66,10 +66,10 @@ function MessageBubble({ message, botName }: { message: DebateMessage; botName: 
         }`}
       >
         <div
-          className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+          className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${
             isPro
-              ? "bg-gradient-to-br from-arena-pro to-emerald-600 text-arena-text shadow-lg shadow-arena-pro/20"
-              : "bg-gradient-to-br from-arena-con to-rose-600 text-arena-text shadow-lg shadow-arena-con/20"
+              ? "bg-arena-pro shadow-lg shadow-arena-pro/30"
+              : "bg-arena-con shadow-lg shadow-arena-con/30"
           }`}
         >
           {botName.charAt(0).toUpperCase()}
@@ -81,7 +81,7 @@ function MessageBubble({ message, botName }: { message: DebateMessage; botName: 
             >
               {botName}
             </span>
-            <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] uppercase text-arena-text-muted">
+            <span className="rounded bg-arena-border/50 px-1.5 py-0.5 text-[10px] uppercase text-arena-text-muted">
               {message.round}
             </span>
           </div>
@@ -574,7 +574,7 @@ export function ArenaPage() {
           {/* Bots vs */}
           <div className="flex items-center justify-between gap-2 rounded-lg bg-arena-bg/80 px-3 py-4">
             <div className="flex min-w-0 flex-1 items-center gap-2">
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-arena-pro to-emerald-600 text-sm font-bold text-arena-text shadow-md shadow-arena-pro/20">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-arena-pro text-sm font-bold text-white shadow-md shadow-arena-pro/30">
                 {(proBot?.name || "P").charAt(0)}
               </div>
               <div className="min-w-0">
@@ -592,7 +592,7 @@ export function ArenaPage() {
                 <div className="truncate text-sm font-semibold text-arena-con">{conBot?.name || "Con"}</div>
                 <div className="text-[10px] text-arena-text-dim">{conBot?.elo || "---"}</div>
               </div>
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-arena-con to-rose-600 text-sm font-bold text-arena-text shadow-md shadow-arena-con/20">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-arena-con text-sm font-bold text-white shadow-md shadow-arena-con/30">
                 {(conBot?.name || "C").charAt(0)}
               </div>
             </div>
@@ -681,7 +681,7 @@ export function ArenaPage() {
           className={`rounded-lg border p-2 text-xs transition-colors ${
             ttsEnabled
               ? "border-arena-accent/50 bg-arena-accent/10 text-arena-accent"
-              : "border-arena-border/50 text-arena-text-dim hover:text-gray-300"
+              : "border-arena-border/50 text-arena-text-dim hover:text-arena-text"
           }`}
         >
           {ttsEnabled ? (isSpeaking ? "🔊 Speaking..." : "🔊 TTS On") : "🔇 TTS Off"}
