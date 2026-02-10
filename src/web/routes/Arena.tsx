@@ -3,9 +3,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useWallet } from "@/hooks/useWallet";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/Card";
-import { Badge, TierBadge } from "@/components/ui/Badge";
+import { Badge } from "@/components/ui/Badge";
 import { BotAvatar } from "@/components/ui/Avatar";
-import { DualProgress, Progress } from "@/components/ui/Progress";
+import { DualProgress } from "@/components/ui/Progress";
 
 const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:3001/ws";
 
@@ -60,14 +60,14 @@ function MessageBubble({ message, botName }: { message: DebateMessage; botName: 
   return (
     <div className={`flex ${isPro ? "justify-start" : "justify-end"}`}>
       <div
-        className={`max-w-[85%] ${isPro ? "order-1" : "order-2"} flex gap-3 ${
+        className={`max-w-[80%] ${isPro ? "order-1" : "order-2"} flex gap-4 ${
           isPro ? "" : "flex-row-reverse"
         }`}
       >
-        <BotAvatar size="sm" alt={botName} tier={3} className="flex-shrink-0" />
+        <BotAvatar size="md" alt={botName} tier={3} className="flex-shrink-0" />
         <div>
-          <div className={`mb-1 flex items-center gap-2 ${isPro ? "" : "justify-end"}`}>
-            <span className={`text-sm font-medium ${isPro ? "text-arena-pro" : "text-arena-con"}`}>
+          <div className={`mb-2 flex items-center gap-2 ${isPro ? "" : "justify-end"}`}>
+            <span className={`font-semibold ${isPro ? "text-arena-pro" : "text-arena-con"}`}>
               {botName}
             </span>
             <Badge variant={isPro ? "pro" : "con"} className="text-xs">
@@ -77,76 +77,14 @@ function MessageBubble({ message, botName }: { message: DebateMessage; botName: 
               {message.round}
             </Badge>
           </div>
-          <Card variant={isPro ? "pro" : "con"} className="p-4">
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-200">
+          <Card variant={isPro ? "pro" : "con"} className="p-5">
+            <p className="whitespace-pre-wrap text-base leading-relaxed text-gray-100">
               {message.content}
             </p>
           </Card>
         </div>
       </div>
     </div>
-  );
-}
-
-function BotInfoPanel({
-  bot,
-  position,
-  votes,
-  totalVotes,
-}: {
-  bot: BotInfo | null;
-  position: "pro" | "con";
-  votes: number;
-  totalVotes: number;
-}) {
-  const isPro = position === "pro";
-  const votePercentage = totalVotes > 0 ? (votes / totalVotes) * 100 : 50;
-
-  if (!bot) {
-    return (
-      <Card variant={isPro ? "pro" : "con"}>
-        <CardContent className="animate-pulse">
-          <div className="mb-4 h-16 rounded bg-arena-border"></div>
-          <div className="h-4 w-3/4 rounded bg-arena-border"></div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card variant={isPro ? "pro" : "con"}>
-      <CardContent>
-        <div className="mb-4 flex items-center gap-3">
-          <BotAvatar size="lg" alt={bot.name} tier={3} />
-          <div>
-            <div className={`font-semibold ${isPro ? "text-arena-pro" : "text-arena-con"}`}>
-              {bot.name}
-            </div>
-            <div className="text-sm text-gray-400">ELO {bot.elo}</div>
-            <div className="mt-1 flex gap-1">
-              <TierBadge tier={3} />
-            </div>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4 text-center text-sm">
-          <div>
-            <div className="font-medium text-white">{bot.wins}</div>
-            <div className="text-gray-400">Wins</div>
-          </div>
-          <div>
-            <div className="font-medium text-white">{bot.losses}</div>
-            <div className="text-gray-400">Losses</div>
-          </div>
-        </div>
-        <div className="mt-4">
-          <div className="mb-1 flex justify-between text-sm">
-            <span className="text-gray-400">Current Votes</span>
-            <span className="font-medium text-white">{votePercentage.toFixed(1)}%</span>
-          </div>
-          <Progress value={votePercentage} variant={isPro ? "pro" : "con"} />
-        </div>
-      </CardContent>
-    </Card>
   );
 }
 
@@ -456,8 +394,6 @@ export function ArenaPage() {
     );
   };
 
-  const totalVotes = currentVotes.pro + currentVotes.con;
-
   // Loading state
   if (connectionStatus === "connecting") {
     return (
@@ -569,80 +505,95 @@ export function ArenaPage() {
         <DualProgress proValue={currentVotes.pro} conValue={currentVotes.con} />
       </div>
 
-      {/* Main Arena */}
-      <div className="grid gap-6 lg:grid-cols-4">
-        {/* PRO Bot Panel */}
-        <div className="hidden lg:block">
-          <BotInfoPanel
-            bot={proBot}
-            position="pro"
-            votes={currentVotes.pro}
-            totalVotes={totalVotes}
-          />
+      {/* Bot Info Bar */}
+      <div className="flex items-center justify-between gap-4 rounded-lg border border-arena-border bg-arena-card p-3">
+        {/* PRO Bot */}
+        <div className="flex items-center gap-3">
+          <BotAvatar size="md" alt={proBot?.name || "Pro"} tier={3} />
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-arena-pro">{proBot?.name || "Pro Bot"}</span>
+              <Badge variant="pro" className="text-xs">PRO</Badge>
+            </div>
+            <div className="text-sm text-gray-400">
+              ELO {proBot?.elo || "---"} · {proBot?.wins || 0}W/{proBot?.losses || 0}L
+            </div>
+          </div>
         </div>
 
-        {/* Debate Feed */}
-        <div className="lg:col-span-2">
-          <Card className="flex h-[600px] flex-col">
-            <CardHeader>
+        {/* VS */}
+        <div className="flex flex-col items-center">
+          <span className="text-lg font-bold text-gray-500">VS</span>
+        </div>
+
+        {/* CON Bot */}
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <div className="flex items-center justify-end gap-2">
+              <Badge variant="con" className="text-xs">CON</Badge>
+              <span className="font-semibold text-arena-con">{conBot?.name || "Con Bot"}</span>
+            </div>
+            <div className="text-sm text-gray-400">
+              ELO {conBot?.elo || "---"} · {conBot?.wins || 0}W/{conBot?.losses || 0}L
+            </div>
+          </div>
+          <BotAvatar size="md" alt={conBot?.name || "Con"} tier={3} />
+        </div>
+      </div>
+
+      {/* Debate Feed - Full Width, Large Height */}
+      <Card className="flex min-h-[calc(100vh-400px)] flex-col">
+        <CardHeader className="flex-shrink-0 border-b border-arena-border pb-3">
+          <div className="flex items-center justify-between">
+            <div>
               <CardTitle>Debate Feed</CardTitle>
               <CardDescription>
                 {messages.length === 0
                   ? "Waiting for debate to start..."
                   : `${messages.length} messages`}
               </CardDescription>
-            </CardHeader>
-            <CardContent className="flex-1 space-y-4 overflow-y-auto">
-              {messages.map((message) => (
-                <MessageBubble
-                  key={message.id}
-                  message={message}
-                  botName={
-                    message.position === "pro"
-                      ? proBot?.name || "Pro Bot"
-                      : conBot?.name || "Con Bot"
-                  }
-                />
-              ))}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="flex-1 space-y-6 overflow-y-auto py-6">
+          {messages.map((message) => (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              botName={
+                message.position === "pro"
+                  ? proBot?.name || "Pro Bot"
+                  : conBot?.name || "Con Bot"
+              }
+            />
+          ))}
 
-              {/* Typing indicator */}
-              {typingBot && (
-                <div className={`flex ${typingBot === "pro" ? "justify-start" : "justify-end"}`}>
-                  <div className="flex items-center gap-2 p-4 text-sm text-gray-400">
-                    <span>{typingBot === "pro" ? proBot?.name : conBot?.name} is typing</span>
-                    <span className="flex gap-1">
-                      <span
-                        className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400"
-                        style={{ animationDelay: "0ms" }}
-                      ></span>
-                      <span
-                        className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400"
-                        style={{ animationDelay: "150ms" }}
-                      ></span>
-                      <span
-                        className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400"
-                        style={{ animationDelay: "300ms" }}
-                      ></span>
-                    </span>
-                  </div>
-                </div>
-              )}
+          {/* Typing indicator */}
+          {typingBot && (
+            <div className={`flex ${typingBot === "pro" ? "justify-start" : "justify-end"}`}>
+              <div className="flex items-center gap-2 p-4 text-sm text-gray-400">
+                <span>{typingBot === "pro" ? proBot?.name : conBot?.name} is typing</span>
+                <span className="flex gap-1">
+                  <span
+                    className="h-2 w-2 animate-bounce rounded-full bg-gray-400"
+                    style={{ animationDelay: "0ms" }}
+                  ></span>
+                  <span
+                    className="h-2 w-2 animate-bounce rounded-full bg-gray-400"
+                    style={{ animationDelay: "150ms" }}
+                  ></span>
+                  <span
+                    className="h-2 w-2 animate-bounce rounded-full bg-gray-400"
+                    style={{ animationDelay: "300ms" }}
+                  ></span>
+                </span>
+              </div>
+            </div>
+          )}
 
-              <div ref={messagesEndRef} />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* CON Bot Panel */}
-        <div className="hidden lg:block">
-          <BotInfoPanel
-            bot={conBot}
-            position="con"
-            votes={currentVotes.con}
-            totalVotes={totalVotes}
-          />
-        </div>
-      </div>
+          <div ref={messagesEndRef} />
+        </CardContent>
+      </Card>
 
       {/* Voting Section */}
       {debate?.roundStatus === "voting" && (
