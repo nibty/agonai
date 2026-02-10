@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { Wallet, Copy, LogOut, ExternalLink, Check, KeyRound } from "lucide-react";
 import { Dropdown, DropdownItem, DropdownDivider } from "flowbite-react";
-import type { CustomFlowbiteTheme } from "flowbite-react";
+import type { DropdownTheme } from "flowbite-react";
 import { Button } from "@/components/ui/Button";
+
+type CustomDropdownTheme = { floating: Partial<DropdownTheme["floating"]> };
 import { useWallet } from "@/hooks/useWallet";
 import { useAuth } from "@/hooks/useAuth";
 import { useBalance } from "@/hooks/useBalance";
 import { cn, truncateAddress, formatNumber } from "@/lib/utils";
 
-const dropdownTheme: CustomFlowbiteTheme["dropdown"] = {
+const dropdownTheme: CustomDropdownTheme = {
   floating: {
     base: "z-10 w-fit divide-y divide-arena-border rounded-lg shadow-lg focus:outline-none",
     content: "py-1 text-sm !text-arena-text",

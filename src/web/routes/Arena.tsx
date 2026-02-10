@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { VoteChart } from "@/components/ui/VoteChart";
+import { DebateProgress } from "@/components/ui/DebateProgress";
 import { api } from "@/lib/api";
 
 const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:3001/ws";
@@ -597,6 +598,18 @@ export function ArenaPage() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Debate Progress */}
+        <div className="rounded-xl border border-arena-border/50 bg-arena-card/50 p-4">
+          <DebateProgress
+            currentRoundIndex={debate?.currentRoundIndex ?? 0}
+            totalRounds={7}
+            roundStatus={debate?.roundStatus || "bot_responding"}
+            debateStatus={debate?.status || "pending"}
+            votingTimeLeft={votingTimeLeft}
+            votingDuration={votingDuration}
+          />
         </div>
 
         {/* Chart */}

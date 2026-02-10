@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { Moon, Sun, Monitor, Palette, Check } from "lucide-react";
 import { Dropdown, DropdownItem, DropdownDivider } from "flowbite-react";
-import type { CustomFlowbiteTheme } from "flowbite-react";
+import type { DropdownTheme } from "flowbite-react";
 import { cn } from "@/lib/utils";
 
-const dropdownTheme: CustomFlowbiteTheme["dropdown"] = {
+type CustomDropdownTheme = { floating: Partial<DropdownTheme["floating"]> };
+
+const dropdownTheme: CustomDropdownTheme = {
   floating: {
     base: "z-10 w-fit divide-y divide-arena-border rounded-lg shadow-lg focus:outline-none",
     content: "py-1 text-sm !text-arena-text",
