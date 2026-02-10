@@ -20,6 +20,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const hasTriedAutoAuth = useRef(false); // Only auto-auth once per session
+  const hasEverConnected = useRef(false); // Track if wallet was ever connected this session
 
   const authenticate = useCallback(async () => {
     if (!publicKey || !signMessage) {
@@ -99,10 +100,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [connected, publicKey, userInitiatedConnect, isAuthenticated, isAuthenticating, authenticate]);
 
-  // Reset auto-auth flag and clear auth state when wallet disconnects
+  // Track when wallet connects
   useEffect(() => {
-    if (!connected) {
+    if (connected) {
+      hasEverConnected.current = true;
+    }
+  }, [connected]);
+
+  // Clear auth state only when wallet actually disconnects (not on initial load)
+  useEffect(() => {
+    if (!connected && hasEverConnected.current) {
       hasTriedAutoAuth.current = false;
+      hasEverConnected.current = false;
       if (isAuthenticated) {
         localStorage.removeItem("auth_token");
         api.setAuthToken(null);
