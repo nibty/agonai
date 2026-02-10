@@ -217,3 +217,183 @@
   --arena-gold: 45 93% 47%;
   --arena-silver: 210 11% 71%;
 }
+
+/* ============================================
+   CYBER THEME (Neon Indigo accent, futuristic)
+   Pro: Cyber lime | Con: Neon magenta
+   ============================================ */
+.theme-cyber {
+  --arena-bg: 245 20% 97%;
+  --arena-card: 245 15% 100%;
+  --arena-border: 245 15% 90%;
+  --arena-accent: 245 100% 69%;
+  --arena-accent-light: 245 100% 76%;
+  --arena-pro: 73 70% 42%;
+  --arena-con: 320 70% 52%;
+  --arena-text: 245 25% 12%;
+  --arena-text-muted: 245 12% 45%;
+  --arena-text-dim: 245 10% 65%;
+  --arena-voting: 48 96% 53%;
+  --arena-gold: 45 93% 47%;
+  --arena-silver: 245 10% 60%;
+}
+
+.theme-cyber.dark {
+  --arena-bg: 245 40% 5%;
+  --arena-card: 245 35% 9%;
+  --arena-border: 245 30% 18%;
+  --arena-accent: 245 100% 69%;
+  --arena-accent-light: 245 100% 76%;
+  --arena-pro: 73 65% 50%;
+  --arena-con: 320 65% 58%;
+  --arena-text: 245 20% 96%;
+  --arena-text-muted: 245 12% 65%;
+  --arena-text-dim: 245 10% 45%;
+  --arena-voting: 48 96% 53%;
+  --arena-gold: 45 93% 47%;
+  --arena-silver: 245 10% 60%;
+}
+
+/* ============================================
+   SUNSET THEME (Warm coral & apricot tones)
+   Pro: Golden amber | Con: Soft violet
+   ============================================ */
+.theme-sunset {
+  --arena-bg: 30 45% 97%;
+  --arena-card: 30 25% 99%;
+  --arena-border: 25 30% 88%;
+  --arena-accent: 0 85% 65%;
+  --arena-accent-light: 15 90% 70%;
+  --arena-pro: 42 75% 45%;
+  --arena-con: 280 50% 55%;
+  --arena-text: 20 30% 12%;
+  --arena-text-muted: 20 15% 45%;
+  --arena-text-dim: 20 12% 65%;
+  --arena-voting: 48 96% 53%;
+  --arena-gold: 45 93% 47%;
+  --arena-silver: 20 10% 60%;
+}
+
+.theme-sunset.dark {
+  --arena-bg: 15 45% 5%;
+  --arena-card: 15 40% 9%;
+  --arena-border: 20 30% 18%;
+  --arena-accent: 0 80% 62%;
+  --arena-accent-light: 15 85% 68%;
+  --arena-pro: 42 70% 52%;
+  --arena-con: 280 45% 62%;
+  --arena-text: 30 30% 96%;
+  --arena-text-muted: 25 18% 65%;
+  --arena-text-dim: 25 12% 45%;
+  --arena-voting: 48 96% 53%;
+  --arena-gold: 45 93% 47%;
+  --arena-silver: 20 10% 60%;
+}
+
+/* ============================================
+   OCEAN THEME (Tranquil blue, sea-inspired)
+   Pro: Sea foam green | Con: Coral pink
+   ============================================ */
+.theme-ocean {
+  --arena-bg: 200 40% 97%;
+  --arena-card: 200 20% 99%;
+  --arena-border: 200 30% 88%;
+  --arena-accent: 197 70% 48%;
+  --arena-accent-light: 197 75% 58%;
+  --arena-pro: 165 55% 40%;
+  --arena-con: 340 55% 55%;
+  --arena-text: 200 35% 12%;
+  --arena-text-muted: 200 18% 45%;
+  --arena-text-dim: 200 12% 65%;
+  --arena-voting: 48 96% 53%;
+  --arena-gold: 45 93% 47%;
+  --arena-silver: 200 12% 60%;
+}
+
+.theme-ocean.dark {
+  --arena-bg: 205 50% 5%;
+  --arena-card: 205 45% 9%;
+  --arena-border: 205 35% 16%;
+  --arena-accent: 197 65% 50%;
+  --arena-accent-light: 197 70% 58%;
+  --arena-pro: 165 50% 48%;
+  --arena-con: 340 50% 60%;
+  --arena-text: 200 30% 96%;
+  --arena-text-muted: 200 18% 65%;
+  --arena-text-dim: 200 12% 45%;
+  --arena-voting: 48 96% 53%;
+  --arena-gold: 45 93% 47%;
+  --arena-silver: 200 12% 60%;
+}
+
+/* ============================================
+   LAVENDER THEME (Digital lavender, soft)
+   Pro: Soft cyan | Con: Dusty rose
+   ============================================ */
+.theme-lavender {
+  --arena-bg: 270 30% 97%;
+  --arena-card: 270 15% 99%;
+  --arena-border: 270 20% 90%;
+  --arena-accent: 270 55% 62%;
+  --arena-accent-light: 270 60% 70%;
+  --arena-pro: 185 50% 42%;
+  --arena-con: 350 55% 58%;
+  --arena-text: 270 25% 12%;
+  --arena-text-muted: 270 12% 45%;
+  --arena-text-dim: 270 10% 65%;
+  --arena-voting: 48 96% 53%;
+  --arena-gold: 45 93% 47%;
+  --arena-silver: 270 10% 60%;
+}
+
+.theme-lavender.dark {
+  --arena-bg: 270 40% 5%;
+  --arena-card: 270 35% 9%;
+  --arena-border: 270 28% 16%;
+  --arena-accent: 270 55% 62%;
+  --arena-accent-light: 270 60% 70%;
+  --arena-pro: 185 45% 50%;
+  --arena-con: 350 50% 62%;
+  --arena-text: 270 20% 96%;
+  --arena-text-muted: 270 12% 65%;
+  --arena-text-dim: 270 10% 45%;
+  --arena-voting: 48 96% 53%;
+  --arena-gold: 45 93% 47%;
+  --arena-silver: 270 10% 60%;
+}
+
+/* ============================================
+   FOREST THEME (Eco green, nature-inspired)
+   Pro: Leaf green | Con: Earthy rust
+   ============================================ */
+.theme-forest {
+  --arena-bg: 100 20% 97%;
+  --arena-card: 100 10% 99%;
+  --arena-border: 100 15% 88%;
+  --arena-accent: 145 45% 42%;
+  --arena-accent-light: 145 50% 52%;
+  --arena-pro: 95 50% 38%;
+  --arena-con: 18 55% 48%;
+  --arena-text: 100 20% 12%;
+  --arena-text-muted: 100 10% 45%;
+  --arena-text-dim: 100 8% 65%;
+  --arena-voting: 48 96% 53%;
+  --arena-gold: 45 93% 47%;
+  --arena-silver: 100 8% 60%;
+}
+
+.theme-forest.dark {
+  --arena-bg: 120 30% 4%;
+  --arena-card: 120 25% 8%;
+  --arena-border: 120 20% 15%;
+  --arena-accent: 145 42% 45%;
+  --arena-accent-light: 145 48% 55%;
+  --arena-pro: 95 45% 46%;
+  --arena-con: 18 50% 55%;
+  --arena-text: 100 15% 96%;
+  --arena-text-muted: 100 10% 65%;
+  --arena-text-dim: 100 8% 45%;
+  --arena-voting: 48 96% 53%;
+  --arena-gold: 45 93% 47%;
+  --arena-silver: 100 8% 60%;
+}

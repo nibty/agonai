@@ -4,7 +4,7 @@ import { Dropdown, DropdownItem, DropdownDivider } from "flowbite-react";
 import { cn } from "@/lib/utils";
 
 type Mode = "light" | "dark" | "system";
-type Theme = "arena" | "default" | "enterprise" | "minimal" | "mono" | "playful";
+type Theme = "arena" | "default" | "enterprise" | "minimal" | "mono" | "playful" | "cyber" | "sunset" | "ocean" | "lavender" | "forest";
 
 interface ThemeOption {
   id: Theme;
@@ -19,6 +19,11 @@ const themes: ThemeOption[] = [
   { id: "minimal", name: "Minimal", description: "Warm stone tones" },
   { id: "mono", name: "Mono", description: "Sharp monochrome" },
   { id: "playful", name: "Playful", description: "Fun pink accent" },
+  { id: "cyber", name: "Cyber", description: "Neon indigo futuristic" },
+  { id: "sunset", name: "Sunset", description: "Warm coral & amber" },
+  { id: "ocean", name: "Ocean", description: "Tranquil sea blues" },
+  { id: "lavender", name: "Lavender", description: "Soft digital lavender" },
+  { id: "forest", name: "Forest", description: "Nature-inspired greens" },
 ];
 
 function getSystemMode(): "light" | "dark" {
