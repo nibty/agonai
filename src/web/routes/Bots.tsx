@@ -31,49 +31,60 @@ function BotListItem({ bot, onViewDetails }: { bot: DisplayBot; onViewDetails: (
 
   return (
     <div
-      className="flex items-center gap-4 rounded-lg border border-arena-border/50 bg-arena-card/50 p-3 transition-colors hover:border-arena-accent/50 hover:bg-arena-card"
+      className="rounded-lg border border-arena-border/50 bg-arena-card/50 p-3 transition-colors hover:border-arena-accent/50 hover:bg-arena-card active:bg-arena-card"
       onClick={() => onViewDetails(bot)}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => e.key === "Enter" && onViewDetails(bot)}
     >
-      <BotAvatar size="md" alt={bot.name} tier={bot.tier} />
+      {/* Mobile: stacked layout, Desktop: row layout */}
+      <div className="flex items-center gap-3">
+        <BotAvatar size="md" alt={bot.name} tier={bot.tier} />
 
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <h3 className="truncate font-semibold text-arena-text">{bot.name}</h3>
-          <TierBadge tier={bot.tier} />
-          {bot.type === "openclaw" && (
-            <span className="rounded bg-purple-500/20 px-1.5 py-0.5 text-[10px] font-medium text-purple-400">
-              OpenClaw
-            </span>
-          )}
-        </div>
-        <p className="truncate text-xs text-arena-text-muted">{bot.endpoint}</p>
-      </div>
-
-      <div className="flex items-center gap-6 text-sm">
-        <div className="text-center">
-          <div className="font-bold text-arena-accent">{bot.elo}</div>
-          <div className="text-[10px] text-arena-text-muted">ELO</div>
-        </div>
-        <div className="text-center">
-          <div className="font-bold">
-            <span className="text-arena-pro">{bot.wins}</span>
-            <span className="text-arena-text-muted">/</span>
-            <span className="text-arena-con">{bot.losses}</span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <h3 className="truncate font-semibold text-arena-text">{bot.name}</h3>
+            <TierBadge tier={bot.tier} />
+            {bot.type === "openclaw" && (
+              <span className="rounded bg-purple-500/20 px-1.5 py-0.5 text-[10px] font-medium text-purple-400">
+                OpenClaw
+              </span>
+            )}
           </div>
-          <div className="text-[10px] text-arena-text-muted">W/L</div>
+          <p className="hidden truncate text-xs text-arena-text-muted sm:block">{bot.endpoint}</p>
         </div>
-        <div className="text-center">
-          <div className="font-bold text-arena-text">{winRate}%</div>
-          <div className="text-[10px] text-arena-text-muted">Win</div>
+
+        {/* Stats - always visible but compact on mobile */}
+        <div className="flex items-center gap-3 text-sm sm:gap-6">
+          <div className="text-center">
+            <div className="font-bold text-arena-accent">{bot.elo}</div>
+            <div className="hidden text-[10px] text-arena-text-muted sm:block">ELO</div>
+          </div>
+          <div className="text-center">
+            <div className="font-bold">
+              <span className="text-arena-pro">{bot.wins}</span>
+              <span className="text-arena-text-muted">/</span>
+              <span className="text-arena-con">{bot.losses}</span>
+            </div>
+            <div className="hidden text-[10px] text-arena-text-muted sm:block">W/L</div>
+          </div>
+          <div className="hidden text-center sm:block">
+            <div className="font-bold text-arena-text">{winRate}%</div>
+            <div className="text-[10px] text-arena-text-muted">Win</div>
+          </div>
         </div>
+
+        <Link to="/queue" onClick={(e) => e.stopPropagation()} className="hidden sm:block">
+          <Button size="sm">Queue</Button>
+        </Link>
       </div>
 
-      <Link to="/queue" onClick={(e) => e.stopPropagation()}>
-        <Button size="sm">Queue</Button>
-      </Link>
+      {/* Mobile: Queue button below */}
+      <div className="mt-3 flex sm:hidden">
+        <Link to="/queue" onClick={(e) => e.stopPropagation()} className="flex-1">
+          <Button size="sm" className="w-full">Queue</Button>
+        </Link>
+      </div>
     </div>
   );
 }
