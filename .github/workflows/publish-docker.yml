@@ -1,0 +1,130 @@
+name: Build and Push Docker Images
+
+# This workflow builds AI Debates Docker images and pushes them to AWS ECR.
+# It uses path-based filtering to only rebuild services that have changed.
+#
+# Docker Tags created:
+#   - {commit-sha}: Always created
+#   - latest: Always created
+#
+# After building K8s-deployed services, triggers a deployment workflow
+# in infrafc to update Helm values.
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Run build without pushing to ECR"
+        required: false
+        default: false
+        type: boolean
+      service:
+        description: "Specific service to build (leave empty for all changed)"
+        required: false
+        type: choice
+        options:
+          - ""
+          - all
+          - api
+  push:
+    branches:
+      - main
+    paths:
+      - "src/api/**"
+      - package.json
+      - bun.lock
+      - ".github/workflows/publish-docker.yml"
+
+jobs:
+  # Detect which services have changed
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.changes.outputs.api }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for manual service selection
+        id: manual
+        run: |
+          if [[ -n "${{ github.event.inputs.service }}" ]]; then
+            echo "manual=true" >> "$GITHUB_OUTPUT"
+            echo "${{ github.event.inputs.service }}=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "manual=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: dorny/paths-filter@v3
+        id: changes
+        if: steps.manual.outputs.manual != 'true'
+        with:
+          filters: |
+            api:
+              - 'src/api/**'
+              - package.json
+              - bun.lock
+
+  # Build API
+  build-api:
+    needs: changes
+    if: |
+      needs.changes.outputs.api == 'true' ||
+      github.event.inputs.service == 'api' ||
+      github.event.inputs.service == 'all'
+    uses: x1-labs/infrafc/.github/workflows/docker-build-push.yml@main
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      image_name: ai-debates/api
+      dockerfile: ./src/api/Dockerfile
+      dry_run: ${{ inputs.dry_run || false }}
+
+  # Trigger deployment after services are built
+  deploy:
+    needs:
+      - changes
+      - build-api
+    # Run if any K8s-deployed service was built
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.build-api.result == 'success' &&
+      github.event.inputs.dry_run != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build images list
+        id: images
+        run: |
+          IMAGES=""
+
+          # Add api if it was built
+          if [[ "${{ needs.build-api.result }}" == "success" ]]; then
+            IMAGES="api:${{ github.sha }}"
+          fi
+
+          echo "images=$IMAGES" >> $GITHUB_OUTPUT
+          echo "Built images: $IMAGES"
+
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: 2770147
+          private-key: ${{ secrets.GH_APP_INFRAFC_DEPLOY_KEY }}
+          owner: x1-labs
+          repositories: infrafc
+
+      - name: Trigger deployment
+        uses: x1-labs/infrafc/.github/actions/trigger-deploy@main
+        with:
+          service: ai-debates
+          environment: mainnet
+          image_tag: ${{ github.sha }}
+          commit_sha: ${{ github.sha }}
+          repo_url: ${{ github.server_url }}/${{ github.repository }}
+          token: ${{ steps.app-token.outputs.token }}
+          images: ${{ steps.images.outputs.images }}
