@@ -50,7 +50,7 @@ export type NewPendingBotResponse = InferInsertModel<typeof pendingBotResponses>
 // ============================================================================
 
 export type BotPublic = Omit<Bot, "authTokenHash" | "authTokenEncrypted" | "endpoint" | "connectionToken"> & {
-  type: "http" | "openclaw" | "websocket";
+  type: "websocket";
 };
 
 export type UserPublic = Omit<User, "updatedAt">;
@@ -62,4 +62,4 @@ export type UserPublic = Omit<User, "updatedAt">;
 export type DebatePosition = "pro" | "con";
 export type DebateStatus = "pending" | "in_progress" | "voting" | "completed" | "cancelled";
 export type RoundStatus = "pending" | "bot_responding" | "voting" | "completed";
-export type BotType = "http" | "openclaw" | "websocket";
+export type BotType = "websocket";

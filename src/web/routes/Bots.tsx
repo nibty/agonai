@@ -8,12 +8,11 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { TierBadge } from "@/components/ui/Badge";
 import { BotAvatar } from "@/components/ui/Avatar";
 import { Input } from "@/components/ui/Input";
-import { api, type Bot, type BotType } from "@/lib/api";
+import { api, type Bot } from "@/lib/api";
 import { getTierFromElo, type BotTier } from "@/types";
 
 interface DisplayBot extends Bot {
   tier: BotTier;
-  type: BotType;
 }
 
 // Tier requirements
@@ -24,6 +23,25 @@ const tierRequirements = {
   4: { minElo: 1600, minWins: 50 },
   5: { minElo: 2000, minWins: 100 },
 };
+
+function ConnectionStatus({ isConnected }: { isConnected: boolean }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium ${
+        isConnected
+          ? "bg-arena-pro/20 text-arena-pro"
+          : "bg-gray-500/20 text-gray-400"
+      }`}
+    >
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${
+          isConnected ? "bg-arena-pro animate-pulse" : "bg-gray-500"
+        }`}
+      />
+      {isConnected ? "Online" : "Offline"}
+    </span>
+  );
+}
 
 function BotListItem({ bot, onViewDetails }: { bot: DisplayBot; onViewDetails: (bot: DisplayBot) => void }) {
   const winRate =
@@ -37,7 +55,6 @@ function BotListItem({ bot, onViewDetails }: { bot: DisplayBot; onViewDetails: (
       tabIndex={0}
       onKeyDown={(e) => e.key === "Enter" && onViewDetails(bot)}
     >
-      {/* Mobile: stacked layout, Desktop: row layout */}
       <div className="flex items-center gap-3">
         <BotAvatar size="md" alt={bot.name} tier={bot.tier} />
 
@@ -45,16 +62,15 @@ function BotListItem({ bot, onViewDetails }: { bot: DisplayBot; onViewDetails: (
           <div className="flex flex-wrap items-center gap-1.5">
             <h3 className="truncate font-semibold text-arena-text">{bot.name}</h3>
             <TierBadge tier={bot.tier} />
-            {bot.type === "openclaw" && (
-              <span className="rounded bg-purple-500/20 px-1.5 py-0.5 text-[10px] font-medium text-purple-400">
-                OpenClaw
+            <ConnectionStatus isConnected={bot.isConnected ?? false} />
+            {!bot.isActive && (
+              <span className="rounded bg-gray-500/20 px-1.5 py-0.5 text-[10px] font-medium text-gray-400">
+                Inactive
               </span>
             )}
           </div>
-          <p className="hidden truncate text-xs text-arena-text-muted sm:block">{bot.endpoint}</p>
         </div>
 
-        {/* Stats - always visible but compact on mobile */}
         <div className="flex items-center gap-3 text-sm sm:gap-6">
           <div className="text-center">
             <div className="font-bold text-arena-accent">{bot.elo}</div>
@@ -75,14 +91,13 @@ function BotListItem({ bot, onViewDetails }: { bot: DisplayBot; onViewDetails: (
         </div>
 
         <Link to="/queue" onClick={(e) => e.stopPropagation()} className="hidden sm:block">
-          <Button size="sm">Queue</Button>
+          <Button size="sm" disabled={!bot.isActive}>Queue</Button>
         </Link>
       </div>
 
-      {/* Mobile: Queue button below */}
       <div className="mt-3 flex sm:hidden">
         <Link to="/queue" onClick={(e) => e.stopPropagation()} className="flex-1">
-          <Button size="sm" className="w-full">Queue</Button>
+          <Button size="sm" className="w-full" disabled={!bot.isActive}>Queue</Button>
         </Link>
       </div>
     </div>
@@ -91,55 +106,33 @@ function BotListItem({ bot, onViewDetails }: { bot: DisplayBot; onViewDetails: (
 
 function RegisterBotForm({
   onClose,
-  onRegister,
+  onSuccess,
   isRegistering,
 }: {
   onClose: () => void;
-  onRegister: (data: { name: string; endpoint: string; authToken?: string; type: BotType }) => void;
+  onSuccess: (result: { connectionToken: string; connectionUrl: string }) => void;
   isRegistering: boolean;
 }) {
   const [name, setName] = useState("");
-  const [endpoint, setEndpoint] = useState("");
-  const [authToken, setAuthToken] = useState("");
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
+  const queryClient = useQueryClient();
 
-  const handleTest = async () => {
-    setTesting(true);
-    setTestResult(null);
-    try {
-      const testData: { endpoint: string; type: BotType; authToken?: string } = {
-        endpoint,
-        type: "http",
-      };
-      if (authToken) {
-        testData.authToken = authToken;
-      }
-      const result = await api.testBotEndpoint(testData);
-      setTestResult(result.success ? "success" : "error");
-    } catch {
-      setTestResult("error");
-    }
-    setTesting(false);
-  };
+  const registerMutation = useMutation({
+    mutationFn: (data: { name: string }) => api.registerBot(data),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["bots", "my"] });
+      onSuccess({ connectionToken: result.connectionToken, connectionUrl: result.connectionUrl });
+    },
+  });
 
   const handleSubmit = () => {
-    const data: { name: string; endpoint: string; authToken?: string; type: BotType } = {
-      name,
-      endpoint,
-      type: "http",
-    };
-    if (authToken) {
-      data.authToken = authToken;
-    }
-    onRegister(data);
+    registerMutation.mutate({ name });
   };
 
   return (
     <Card variant="glow">
       <CardHeader>
         <CardTitle>Register New Bot</CardTitle>
-        <CardDescription>Connect your AI endpoint to start debating</CardDescription>
+        <CardDescription>Create a WebSocket bot to start debating</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
@@ -151,65 +144,160 @@ function RegisterBotForm({
           />
         </div>
 
-        <div>
-          <label className="mb-2 block text-sm text-gray-400">API Endpoint</label>
-          <Input
-            placeholder="http://localhost:4200/debate"
-            value={endpoint}
-            onChange={(e) => {
-              setEndpoint(e.target.value);
-              setTestResult(null);
-            }}
-          />
-          <p className="mt-1 text-xs text-gray-500">
-            Your bot's debate endpoint (e.g., http://localhost:4200/debate for OpenClaw bridge)
+        <div className="rounded-lg bg-arena-bg p-4 text-sm text-gray-400">
+          <p className="mb-2">
+            After registration, you'll receive a <strong className="text-arena-accent">connection token</strong> and{" "}
+            <strong className="text-arena-accent">WebSocket URL</strong>.
           </p>
+          <p>Your bot connects to our server - no public endpoint needed!</p>
         </div>
-
-        <div>
-          <label className="mb-2 block text-sm text-gray-400">Auth Token (optional)</label>
-          <Input
-            type="password"
-            placeholder="Optional authentication token"
-            value={authToken}
-            onChange={(e) => setAuthToken(e.target.value)}
-          />
-          <p className="mt-1 text-xs text-gray-500">
-            If your bot requires authentication
-          </p>
-        </div>
-
-        {testResult && (
-          <div
-            className={`rounded-lg p-3 ${
-              testResult === "success"
-                ? "bg-arena-pro/20 text-arena-pro"
-                : "bg-arena-con/20 text-arena-con"
-            }`}
-          >
-            {testResult === "success"
-              ? "Endpoint is responding correctly!"
-              : "Failed to connect. Make sure your bot server is running."}
-          </div>
-        )}
 
         <div className="flex gap-3 pt-2">
+          <Button variant="outline" onClick={onClose} className="flex-1">
+            Cancel
+          </Button>
           <Button
-            variant="outline"
-            onClick={handleTest}
-            disabled={!endpoint || testing}
+            onClick={handleSubmit}
+            disabled={!name || isRegistering || registerMutation.isPending}
             className="flex-1"
           >
-            {testing ? "Testing..." : "Test Endpoint"}
-          </Button>
-          <Button onClick={handleSubmit} disabled={!name || !endpoint || isRegistering} className="flex-1">
-            {isRegistering ? "Registering..." : "Register Bot"}
+            {registerMutation.isPending ? "Creating..." : "Create Bot"}
           </Button>
         </div>
+      </CardContent>
+    </Card>
+  );
+}
 
-        <Button variant="ghost" onClick={onClose} className="w-full">
-          Cancel
+function ConnectionInfoModal({
+  connectionToken,
+  connectionUrl,
+  onClose,
+}: {
+  connectionToken: string;
+  connectionUrl: string;
+  onClose: () => void;
+}) {
+  const [copied, setCopied] = useState<"token" | "url" | null>(null);
+
+  const copyToClipboard = async (text: string, type: "token" | "url") => {
+    await navigator.clipboard.writeText(text);
+    setCopied(type);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
+  return (
+    <Card variant="glow">
+      <CardHeader>
+        <CardTitle className="text-arena-pro">Bot Created Successfully!</CardTitle>
+        <CardDescription>Save these credentials - the token won't be shown again</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-400">Connection Token</label>
+          <div className="flex gap-2">
+            <code className="flex-1 break-all rounded-lg bg-arena-bg p-3 text-xs text-gray-300">
+              {connectionToken}
+            </code>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => copyToClipboard(connectionToken, "token")}
+            >
+              {copied === "token" ? "Copied!" : "Copy"}
+            </Button>
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-400">WebSocket URL</label>
+          <div className="flex gap-2">
+            <code className="flex-1 break-all rounded-lg bg-arena-bg p-3 text-xs text-gray-300">
+              {connectionUrl}
+            </code>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => copyToClipboard(connectionUrl, "url")}
+            >
+              {copied === "url" ? "Copied!" : "Copy"}
+            </Button>
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm text-yellow-200">
+          <strong>Important:</strong> Save this token securely. You can regenerate it later, but any
+          existing connections will be disconnected.
+        </div>
+
+        <Button onClick={onClose} className="w-full">
+          Done
         </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function EditBotForm({
+  bot,
+  onClose,
+  onSave,
+  isSaving,
+}: {
+  bot: DisplayBot;
+  onClose: () => void;
+  onSave: (data: { name?: string; isActive?: boolean }) => void;
+  isSaving: boolean;
+}) {
+  const [name, setName] = useState(bot.name);
+  const [isActive, setIsActive] = useState(bot.isActive);
+
+  const hasChanges = name !== bot.name || isActive !== bot.isActive;
+
+  const handleSubmit = () => {
+    const updates: { name?: string; isActive?: boolean } = {};
+    if (name !== bot.name) updates.name = name;
+    if (isActive !== bot.isActive) updates.isActive = isActive;
+    onSave(updates);
+  };
+
+  return (
+    <Card variant="glow">
+      <CardHeader>
+        <CardTitle>Edit Bot</CardTitle>
+        <CardDescription>Update your bot's settings</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <label className="mb-2 block text-sm text-gray-400">Bot Name</label>
+          <Input
+            placeholder="e.g., MyDebateBot"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="isActive"
+            checked={isActive}
+            onChange={(e) => setIsActive(e.target.checked)}
+            className="rounded border-arena-border"
+          />
+          <label htmlFor="isActive" className="text-sm text-gray-400">
+            Bot is active (can join queue and participate in debates)
+          </label>
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <Button variant="outline" onClick={onClose} className="flex-1">
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit} disabled={!hasChanges || isSaving} className="flex-1">
+            {isSaving ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
@@ -219,12 +307,18 @@ function BotDetailsModal({
   bot,
   onClose,
   onDelete,
+  onEdit,
+  onRegenerateToken,
   isDeleting,
+  isRegenerating,
 }: {
   bot: DisplayBot;
   onClose: () => void;
   onDelete: () => void;
+  onEdit: () => void;
+  onRegenerateToken: () => void;
   isDeleting: boolean;
+  isRegenerating: boolean;
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const winRate =
@@ -266,11 +360,12 @@ function BotDetailsModal({
           <BotAvatar size="xl" alt={bot.name} tier={bot.tier} />
           <div>
             <CardTitle>{bot.name}</CardTitle>
-            <div className="mt-1 flex items-center gap-2">
+            <div className="mt-1 flex flex-wrap items-center gap-2">
               <TierBadge tier={bot.tier} />
-              {bot.type === "openclaw" && (
-                <span className="rounded bg-purple-500/20 px-1.5 py-0.5 text-xs font-medium text-purple-400">
-                  OpenClaw
+              <ConnectionStatus isConnected={bot.isConnected ?? false} />
+              {!bot.isActive && (
+                <span className="rounded bg-gray-500/20 px-1.5 py-0.5 text-xs font-medium text-gray-400">
+                  Inactive
                 </span>
               )}
               <span className="text-sm text-gray-400">
@@ -281,13 +376,6 @@ function BotDetailsModal({
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div>
-          <h4 className="mb-2 text-sm font-medium text-gray-400">Endpoint</h4>
-          <code className="block break-all rounded-lg bg-arena-bg p-3 text-sm text-gray-300">
-            {bot.endpoint}
-          </code>
-        </div>
-
         <div>
           <h4 className="mb-2 text-sm font-medium text-gray-400">Statistics</h4>
           <div className="grid grid-cols-4 gap-4 text-center">
@@ -341,19 +429,39 @@ function BotDetailsModal({
           </div>
         </div>
 
-        <div className="flex gap-3 pt-2">
+        <div>
+          <h4 className="mb-2 text-sm font-medium text-gray-400">Connection</h4>
+          <Button
+            variant="outline"
+            onClick={onRegenerateToken}
+            disabled={isRegenerating}
+            className="w-full"
+          >
+            {isRegenerating ? "Regenerating..." : "Regenerate Connection Token"}
+          </Button>
+          <p className="mt-2 text-xs text-gray-500">
+            Generate a new token if your current one is compromised. This will disconnect any active connections.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-3 pt-2">
           <Button variant="outline" onClick={onClose} className="flex-1">
             Close
+          </Button>
+          <Button variant="outline" onClick={onEdit} className="flex-1">
+            Edit Bot
           </Button>
           <Button
             variant="ghost"
             onClick={() => setShowDeleteConfirm(true)}
             className="text-arena-con hover:bg-arena-con/10 hover:text-arena-con"
           >
-            Delete Bot
+            Delete
           </Button>
           <Link to="/queue" className="flex-1">
-            <Button className="w-full">Enter Queue</Button>
+            <Button className="w-full" disabled={!bot.isActive}>
+              {bot.isActive ? "Enter Queue" : "Inactive"}
+            </Button>
           </Link>
         </div>
       </CardContent>
@@ -366,47 +474,35 @@ export function BotsPage() {
   const { isAuthenticated, isAuthenticating } = useAuth();
   const [isInitializing, setIsInitializing] = useState(true);
 
-  // Give wallet time to auto-connect on page load
   useEffect(() => {
     const timer = setTimeout(() => setIsInitializing(false), 1500);
     return () => clearTimeout(timer);
   }, []);
 
-  // Clear initializing once we know the state
   useEffect(() => {
     if (connected || isAuthenticated) {
       setIsInitializing(false);
     }
   }, [connected, isAuthenticated]);
+
   const queryClient = useQueryClient();
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [selectedBot, setSelectedBot] = useState<DisplayBot | null>(null);
+  const [editingBot, setEditingBot] = useState<DisplayBot | null>(null);
+  const [newBotCredentials, setNewBotCredentials] = useState<{ connectionToken: string; connectionUrl: string } | null>(null);
 
-  // Fetch bots from API
   const { data: botsData, isLoading } = useQuery({
     queryKey: ["bots", "my"],
     queryFn: () => api.getMyBots(),
     enabled: isAuthenticated,
+    refetchInterval: 5000, // Refresh every 5s to update connection status
   });
 
-  // Transform bots to include tier
   const bots: DisplayBot[] = (botsData?.bots ?? []).map((bot) => ({
     ...bot,
     tier: getTierFromElo(bot.elo),
-    type: (bot.type ?? "http") as BotType,
   }));
 
-  // Register bot mutation
-  const registerMutation = useMutation({
-    mutationFn: (data: { name: string; endpoint: string; authToken?: string; type: BotType }) =>
-      api.registerBot(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["bots", "my"] });
-      setShowRegisterForm(false);
-    },
-  });
-
-  // Delete bot mutation
   const deleteMutation = useMutation({
     mutationFn: (botId: string) => api.deleteBot(botId),
     onSuccess: () => {
@@ -415,7 +511,29 @@ export function BotsPage() {
     },
   });
 
-  // Show loading while wallet is initializing or connecting
+  const updateMutation = useMutation({
+    mutationFn: ({
+      botId,
+      data,
+    }: {
+      botId: string;
+      data: { name?: string; isActive?: boolean };
+    }) => api.updateBot(botId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bots", "my"] });
+      setEditingBot(null);
+      setSelectedBot(null);
+    },
+  });
+
+  const regenerateTokenMutation = useMutation({
+    mutationFn: (botId: string) => api.regenerateBotToken(botId),
+    onSuccess: (result) => {
+      setSelectedBot(null);
+      setNewBotCredentials(result);
+    },
+  });
+
   if (isInitializing || connecting || isAuthenticating) {
     return (
       <div className="mx-auto max-w-lg py-16 text-center">
@@ -462,6 +580,33 @@ export function BotsPage() {
     );
   }
 
+  // Show new bot credentials
+  if (newBotCredentials) {
+    return (
+      <div className="mx-auto max-w-xl">
+        <ConnectionInfoModal
+          connectionToken={newBotCredentials.connectionToken}
+          connectionUrl={newBotCredentials.connectionUrl}
+          onClose={() => setNewBotCredentials(null)}
+        />
+      </div>
+    );
+  }
+
+  // Show edit form
+  if (editingBot) {
+    return (
+      <div className="mx-auto max-w-xl">
+        <EditBotForm
+          bot={editingBot}
+          onClose={() => setEditingBot(null)}
+          onSave={(data) => updateMutation.mutate({ botId: editingBot.id, data })}
+          isSaving={updateMutation.isPending}
+        />
+      </div>
+    );
+  }
+
   // Show bot details modal
   if (selectedBot) {
     return (
@@ -470,7 +615,10 @@ export function BotsPage() {
           bot={selectedBot}
           onClose={() => setSelectedBot(null)}
           onDelete={() => deleteMutation.mutate(selectedBot.id)}
+          onEdit={() => setEditingBot(selectedBot)}
+          onRegenerateToken={() => regenerateTokenMutation.mutate(selectedBot.id)}
           isDeleting={deleteMutation.isPending}
+          isRegenerating={regenerateTokenMutation.isPending}
         />
       </div>
     );
@@ -482,8 +630,11 @@ export function BotsPage() {
       <div className="mx-auto max-w-xl">
         <RegisterBotForm
           onClose={() => setShowRegisterForm(false)}
-          onRegister={(data) => registerMutation.mutate(data)}
-          isRegistering={registerMutation.isPending}
+          onSuccess={(result) => {
+            setShowRegisterForm(false);
+            setNewBotCredentials(result);
+          }}
+          isRegistering={false}
         />
       </div>
     );
@@ -491,7 +642,6 @@ export function BotsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-arena-text">My Bots</h1>
@@ -502,12 +652,19 @@ export function BotsPage() {
         <Button onClick={() => setShowRegisterForm(true)}>Register New Bot</Button>
       </div>
 
-      {/* Bot Stats Summary */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
         <Card className="text-center">
           <CardContent className="py-4">
             <div className="text-2xl font-bold text-arena-text">{bots.length}</div>
             <div className="text-sm text-gray-400">Total Bots</div>
+          </CardContent>
+        </Card>
+        <Card className="text-center">
+          <CardContent className="py-4">
+            <div className="text-2xl font-bold text-arena-pro">
+              {bots.filter((b) => b.isConnected).length}
+            </div>
+            <div className="text-sm text-gray-400">Online</div>
           </CardContent>
         </Card>
         <Card className="text-center">
@@ -536,7 +693,6 @@ export function BotsPage() {
         </Card>
       </div>
 
-      {/* Bots Grid */}
       {isLoading ? (
         <Card className="py-12 text-center">
           <CardContent>
@@ -558,104 +714,64 @@ export function BotsPage() {
         </div>
       )}
 
-      {/* Help Section */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">HTTP Bot (Custom Endpoint)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ol className="space-y-3 text-sm text-gray-400">
-              <li className="flex gap-3">
-                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-arena-accent/20 text-xs font-bold text-arena-accent">
-                  1
-                </span>
-                <span>Create an API endpoint that accepts POST requests with debate prompts</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-arena-accent/20 text-xs font-bold text-arena-accent">
-                  2
-                </span>
-                <span>
-                  Your endpoint should return JSON with a "message" field containing the bot's
-                  response
-                </span>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-arena-accent/20 text-xs font-bold text-arena-accent">
-                  3
-                </span>
-                <span>Register your bot here and test the endpoint connection</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-arena-accent/20 text-xs font-bold text-arena-accent">
-                  4
-                </span>
-                <span>Join the queue to start debating and climb the leaderboard!</span>
-              </li>
-            </ol>
-          </CardContent>
-        </Card>
-
-        <Card className="border-purple-500/30">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <span className="rounded bg-purple-500/20 px-2 py-0.5 text-xs font-medium text-purple-400">
-                OpenClaw
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">How WebSocket Bots Work</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ol className="space-y-3 text-sm text-gray-400">
+            <li className="flex gap-3">
+              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-arena-accent/20 text-xs font-bold text-arena-accent">
+                1
               </span>
-              Self-Hosted AI Gateway
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="mb-4 text-sm text-gray-400">
-              Use OpenClaw to run bots with your own API keys (OpenAI, Anthropic, etc).
-              No custom code required!
-            </p>
-            <ol className="space-y-3 text-sm text-gray-400">
-              <li className="flex gap-3">
-                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-xs font-bold text-purple-400">
-                  1
-                </span>
-                <span>
-                  Install: <code className="rounded bg-arena-bg px-1.5 text-xs">npm i -g openclaw</code>
-                </span>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-xs font-bold text-purple-400">
-                  2
-                </span>
-                <span>
-                  Setup: <code className="rounded bg-arena-bg px-1.5 text-xs">openclaw onboard</code>
-                </span>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-xs font-bold text-purple-400">
-                  3
-                </span>
-                <span>
-                  Run gateway: <code className="rounded bg-arena-bg px-1.5 text-xs">openclaw gateway --port 18789</code>
-                </span>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-xs font-bold text-purple-400">
-                  4
-                </span>
-                <span>
-                  Run bridge: <code className="rounded bg-arena-bg px-1.5 text-xs">bun run openclaw</code>
-                </span>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-xs font-bold text-purple-400">
-                  5
-                </span>
-                <span>
-                  Register with endpoint: <code className="rounded bg-arena-bg px-1.5 text-xs">http://localhost:4200/debate</code>
-                </span>
-              </li>
-            </ol>
-          </CardContent>
-        </Card>
-      </div>
+              <span>Register a bot here to get a connection token and WebSocket URL</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-arena-accent/20 text-xs font-bold text-arena-accent">
+                2
+              </span>
+              <span>
+                Your bot connects TO our server (no public endpoint needed - works behind NATs/firewalls)
+              </span>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-arena-accent/20 text-xs font-bold text-arena-accent">
+                3
+              </span>
+              <span>
+                When a debate starts, we send <code className="rounded bg-arena-bg px-1.5 text-xs">debate_request</code> messages to your bot
+              </span>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-arena-accent/20 text-xs font-bold text-arena-accent">
+                4
+              </span>
+              <span>
+                Your bot responds with <code className="rounded bg-arena-bg px-1.5 text-xs">debate_response</code> messages
+              </span>
+            </li>
+          </ol>
+
+          <div className="mt-4 rounded-lg bg-arena-bg p-4">
+            <h5 className="mb-2 font-medium text-arena-text">Example Bot Client</h5>
+            <pre className="overflow-x-auto text-xs text-gray-400">
+{`const ws = new WebSocket('wss://...token...');
+
+ws.on('message', (data) => {
+  const msg = JSON.parse(data);
+  if (msg.type === 'debate_request') {
+    const response = generateResponse(msg);
+    ws.send(JSON.stringify({
+      type: 'debate_response',
+      requestId: msg.requestId,
+      message: response,
+    }));
+  }
+});`}
+            </pre>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

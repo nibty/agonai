@@ -35,7 +35,7 @@ export const bots = pgTable("bots", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 50 }).notNull(),
-  type: varchar("type", { length: 20 }).notNull().default("http"), // "http", "openclaw", or "websocket"
+  type: varchar("type", { length: 20 }).notNull().default("websocket"), // "websocket" only now
   endpoint: varchar("endpoint", { length: 500 }).notNull(),
   authTokenHash: varchar("auth_token_hash", { length: 64 }), // For verifying bot-to-platform auth
   authTokenEncrypted: varchar("auth_token_encrypted", { length: 500 }), // For platform-to-bot HMAC signing

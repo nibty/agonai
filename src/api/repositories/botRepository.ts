@@ -1,27 +1,14 @@
 import { eq, desc, sql } from "drizzle-orm";
 import { db, bots } from "../db/index.js";
 import type { Bot, NewBot, BotPublic } from "../db/types.js";
-import { createHash, createCipheriv, createDecipheriv, randomBytes } from "crypto";
+import { createDecipheriv, randomBytes } from "crypto";
 
 // Encryption key from environment (32 bytes for AES-256)
-// In production, use a secure key management service
+// Used for decrypting legacy tokens if needed
 const ENCRYPTION_KEY = process.env.BOT_TOKEN_ENCRYPTION_KEY || "default-dev-key-change-in-prod!!"; // 32 chars
-
-function hashToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
-}
 
 function generateConnectionToken(): string {
   return randomBytes(32).toString("hex"); // 64 char hex string
-}
-
-function encryptToken(token: string): string {
-  const key = Buffer.from(ENCRYPTION_KEY.padEnd(32).slice(0, 32));
-  const iv = randomBytes(16);
-  const cipher = createCipheriv("aes-256-cbc", key, iv);
-  let encrypted = cipher.update(token, "utf8", "hex");
-  encrypted += cipher.final("hex");
-  return iv.toString("hex") + ":" + encrypted;
 }
 
 function decryptToken(encrypted: string): string | null {
@@ -46,7 +33,7 @@ function toPublic(bot: Bot): BotPublic {
     id: bot.id,
     ownerId: bot.ownerId,
     name: bot.name,
-    type: bot.type as "http" | "openclaw" | "websocket",
+    type: "websocket",
     elo: bot.elo,
     wins: bot.wins,
     losses: bot.losses,
@@ -81,23 +68,15 @@ export const botRepository = {
     return result.map(toPublic);
   },
 
-  async create(
-    ownerId: number,
-    name: string,
-    endpoint: string,
-    authToken?: string,
-    type: "http" | "openclaw" | "websocket" = "http"
-  ): Promise<Bot> {
+  async create(ownerId: number, name: string): Promise<Bot> {
     const connectionToken = generateConnectionToken();
     const result = await db
       .insert(bots)
       .values({
         ownerId,
         name,
-        endpoint,
-        type,
-        authTokenHash: authToken ? hashToken(authToken) : null,
-        authTokenEncrypted: authToken ? encryptToken(authToken) : null,
+        endpoint: "", // Not used for WebSocket bots
+        type: "websocket",
         connectionToken,
       })
       .returning();
@@ -109,14 +88,8 @@ export const botRepository = {
     return bot;
   },
 
-  async update(id: number, data: Partial<Omit<NewBot, "authTokenHash" | "authTokenEncrypted">> & { authToken?: string }): Promise<Bot | undefined> {
-    const updateData: Partial<NewBot> = { ...data, updatedAt: new Date() };
-
-    if (data.authToken) {
-      updateData.authTokenHash = hashToken(data.authToken);
-      updateData.authTokenEncrypted = encryptToken(data.authToken);
-      delete (updateData as Record<string, unknown>)["authToken"];
-    }
+  async update(id: number, data: Partial<Pick<NewBot, "name" | "isActive">>): Promise<Bot | undefined> {
+    const updateData = { ...data, updatedAt: new Date() };
 
     const result = await db
       .update(bots)
@@ -150,11 +123,17 @@ export const botRepository = {
     const bot = await this.findById(id);
     if (!bot) return undefined;
 
-    return this.update(id, {
-      elo: bot.elo + eloChange,
-      wins: isWin ? bot.wins + 1 : bot.wins,
-      losses: isWin ? bot.losses : bot.losses + 1,
-    });
+    const result = await db
+      .update(bots)
+      .set({
+        elo: bot.elo + eloChange,
+        wins: isWin ? bot.wins + 1 : bot.wins,
+        losses: isWin ? bot.losses : bot.losses + 1,
+        updatedAt: new Date(),
+      })
+      .where(eq(bots.id, id))
+      .returning();
+    return result[0];
   },
 
   async countByOwner(ownerId: number): Promise<number> {
@@ -163,12 +142,6 @@ export const botRepository = {
       .from(bots)
       .where(eq(bots.ownerId, ownerId));
     return result[0]?.count ?? 0;
-  },
-
-  async verifyAuth(id: number, authToken: string): Promise<boolean> {
-    const bot = await this.findById(id);
-    if (!bot) return false;
-    return bot.authTokenHash === hashToken(authToken);
   },
 
   async regenerateConnectionToken(id: number): Promise<string | null> {

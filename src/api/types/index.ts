@@ -345,17 +345,21 @@ export interface ErrorPayload {
 // API Request/Response Types
 // ============================================================================
 
-export const BotTypeSchema = z.enum(["http", "openclaw", "websocket"]).default("http");
+export const BotTypeSchema = z.literal("websocket").default("websocket");
 export type BotType = z.infer<typeof BotTypeSchema>;
 
 export const RegisterBotSchema = z.object({
   name: z.string().min(1).max(50),
-  endpoint: z.string().url(),
-  authToken: z.string().optional(),
-  type: BotTypeSchema,
 });
 
 export type RegisterBotRequest = z.infer<typeof RegisterBotSchema>;
+
+export const UpdateBotSchema = z.object({
+  name: z.string().min(1).max(50).optional(),
+  isActive: z.boolean().optional(),
+});
+
+export type UpdateBotRequest = z.infer<typeof UpdateBotSchema>;
 
 export const SubmitTopicSchema = z.object({
   text: z.string().min(10).max(500),

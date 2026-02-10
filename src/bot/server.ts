@@ -1,9 +1,4 @@
-import express from "express";
-import cors from "cors";
-
-const app = express();
-app.use(cors());
-app.use(express.json());
+import WebSocket from "ws";
 
 // =============================================================================
 // Bot Personalities
@@ -31,22 +26,30 @@ interface DebateResponse {
 
 type BotPersonality = (req: DebateRequest) => DebateResponse;
 
-// Helper to get response length hint based on word limits
-function getLengthHint(wordLimit: { min: number; max: number }): string {
-  if (wordLimit.max <= 100) return "very brief";
-  if (wordLimit.max <= 200) return "concise";
-  if (wordLimit.max <= 300) return "moderate";
-  return "comprehensive";
+// Message types from server
+interface DebateRequestMessage extends DebateRequest {
+  type: "debate_request";
+  requestId: string;
 }
+
+interface ConnectedMessage {
+  type: "connected";
+  botId: number;
+  botName: string;
+}
+
+interface PingMessage {
+  type: "ping";
+}
+
+type ServerMessage = DebateRequestMessage | ConnectedMessage | PingMessage;
 
 // -----------------------------------------------------------------------------
 // Bot: LogicMaster - Analytical and structured
 // -----------------------------------------------------------------------------
 const logicMaster: BotPersonality = (req) => {
   const { round, topic, position, opponent_last_message } = req;
-  const word_limit = req.word_limit ?? { min: 100, max: 300 };
   const stance = position === "pro" ? "support" : "oppose";
-  const lengthHint = getLengthHint(word_limit);
 
   const responses: Record<RoundType, string> = {
     opening: `Let me present a structured argument to ${stance} the proposition: "${topic}".
@@ -383,125 +386,131 @@ The data is clear. I rest my case on the evidence.`,
 // Bot Registry
 // =============================================================================
 
-const bots: Record<string, BotPersonality> = {
-  "logic-master": logicMaster,
-  "devils-advocate": devilsAdvocate,
-  philosopher: philosopher,
-  "data-driven": dataDriven,
+const bots: Record<string, { personality: BotPersonality; description: string }> = {
+  "logic-master": { personality: logicMaster, description: "Analytical and structured arguments" },
+  "devils-advocate": { personality: devilsAdvocate, description: "Aggressive and witty rebuttals" },
+  "philosopher": { personality: philosopher, description: "Thoughtful and nuanced discourse" },
+  "data-driven": { personality: dataDriven, description: "Statistics and facts focused" },
 };
 
 // =============================================================================
-// Routes
+// WebSocket Connection
 // =============================================================================
 
-// Health check
-app.get("/health", (_req, res) => {
-  res.json({ status: "ok", bots: Object.keys(bots) });
-});
+function connect(url: string, botId: string, personality: BotPersonality): void {
+  console.log(`[${botId}] Connecting to ${url}...`);
 
-// List available bots
-app.get("/bots", (_req, res) => {
-  res.json({
-    bots: [
-      {
-        id: "logic-master",
-        name: "LogicMaster",
-        description: "Analytical and structured arguments",
-        port: 4001,
-      },
-      {
-        id: "devils-advocate",
-        name: "DevilsAdvocate",
-        description: "Aggressive and witty rebuttals",
-        port: 4002,
-      },
-      {
-        id: "philosopher",
-        name: "Philosopher",
-        description: "Thoughtful and nuanced discourse",
-        port: 4003,
-      },
-      {
-        id: "data-driven",
-        name: "DataDriven",
-        description: "Statistics and facts focused",
-        port: 4004,
-      },
-    ],
+  const ws = new WebSocket(url);
+  let reconnectAttempts = 0;
+  const maxReconnectDelay = 30000;
+
+  ws.on("open", () => {
+    console.log(`[${botId}] WebSocket connected`);
+    reconnectAttempts = 0;
   });
-});
 
-// Generic debate endpoint (bot specified in URL)
-app.post("/bot/:botId/debate", (req, res) => {
-  const { botId } = req.params;
-  const bot = bots[botId];
+  ws.on("message", (data) => {
+    try {
+      const message = JSON.parse(data.toString()) as ServerMessage;
 
-  if (!bot) {
-    return res.status(404).json({ error: `Bot '${botId}' not found` });
-  }
+      switch (message.type) {
+        case "connected":
+          console.log(`[${botId}] Authenticated as "${message.botName}" (ID: ${message.botId})`);
+          break;
 
-  const debateReq: DebateRequest = req.body;
-  console.log(
-    `[${botId}] ${debateReq.round} - ${debateReq.position} on "${debateReq.topic.slice(0, 50)}..."`
-  );
+        case "ping":
+          ws.send(JSON.stringify({ type: "pong" }));
+          break;
 
-  // Simulate thinking time (100-500ms)
-  const thinkTime = Math.random() * 400 + 100;
-  setTimeout(() => {
-    const response = bot(debateReq);
-    res.json(response);
-  }, thinkTime);
-});
+        case "debate_request": {
+          console.log(`[${botId}] ${message.round} - ${message.position} on "${message.topic.slice(0, 50)}..."`);
 
-// Individual bot endpoints (for separate ports)
-app.post("/debate", (req, res) => {
-  const port = (req.socket.localPort || 4001) as number;
-  const botMap: Record<number, string> = {
-    4001: "logic-master",
-    4002: "devils-advocate",
-    4003: "philosopher",
-    4004: "data-driven",
-  };
+          // Simulate thinking time (100-500ms)
+          const thinkTime = Math.random() * 400 + 100;
+          setTimeout(() => {
+            const response = personality(message);
+            ws.send(
+              JSON.stringify({
+                type: "debate_response",
+                requestId: message.requestId,
+                message: response.message,
+                confidence: response.confidence,
+              })
+            );
+            console.log(`[${botId}] Response sent (${Math.round(thinkTime)}ms think time)`);
+          }, thinkTime);
+          break;
+        }
 
-  const botId = botMap[port] || "logic-master";
-  const bot = bots[botId];
-  const debateReq: DebateRequest = req.body;
+        default:
+          console.warn(`[${botId}] Unknown message type:`, (message as { type: string }).type);
+      }
+    } catch (error) {
+      console.error(`[${botId}] Error handling message:`, error);
+    }
+  });
 
-  console.log(
-    `[${botId}:${port}] ${debateReq.round} - ${debateReq.position} on "${debateReq.topic.slice(0, 50)}..."`
-  );
+  ws.on("close", (code, reason) => {
+    console.log(`[${botId}] Disconnected: ${code} ${reason.toString()}`);
 
-  const thinkTime = Math.random() * 400 + 100;
-  setTimeout(() => {
-    const response = bot(debateReq);
-    res.json(response);
-  }, thinkTime);
-});
+    // Reconnect with exponential backoff
+    const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), maxReconnectDelay);
+    reconnectAttempts++;
+    console.log(`[${botId}] Reconnecting in ${delay}ms...`);
+    setTimeout(() => connect(url, botId, personality), delay);
+  });
+
+  ws.on("error", (error) => {
+    console.error(`[${botId}] WebSocket error:`, error.message);
+  });
+}
 
 // =============================================================================
-// Start Server
+// Main
 // =============================================================================
 
-const PORT = process.env.PORT || 4000;
+const botId = process.argv[2];
+const url = process.argv[3];
 
-app.listen(PORT, () => {
-  console.log(`
+if (!botId || !url) {
+  console.error(`
 ╔═══════════════════════════════════════════════════════════╗
-║           AI Debates - Demo Bot Server                    ║
+║           AI Debates - Demo Bot                           ║
 ╠═══════════════════════════════════════════════════════════╣
-║  Main server: http://localhost:${PORT}                       ║
+║  Usage: bun run dev:bot <personality> <websocket-url>     ║
 ║                                                           ║
-║  Available bots:                                          ║
-║    • LogicMaster    - http://localhost:${PORT}/bot/logic-master    ║
-║    • DevilsAdvocate - http://localhost:${PORT}/bot/devils-advocate ║
-║    • Philosopher    - http://localhost:${PORT}/bot/philosopher     ║
-║    • DataDriven     - http://localhost:${PORT}/bot/data-driven     ║
+║  Available personalities:                                 ║
+║    • logic-master    - Analytical and structured          ║
+║    • devils-advocate - Aggressive and witty               ║
+║    • philosopher     - Thoughtful and nuanced             ║
+║    • data-driven     - Statistics and facts focused       ║
 ║                                                           ║
-║  Endpoints:                                               ║
-║    GET  /health              - Health check               ║
-║    GET  /bots                - List all bots              ║
-║    POST /bot/:botId/debate   - Call specific bot          ║
-║    POST /debate              - Call bot (port-based)      ║
+║  Example:                                                 ║
+║    bun run dev:bot logic-master ws://localhost:3001/...   ║
+║                                                           ║
+║  Get your connection URL by registering a bot at:         ║
+║    http://localhost:5173/bots                             ║
 ╚═══════════════════════════════════════════════════════════╝
 `);
-});
+  process.exit(1);
+}
+
+const bot = bots[botId];
+if (!bot) {
+  console.error(`Unknown bot personality: ${botId}`);
+  console.error(`Available: ${Object.keys(bots).join(", ")}`);
+  process.exit(1);
+}
+
+console.log(`
+╔═══════════════════════════════════════════════════════════╗
+║           AI Debates - Demo Bot                           ║
+╠═══════════════════════════════════════════════════════════╣
+║  Personality: ${botId.padEnd(42)}║
+║  ${bot.description.padEnd(55)}║
+║                                                           ║
+║  Connecting via WebSocket...                              ║
+╚═══════════════════════════════════════════════════════════╝
+`);
+
+connect(url, botId, bot.personality);

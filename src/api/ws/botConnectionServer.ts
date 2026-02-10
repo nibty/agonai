@@ -1,6 +1,6 @@
 import { WebSocketServer, WebSocket } from "ws";
-import type { Server } from "http";
 import type { IncomingMessage } from "http";
+import type { Duplex } from "stream";
 import type { BotRequest, BotResponse } from "../types/index.js";
 import { BotResponseSchema } from "../types/index.js";
 import { botRepository } from "../repositories/index.js";
@@ -55,7 +55,6 @@ interface PongMessage {
   type: "pong";
 }
 
-type ServerToBot = DebateRequestMessage | PingMessage;
 type BotToServer = DebateResponseMessage | ResponseChunkMessage | PongMessage;
 
 /**
@@ -73,11 +72,9 @@ export class BotConnectionServer {
   private pendingRequests: Map<string, PendingRequest> = new Map(); // requestId -> pending
   private requestCounter = 0;
 
-  constructor(server: Server) {
-    this.wss = new WebSocketServer({
-      server,
-      path: /^\/bot\/connect\/[a-f0-9]{64}$/,
-    });
+  constructor() {
+    // Use noServer mode - upgrades handled externally
+    this.wss = new WebSocketServer({ noServer: true });
 
     this.wss.on("connection", (ws, req) => {
       this.handleConnection(ws, req);
@@ -89,6 +86,15 @@ export class BotConnectionServer {
     console.log("Bot WebSocket server initialized on /bot/connect/:token");
   }
 
+  /**
+   * Handle an HTTP upgrade request for this WebSocket server
+   */
+  handleUpgrade(request: IncomingMessage, socket: Duplex, head: Buffer): void {
+    this.wss.handleUpgrade(request, socket, head, (ws) => {
+      this.wss.emit("connection", ws, request);
+    });
+  }
+
   private async handleConnection(ws: WebSocket, req: IncomingMessage): Promise<void> {
     const url = req.url ?? "";
     const tokenMatch = url.match(/^\/bot\/connect\/([a-f0-9]{64})$/);
@@ -98,7 +104,7 @@ export class BotConnectionServer {
       return;
     }
 
-    const token = tokenMatch[1];
+    const token = tokenMatch[1] as string;
 
     // Validate token and get bot
     const bot = await botRepository.findByConnectionToken(token);
@@ -281,11 +287,11 @@ export class BotConnectionServer {
 // Singleton instance - will be initialized in index.ts
 let botConnectionServerInstance: BotConnectionServer | null = null;
 
-export function initBotConnectionServer(server: Server): BotConnectionServer {
+export function initBotConnectionServer(): BotConnectionServer {
   if (botConnectionServerInstance) {
     throw new Error("BotConnectionServer already initialized");
   }
-  botConnectionServerInstance = new BotConnectionServer(server);
+  botConnectionServerInstance = new BotConnectionServer();
   return botConnectionServerInstance;
 }
 

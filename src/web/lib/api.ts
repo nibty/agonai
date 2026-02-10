@@ -93,10 +93,7 @@ class ApiClient {
 
   async registerBot(data: {
     name: string;
-    endpoint: string;
-    authToken?: string;
-    type?: BotType;
-  }): Promise<{ bot: BotPublic }> {
+  }): Promise<{ bot: BotPublic; connectionToken: string; connectionUrl: string }> {
     return this.request("POST", "/bots", data);
   }
 
@@ -104,12 +101,18 @@ class ApiClient {
     return this.request("DELETE", `/bots/${botId}`);
   }
 
-  async testBotEndpoint(data: {
-    endpoint: string;
-    type: BotType;
-    authToken?: string;
-  }): Promise<{ success: boolean; error?: string }> {
-    return this.request("POST", "/test-endpoint", data);
+  async updateBot(
+    botId: string,
+    data: {
+      name?: string;
+      isActive?: boolean;
+    }
+  ): Promise<{ bot: BotPublic }> {
+    return this.request("PATCH", `/bots/${botId}`, data);
+  }
+
+  async regenerateBotToken(botId: string): Promise<{ connectionToken: string; connectionUrl: string }> {
+    return this.request("POST", `/bots/${botId}/regenerate-token`);
   }
 
   // Topics
@@ -215,18 +218,17 @@ interface UserPublic {
   botCount: number;
 }
 
-type BotType = "http" | "openclaw";
+type BotType = "websocket";
 
 interface Bot {
   id: string;
   ownerId: string;
   name: string;
-  type: BotType;
-  endpoint: string;
   elo: number;
   wins: number;
   losses: number;
   isActive: boolean;
+  isConnected?: boolean;
   createdAt: string;
 }
 

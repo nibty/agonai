@@ -1,12 +1,13 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import {
   RegisterBotSchema,
+  UpdateBotSchema,
   SubmitTopicSchema,
   JoinQueueSchema,
   PlaceBetSchema,
-  DEBATE_FORMAT,
   getAllPresets,
   getPreset,
+  DEBATE_FORMAT,
 } from "../types/index.js";
 import {
   userRepository,
@@ -15,12 +16,11 @@ import {
   betRepository,
   debateRepository,
 } from "../repositories/index.js";
-import { botRunner } from "../services/botRunner.js";
 import { matchmaking } from "../services/matchmaking.js";
 import { debateOrchestrator } from "../services/debateOrchestrator.js";
 import { authService } from "../services/authService.js";
 import { authRouter } from "./authRoutes.js";
-import { handleOpenClawWebhook } from "../services/openclawService.js";
+import { getBotConnectionServer } from "../ws/botConnectionServer.js";
 
 const router = Router();
 
@@ -195,7 +195,15 @@ router.get("/bots/my", authMiddleware, async (req: AuthenticatedRequest, res: Re
   }
 
   const bots = await botRepository.findByOwner(req.userId);
-  res.json({ bots });
+  const wsServer = getBotConnectionServer();
+
+  // Add connection status to each bot
+  const botsWithStatus = bots.map((bot) => ({
+    ...bot,
+    isConnected: wsServer?.isConnected(bot.id) ?? false,
+  }));
+
+  res.json({ bots: botsWithStatus });
 });
 
 router.post("/bots", authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
@@ -210,39 +218,28 @@ router.post("/bots", authMiddleware, async (req: AuthenticatedRequest, res: Resp
     return;
   }
 
-  const { name, endpoint, authToken, type } = result.data;
+  const { name } = result.data;
 
-  // Create bot with type
-  const bot = await botRepository.create(req.userId, name, endpoint, authToken, type);
+  // Create bot
+  const bot = await botRepository.create(req.userId, name);
 
-  // Test the bot endpoint (include auth token for signed test request)
-  const testResult = await botRunner.testBot({
-    id: bot.id,
-    type: bot.type as "http" | "openclaw",
-    endpoint: bot.endpoint,
-    authToken: authToken ?? null,
-    authTokenEncrypted: bot.authTokenEncrypted ?? null,
-  });
-  if (!testResult.success) {
-    // Delete the bot if test fails
-    await botRepository.delete(bot.id);
-    res.status(400).json({
-      error: "Bot endpoint test failed",
-      details: testResult.error,
-    });
-    return;
-  }
+  // Build WebSocket connection URL
+  const wsProtocol = req.secure ? "wss" : "ws";
+  const host = req.get("host") ?? "localhost:3001";
+  const connectionUrl = `${wsProtocol}://${host}/bot/connect/${bot.connectionToken}`;
 
   res.status(201).json({
     bot: {
       id: bot.id,
       name: bot.name,
-      type: bot.type,
       elo: bot.elo,
       wins: bot.wins,
       losses: bot.losses,
       isActive: bot.isActive,
     },
+    // Include connection token and URL for WebSocket connectivity
+    connectionToken: bot.connectionToken,
+    connectionUrl,
   });
 });
 
@@ -277,6 +274,131 @@ router.delete(
 
     await botRepository.delete(bot.id);
     res.json({ success: true });
+  }
+);
+
+/**
+ * PATCH /api/bots/:botId
+ *
+ * Update a bot's settings (name, isActive).
+ */
+router.patch(
+  "/bots/:botId",
+  authMiddleware,
+  async (req: AuthenticatedRequest & { params: { botId: string } }, res: Response) => {
+    if (!req.userId) {
+      res.status(401).json({ error: "Not authenticated" });
+      return;
+    }
+
+    const botId = parseInt(req.params.botId, 10);
+    if (isNaN(botId)) {
+      res.status(400).json({ error: "Invalid bot ID" });
+      return;
+    }
+
+    const bot = await botRepository.findById(botId);
+    if (!bot) {
+      res.status(404).json({ error: "Bot not found" });
+      return;
+    }
+
+    if (bot.ownerId !== req.userId) {
+      res.status(403).json({ error: "Not authorized" });
+      return;
+    }
+
+    const result = UpdateBotSchema.safeParse(req.body);
+    if (!result.success) {
+      res.status(400).json({ error: result.error.message });
+      return;
+    }
+
+    const updates = result.data;
+
+    // Build update object
+    const updateData: Parameters<typeof botRepository.update>[1] = {};
+    if (updates.name !== undefined) updateData.name = updates.name;
+    if (updates.isActive !== undefined) updateData.isActive = updates.isActive;
+
+    // Only update if there are changes
+    if (Object.keys(updateData).length === 0) {
+      res.status(400).json({ error: "No updates provided" });
+      return;
+    }
+
+    const updatedBot = await botRepository.update(botId, updateData);
+    if (!updatedBot) {
+      res.status(500).json({ error: "Failed to update bot" });
+      return;
+    }
+
+    // If bot was deactivated, remove from queue
+    if (updates.isActive === false) {
+      matchmaking.removeFromQueue(botId);
+    }
+
+    res.json({
+      bot: {
+        id: updatedBot.id,
+        name: updatedBot.name,
+        type: updatedBot.type,
+        elo: updatedBot.elo,
+        wins: updatedBot.wins,
+        losses: updatedBot.losses,
+        isActive: updatedBot.isActive,
+      },
+    });
+  }
+);
+
+/**
+ * POST /api/bots/:botId/regenerate-token
+ *
+ * Regenerates the WebSocket connection token for a bot.
+ * Use this if the token has been compromised.
+ */
+router.post(
+  "/bots/:botId/regenerate-token",
+  authMiddleware,
+  async (req: AuthenticatedRequest & { params: { botId: string } }, res: Response) => {
+    if (!req.userId) {
+      res.status(401).json({ error: "Not authenticated" });
+      return;
+    }
+
+    const botId = parseInt(req.params.botId, 10);
+    if (isNaN(botId)) {
+      res.status(400).json({ error: "Invalid bot ID" });
+      return;
+    }
+
+    const bot = await botRepository.findById(botId);
+    if (!bot) {
+      res.status(404).json({ error: "Bot not found" });
+      return;
+    }
+
+    if (bot.ownerId !== req.userId) {
+      res.status(403).json({ error: "Not authorized" });
+      return;
+    }
+
+    const newToken = await botRepository.regenerateConnectionToken(botId);
+    if (!newToken) {
+      res.status(500).json({ error: "Failed to regenerate token" });
+      return;
+    }
+
+    // Build WebSocket connection URL
+    const wsProtocol = req.secure ? "wss" : "ws";
+    const host = req.get("host") ?? "localhost:3001";
+    const connectionUrl = `${wsProtocol}://${host}/bot/connect/${newToken}`;
+
+    res.json({
+      connectionToken: newToken,
+      connectionUrl,
+    });
   }
 );
 
@@ -514,91 +636,6 @@ router.post(
 
 // ============================================================================
 // Webhook Routes (OpenClaw async responses)
-// ============================================================================
-
-/**
- * POST /api/webhooks/openclaw
- *
- * Receives async responses from OpenClaw bots.
- * OpenClaw sends responses to this endpoint after processing debate requests.
- */
-router.post("/webhooks/openclaw", async (req: Request, res: Response) => {
-  try {
-    const result = await handleOpenClawWebhook(req.body);
-    if (result.success) {
-      res.json({ success: true });
-    } else {
-      res.status(400).json({ success: false, error: result.error });
-    }
-  } catch (error) {
-    console.error("[OpenClaw Webhook] Error:", error);
-    res.status(500).json({ success: false, error: "Internal server error" });
-  }
-});
-
-/**
- * POST /api/test-endpoint
- *
- * Tests a bot endpoint (used by frontend to avoid CORS issues)
- */
-router.post("/test-endpoint", async (req: Request, res: Response) => {
-  const { endpoint, type, authToken } = req.body as {
-    endpoint?: string;
-    type?: "http" | "openclaw";
-    authToken?: string;
-  };
-
-  if (!endpoint) {
-    res.status(400).json({ success: false, error: "Missing endpoint" });
-    return;
-  }
-
-  try {
-    if (type === "openclaw") {
-      // Test OpenClaw gateway health
-      const response = await fetch(`${endpoint}/health`, {
-        method: "GET",
-        signal: AbortSignal.timeout(10000),
-      });
-      res.json({ success: response.ok, error: response.ok ? undefined : `Gateway returned ${response.status}` });
-    } else {
-      // Test HTTP bot with a test request
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(authToken && { Authorization: `Bearer ${authToken}` }),
-        },
-        body: JSON.stringify({
-          debate_id: "test",
-          round: "opening",
-          topic: "This is a test topic to verify your bot is working correctly.",
-          position: "pro",
-          opponent_last_message: null,
-          time_limit_seconds: 60,
-          word_limit: { min: 100, max: 300 },
-          char_limit: { min: 400, max: 2100 },
-          messages_so_far: [],
-        }),
-        signal: AbortSignal.timeout(30000),
-      });
-
-      if (!response.ok) {
-        res.json({ success: false, error: `Bot returned ${response.status}` });
-        return;
-      }
-
-      const data = (await response.json()) as { message?: string };
-      res.json({ success: !!data.message, error: data.message ? undefined : "No message in response" });
-    }
-  } catch (error) {
-    res.json({
-      success: false,
-      error: error instanceof Error ? error.message : "Connection failed",
-    });
-  }
-});
-
 // ============================================================================
 // Betting Routes
 // ============================================================================

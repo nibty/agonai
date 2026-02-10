@@ -3,6 +3,7 @@ import cors from "cors";
 import { createServer } from "http";
 import { router } from "./api/routes.js";
 import { DebateWebSocketServer } from "./ws/debateServer.js";
+import { initBotConnectionServer } from "./ws/botConnectionServer.js";
 import { matchmaking } from "./services/matchmaking.js";
 import { debateOrchestrator } from "./services/debateOrchestrator.js";
 import { topicRepository, botRepository } from "./repositories/index.js";
@@ -35,8 +36,23 @@ app.use("/api", router);
 // Create HTTP server
 const server = createServer(app);
 
-// Initialize WebSocket server
-const wsServer = new DebateWebSocketServer(server);
+// Initialize WebSocket servers
+const wsServer = new DebateWebSocketServer();
+const botWsServer = initBotConnectionServer();
+
+// Centralized WebSocket upgrade handling
+server.on("upgrade", (request, socket, head) => {
+  const url = request.url ?? "";
+
+  if (url === "/ws") {
+    wsServer.handleUpgrade(request, socket, head);
+  } else if (url.match(/^\/bot\/connect\/[a-f0-9]{64}$/)) {
+    botWsServer.handleUpgrade(request, socket, head);
+  } else {
+    // Unknown WebSocket path - destroy the socket
+    socket.destroy();
+  }
+});
 
 // Matchmaking loop - runs every 5 seconds
 let matchmakingInterval: ReturnType<typeof setInterval>;
@@ -125,6 +141,7 @@ server.listen(PORT, () => {
 ╠═══════════════════════════════════════════════════════════╣
 ║  API:       http://localhost:${PORT}/api                     ║
 ║  WebSocket: ws://localhost:${PORT}/ws                        ║
+║  Bot WS:    ws://localhost:${PORT}/bot/connect/:token        ║
 ║  Network:   X1 (https://rpc.mainnet.x1.xyz/)              ║
 ╚═══════════════════════════════════════════════════════════╝
 `);

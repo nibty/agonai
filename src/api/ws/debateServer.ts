@@ -1,5 +1,6 @@
 import { WebSocketServer, WebSocket } from "ws";
-import type { Server } from "http";
+import type { IncomingMessage } from "http";
+import type { Duplex } from "stream";
 import type { WSMessage } from "../types/index.js";
 import { SubmitVoteSchema } from "../types/index.js";
 import { debateOrchestrator } from "../services/debateOrchestrator.js";
@@ -24,14 +25,24 @@ export class DebateWebSocketServer {
   private clients: Map<WebSocket, Client> = new Map();
   private debateSpectators: Map<number, Set<WebSocket>> = new Map();
 
-  constructor(server: Server) {
-    this.wss = new WebSocketServer({ server, path: "/ws" });
+  constructor() {
+    // Use noServer mode - upgrades handled externally
+    this.wss = new WebSocketServer({ noServer: true });
 
     this.wss.on("connection", (ws) => {
       this.handleConnection(ws);
     });
 
     console.log("WebSocket server initialized on /ws");
+  }
+
+  /**
+   * Handle an HTTP upgrade request for this WebSocket server
+   */
+  handleUpgrade(request: IncomingMessage, socket: Duplex, head: Buffer): void {
+    this.wss.handleUpgrade(request, socket, head, (ws) => {
+      this.wss.emit("connection", ws, request);
+    });
   }
 
   private handleConnection(ws: WebSocket): void {
