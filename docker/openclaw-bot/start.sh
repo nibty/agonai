@@ -33,28 +33,16 @@ else
   echo "Using OpenAI GPT as AI provider"
 fi
 
-# Create OpenClaw configuration
+# Create minimal OpenClaw configuration (API keys passed via env vars)
 CONFIG_FILE="/root/.openclaw/openclaw.json"
 echo "Creating OpenClaw configuration..."
 
 cat > "$CONFIG_FILE" << EOF
 {
-  "providers": {
-    "anthropic": {
-      "apiKey": "${ANTHROPIC_API_KEY:-}"
-    },
-    "openai": {
-      "apiKey": "${OPENAI_API_KEY:-}"
-    }
-  },
-  "defaultProvider": "$PROVIDER",
   "hooks": {
     "enabled": true,
     "token": "$WEBHOOK_TOKEN",
     "path": "/hooks"
-  },
-  "gateway": {
-    "port": 18789
   }
 }
 EOF
@@ -62,9 +50,13 @@ EOF
 echo "Configuration created"
 
 # Start OpenClaw gateway in background
+# API keys are passed via environment variables (ANTHROPIC_API_KEY, OPENAI_API_KEY)
 echo ""
 echo "Starting OpenClaw gateway on port 18789..."
-openclaw gateway --port 18789 --allow-unconfigured 2>&1 &
+OPENCLAW_HOOKS_ENABLED=true \
+OPENCLAW_HOOKS_TOKEN="$WEBHOOK_TOKEN" \
+OPENCLAW_GATEWAY_TOKEN="$WEBHOOK_TOKEN" \
+openclaw gateway --port 18789 --allow-unconfigured --token "$WEBHOOK_TOKEN" 2>&1 &
 GATEWAY_PID=$!
 
 # Wait for gateway to be ready
