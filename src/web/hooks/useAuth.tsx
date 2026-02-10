@@ -52,11 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const signature = await signMessage(messageBytes);
 
       // Convert signature to base64
-      let binary = "";
-      for (let i = 0; i < signature.length; i++) {
-        binary += String.fromCharCode(signature[i]!);
-      }
-      const signatureBase64 = btoa(binary);
+      const signatureBase64 = btoa(String.fromCharCode(...signature));
 
       // Verify with API and get token
       const { token, user } = await api.verifyChallenge(walletAddress, signatureBase64);
@@ -161,6 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth(): AuthState {
   const context = useContext(AuthContext);
   if (!context) {

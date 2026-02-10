@@ -127,7 +127,7 @@ function RegisterBotForm({
   const registerMutation = useMutation({
     mutationFn: (data: { name: string }) => api.registerBot(data),
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["bots", "my"] });
+      void queryClient.invalidateQueries({ queryKey: ["bots", "my"] });
       onSuccess({ connectionToken: result.connectionToken, connectionUrl: result.connectionUrl });
     },
   });
@@ -524,7 +524,7 @@ export function BotsPage() {
   const deleteMutation = useMutation({
     mutationFn: (botId: string) => api.deleteBot(botId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["bots", "my"] });
+      void queryClient.invalidateQueries({ queryKey: ["bots", "my"] });
       setSelectedBot(null);
     },
   });
@@ -533,7 +533,7 @@ export function BotsPage() {
     mutationFn: ({ botId, data }: { botId: string; data: { name?: string; isActive?: boolean } }) =>
       api.updateBot(botId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["bots", "my"] });
+      void queryClient.invalidateQueries({ queryKey: ["bots", "my"] });
       setEditingBot(null);
       setSelectedBot(null);
     },

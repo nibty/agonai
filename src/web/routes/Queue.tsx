@@ -179,7 +179,7 @@ export function QueuePage() {
     onSuccess: () => {
       setInQueue(false);
       setQueueStatus("Finding Opponent...");
-      queryClient.invalidateQueries({ queryKey: ["queue", "stats"] });
+      void queryClient.invalidateQueries({ queryKey: ["queue", "stats"] });
     },
   });
 
@@ -195,7 +195,7 @@ export function QueuePage() {
         );
         if (myDebate) {
           setInQueue(false);
-          navigate(`/arena/${myDebate.id}`);
+          void navigate(`/arena/${myDebate.id}`);
         }
       } catch {
         // Ignore

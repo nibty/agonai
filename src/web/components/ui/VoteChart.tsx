@@ -35,8 +35,7 @@ export function VoteChart({
   }[] = [];
   let cumulative = 0;
 
-  for (let i = 0; i < roundResults.length; i++) {
-    const result = roundResults[i]!;
+  roundResults.forEach((result, i) => {
     if (result.winner === "pro") cumulative += 1;
     else if (result.winner === "con") cumulative -= 1;
     dataPoints.push({
@@ -46,7 +45,7 @@ export function VoteChart({
       conVotes: result.conVotes,
       roundNum: i + 1,
     });
-  }
+  });
 
   // Add current voting round if active
   if (isVoting && currentVotes) {
@@ -94,15 +93,19 @@ export function VoteChart({
       return { x, y };
     });
 
+    const firstPoint = points[0];
+    if (!firstPoint) return "";
+
     if (points.length === 1) {
-      return `M ${points[0]!.x} ${points[0]!.y}`;
+      return `M ${firstPoint.x} ${firstPoint.y}`;
     }
 
     // Create smooth curve through points
-    let path = `M ${points[0]!.x} ${points[0]!.y}`;
+    let path = `M ${firstPoint.x} ${firstPoint.y}`;
     for (let i = 1; i < points.length; i++) {
-      const prev = points[i - 1]!;
-      const curr = points[i]!;
+      const prev = points[i - 1];
+      const curr = points[i];
+      if (!prev || !curr) continue;
       const cpX = (prev.x + curr.x) / 2;
       path += ` C ${cpX} ${prev.y}, ${cpX} ${curr.y}, ${curr.x} ${curr.y}`;
     }
