@@ -234,14 +234,14 @@ class DebateWebSocket {
     }
   }
 
-  submitVote(round: DebateRound, choice: DebatePosition): void {
+  submitVote(roundIndex: number, choice: DebatePosition): void {
     if (!this.currentDebateId) return;
 
     this.send({
       type: "submit_vote",
       payload: {
         debateId: this.currentDebateId,
-        round,
+        roundIndex,
         choice,
       },
     });

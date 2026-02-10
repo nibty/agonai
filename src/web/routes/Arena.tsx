@@ -38,6 +38,7 @@ interface DebateState {
   topic: string;
   status: string;
   currentRound: string;
+  currentRoundIndex: number;
   roundStatus: string;
   roundResults: RoundResult[];
   winner: "pro" | "con" | null;
@@ -229,9 +230,9 @@ export function ArenaPage() {
         }
 
         case "round_started": {
-          const payload = msg.payload as { round: string };
+          const payload = msg.payload as { round: string; roundIndex: number };
           setDebate((prev) =>
-            prev ? { ...prev, currentRound: payload.round, roundStatus: "bot_responding" } : null
+            prev ? { ...prev, currentRound: payload.round, currentRoundIndex: payload.roundIndex, roundStatus: "bot_responding" } : null
           );
           setTypingBot(null);
           break;
@@ -268,9 +269,9 @@ export function ArenaPage() {
         }
 
         case "voting_started": {
-          const payload = msg.payload as { round: string };
+          const payload = msg.payload as { round: string; roundIndex: number };
           setDebate((prev) =>
-            prev ? { ...prev, roundStatus: "voting", currentRound: payload.round } : null
+            prev ? { ...prev, roundStatus: "voting", currentRound: payload.round, currentRoundIndex: payload.roundIndex } : null
           );
           setCurrentVotes({ pro: 0, con: 0 });
           setHasVoted(false);
@@ -390,7 +391,7 @@ export function ArenaPage() {
         type: "submit_vote",
         payload: {
           debateId,
-          round: debate.currentRound,
+          roundIndex: debate.currentRoundIndex,
           choice: position,
         },
       })

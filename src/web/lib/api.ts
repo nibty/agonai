@@ -251,10 +251,10 @@ interface Debate {
   conBotName?: string;
   conBotElo?: number;
   status: "pending" | "in_progress" | "voting" | "completed" | "cancelled";
-  currentRound: "opening" | "rebuttal" | "closing";
+  currentRoundIndex: number;
   roundStatus: "pending" | "bot_responding" | "voting" | "completed";
   roundResults: Array<{
-    round: "opening" | "rebuttal" | "closing";
+    roundIndex: number;
     proVotes: number;
     conVotes: number;
     winner: "pro" | "con";
