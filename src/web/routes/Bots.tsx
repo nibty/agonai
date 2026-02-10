@@ -8,7 +8,6 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { TierBadge } from "@/components/ui/Badge";
 import { BotAvatar } from "@/components/ui/Avatar";
 import { Input } from "@/components/ui/Input";
-import { Progress } from "@/components/ui/Progress";
 import { api, type Bot, type BotType } from "@/lib/api";
 import { getTierFromElo, type BotTier } from "@/types";
 
@@ -26,91 +25,56 @@ const tierRequirements = {
   5: { minElo: 2000, minWins: 100 },
 };
 
-function BotCard({ bot, onViewDetails }: { bot: DisplayBot; onViewDetails: (bot: DisplayBot) => void }) {
+function BotListItem({ bot, onViewDetails }: { bot: DisplayBot; onViewDetails: (bot: DisplayBot) => void }) {
   const winRate =
-    bot.wins + bot.losses > 0 ? ((bot.wins / (bot.wins + bot.losses)) * 100).toFixed(1) : "0.0";
-
-  // Calculate progress to next tier
-  const nextTier = Math.min(bot.tier + 1, 5) as 1 | 2 | 3 | 4 | 5;
-  const nextTierReqs = tierRequirements[nextTier];
-  const eloProgress = bot.tier === 5 ? 100 : Math.min((bot.elo / nextTierReqs.minElo) * 100, 100);
-  const winsProgress =
-    bot.tier === 5 ? 100 : Math.min((bot.wins / nextTierReqs.minWins) * 100, 100);
+    bot.wins + bot.losses > 0 ? ((bot.wins / (bot.wins + bot.losses)) * 100).toFixed(0) : "0";
 
   return (
-    <Card className="transition-colors hover:border-arena-accent/50">
-      <CardContent>
-        <div className="flex items-start gap-4">
-          <BotAvatar size="lg" alt={bot.name} tier={bot.tier} />
-          <div className="min-w-0 flex-1">
-            <div className="mb-1 flex items-center gap-2">
-              <h3 className="truncate font-semibold text-arena-text">{bot.name}</h3>
-              <TierBadge tier={bot.tier} />
-              {bot.type === "openclaw" && (
-                <span className="rounded bg-purple-500/20 px-1.5 py-0.5 text-[10px] font-medium text-purple-400">
-                  OpenClaw
-                </span>
-              )}
-            </div>
-            <p className="mb-2 truncate text-sm text-gray-400">{bot.endpoint}</p>
-          </div>
-        </div>
+    <div
+      className="flex items-center gap-4 rounded-lg border border-arena-border/50 bg-arena-card/50 p-3 transition-colors hover:border-arena-accent/50 hover:bg-arena-card"
+      onClick={() => onViewDetails(bot)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === "Enter" && onViewDetails(bot)}
+    >
+      <BotAvatar size="md" alt={bot.name} tier={bot.tier} />
 
-        <div className="mt-4 grid grid-cols-3 gap-4 text-center">
-          <div>
-            <div className="text-lg font-bold text-arena-accent">{bot.elo}</div>
-            <div className="text-xs text-gray-400">ELO</div>
-          </div>
-          <div>
-            <div className="text-lg font-bold text-arena-text">
-              <span className="text-arena-pro">{bot.wins}</span>
-              <span className="text-gray-400">/</span>
-              <span className="text-arena-con">{bot.losses}</span>
-            </div>
-            <div className="text-xs text-gray-400">W/L</div>
-          </div>
-          <div>
-            <div className="text-lg font-bold text-arena-text">{winRate}%</div>
-            <div className="text-xs text-gray-400">Win Rate</div>
-          </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <h3 className="truncate font-semibold text-arena-text">{bot.name}</h3>
+          <TierBadge tier={bot.tier} />
+          {bot.type === "openclaw" && (
+            <span className="rounded bg-purple-500/20 px-1.5 py-0.5 text-[10px] font-medium text-purple-400">
+              OpenClaw
+            </span>
+          )}
         </div>
+        <p className="truncate text-xs text-arena-text-muted">{bot.endpoint}</p>
+      </div>
 
-        {bot.tier < 5 && (
-          <div className="mt-4 space-y-2">
-            <div className="text-xs text-gray-400">Progress to Tier {nextTier}</div>
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-400">ELO</span>
-                <span className="text-arena-text">
-                  {bot.elo} / {nextTierReqs.minElo}
-                </span>
-              </div>
-              <Progress value={eloProgress} variant="accent" size="sm" />
-            </div>
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-400">Wins</span>
-                <span className="text-arena-text">
-                  {bot.wins} / {nextTierReqs.minWins}
-                </span>
-              </div>
-              <Progress value={winsProgress} variant="pro" size="sm" />
-            </div>
-          </div>
-        )}
-
-        <div className="mt-4 flex gap-2">
-          <Button variant="outline" size="sm" className="flex-1" onClick={() => onViewDetails(bot)}>
-            View Details
-          </Button>
-          <Link to="/queue" className="flex-1">
-            <Button size="sm" className="w-full">
-              Queue
-            </Button>
-          </Link>
+      <div className="flex items-center gap-6 text-sm">
+        <div className="text-center">
+          <div className="font-bold text-arena-accent">{bot.elo}</div>
+          <div className="text-[10px] text-arena-text-muted">ELO</div>
         </div>
-      </CardContent>
-    </Card>
+        <div className="text-center">
+          <div className="font-bold">
+            <span className="text-arena-pro">{bot.wins}</span>
+            <span className="text-arena-text-muted">/</span>
+            <span className="text-arena-con">{bot.losses}</span>
+          </div>
+          <div className="text-[10px] text-arena-text-muted">W/L</div>
+        </div>
+        <div className="text-center">
+          <div className="font-bold text-arena-text">{winRate}%</div>
+          <div className="text-[10px] text-arena-text-muted">Win</div>
+        </div>
+      </div>
+
+      <Link to="/queue" onClick={(e) => e.stopPropagation()}>
+        <Button size="sm">Queue</Button>
+      </Link>
+    </div>
   );
 }
 
@@ -546,9 +510,9 @@ export function BotsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-2">
           {bots.map((bot) => (
-            <BotCard key={bot.id} bot={bot} onViewDetails={(b) => setSelectedBot(b)} />
+            <BotListItem key={bot.id} bot={bot} onViewDetails={(b) => setSelectedBot(b)} />
           ))}
         </div>
       )}
