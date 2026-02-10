@@ -103,7 +103,7 @@ function TopicCard({
             </div>
             <p className="mb-2 font-medium text-white">{topic.text}</p>
             <div className="flex items-center gap-4 text-xs text-gray-400">
-              {topic.proposerId && <span>by {topic.proposerId.slice(0, 8)}...</span>}
+              {topic.proposerId && <span>by User #{topic.proposerId}</span>}
               <span>Used {topic.timesUsed} times</span>
             </div>
           </div>
