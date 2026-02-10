@@ -555,7 +555,7 @@ export function ArenaPage() {
 
         {/* Messages */}
         <div className="relative min-h-[400px] flex-1 overflow-hidden rounded-lg border border-arena-border/50 bg-arena-card/30 lg:min-h-0">
-          <div className="absolute inset-0 overflow-y-auto p-4">
+          <div className="absolute inset-0 overflow-y-auto p-4 scrollbar-hide">
             <div className="space-y-3">
               {messages.length === 0 && (
                 <div className="flex h-full items-center justify-center py-20 text-sm text-gray-500">
