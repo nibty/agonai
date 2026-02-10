@@ -28,7 +28,13 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
   ({ className, variant = "default", padding = "md", children, ...props }, ref) => (
     <FlowbiteCard
       ref={ref}
-      className={cn(variantClasses[variant], paddingClasses[padding], className)}
+      className={cn(
+        // Override Flowbite defaults with theme colors
+        "!bg-arena-card !border-arena-border",
+        variantClasses[variant],
+        paddingClasses[padding],
+        className
+      )}
       {...props}
     >
       {children}
