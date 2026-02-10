@@ -123,6 +123,7 @@ export function ArenaPage() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [votingTimeLeft, setVotingTimeLeft] = useState(0);
   const [votingDuration, setVotingDuration] = useState(0);
+  const [botError, setBotError] = useState<{ position: "pro" | "con"; message: string } | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const votingTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -266,6 +267,16 @@ export function ArenaPage() {
               timestamp: new Date(),
             },
           ]);
+
+          // Detect bot errors
+          if (payload.content.startsWith("[Bot failed to respond:")) {
+            const errorMatch = payload.content.match(/\[Bot failed to respond: (.+)\]/);
+            setBotError({
+              position: payload.position,
+              message: errorMatch?.[1] || "Unknown error",
+            });
+          }
+
           speakRef.current?.(payload.content, payload.position);
           break;
         }
@@ -690,6 +701,22 @@ export function ArenaPage() {
             <div className="text-xs text-arena-text-muted">
               Final: {proWins} - {conWins}
             </div>
+          </div>
+        )}
+
+        {/* Bot Error Banner */}
+        {botError && (
+          <div className="rounded-lg border border-arena-con/50 bg-arena-con/10 p-3">
+            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-arena-con">
+              <span>⚠️</span>
+              <span>{botError.position === "pro" ? proBot?.name : conBot?.name} Error</span>
+            </div>
+            <div className="mb-3 text-xs text-arena-text-muted">{botError.message}</div>
+            <Link to="/queue">
+              <Button variant="outline" size="sm" className="w-full">
+                Exit Debate
+              </Button>
+            </Link>
           </div>
         )}
 
