@@ -94,13 +94,22 @@ class ApiClient {
   async registerBot(data: {
     name: string;
     endpoint: string;
-    authToken: string;
+    authToken?: string;
+    type?: BotType;
   }): Promise<{ bot: BotPublic }> {
     return this.request("POST", "/bots", data);
   }
 
   async deleteBot(botId: string): Promise<{ success: boolean }> {
     return this.request("DELETE", `/bots/${botId}`);
+  }
+
+  async testBotEndpoint(data: {
+    endpoint: string;
+    type: BotType;
+    authToken?: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    return this.request("POST", "/test-endpoint", data);
   }
 
   // Topics
@@ -202,10 +211,13 @@ interface UserPublic {
   botCount: number;
 }
 
+type BotType = "http" | "openclaw";
+
 interface Bot {
   id: string;
   ownerId: string;
   name: string;
+  type: BotType;
   endpoint: string;
   elo: number;
   wins: number;
@@ -218,6 +230,7 @@ interface BotPublic {
   id: string;
   ownerId: string;
   name: string;
+  type?: BotType;
   elo: number;
   wins: number;
   losses: number;
@@ -331,4 +344,4 @@ interface DebatePreset {
 export const api = new ApiClient();
 
 // Export types
-export type { User, UserPublic, Bot, BotPublic, Topic, QueueEntry, Debate, Bet, DebatePreset, DebateDetails, DebateMessage };
+export type { User, UserPublic, Bot, BotPublic, BotType, Topic, QueueEntry, Debate, Bet, DebatePreset, DebateDetails, DebateMessage };

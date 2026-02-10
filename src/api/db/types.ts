@@ -10,6 +10,7 @@ import type {
   votes,
   bets,
   authChallenges,
+  pendingBotResponses,
 } from "./schema.js";
 
 // ============================================================================
@@ -26,6 +27,7 @@ export type DebateMessage = InferSelectModel<typeof debateMessages>;
 export type Vote = InferSelectModel<typeof votes>;
 export type Bet = InferSelectModel<typeof bets>;
 export type AuthChallenge = InferSelectModel<typeof authChallenges>;
+export type PendingBotResponse = InferSelectModel<typeof pendingBotResponses>;
 
 // ============================================================================
 // Insert Types (what you insert into the database)
@@ -41,12 +43,15 @@ export type NewDebateMessage = InferInsertModel<typeof debateMessages>;
 export type NewVote = InferInsertModel<typeof votes>;
 export type NewBet = InferInsertModel<typeof bets>;
 export type NewAuthChallenge = InferInsertModel<typeof authChallenges>;
+export type NewPendingBotResponse = InferInsertModel<typeof pendingBotResponses>;
 
 // ============================================================================
 // Public Types (for API responses - excludes sensitive fields)
 // ============================================================================
 
-export type BotPublic = Omit<Bot, "authTokenHash" | "authTokenEncrypted" | "endpoint">;
+export type BotPublic = Omit<Bot, "authTokenHash" | "authTokenEncrypted" | "endpoint"> & {
+  type: "http" | "openclaw";
+};
 
 export type UserPublic = Omit<User, "updatedAt">;
 
@@ -57,3 +62,4 @@ export type UserPublic = Omit<User, "updatedAt">;
 export type DebatePosition = "pro" | "con";
 export type DebateStatus = "pending" | "in_progress" | "voting" | "completed" | "cancelled";
 export type RoundStatus = "pending" | "bot_responding" | "voting" | "completed";
+export type BotType = "http" | "openclaw";

@@ -35,6 +35,7 @@ export const bots = pgTable("bots", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 50 }).notNull(),
+  type: varchar("type", { length: 20 }).notNull().default("http"), // "http" or "openclaw"
   endpoint: varchar("endpoint", { length: 500 }).notNull(),
   authTokenHash: varchar("auth_token_hash", { length: 64 }), // For verifying bot-to-platform auth
   authTokenEncrypted: varchar("auth_token_encrypted", { length: 500 }), // For platform-to-bot HMAC signing
@@ -194,4 +195,25 @@ export const authChallenges = pgTable("auth_challenges", {
   message: text("message").notNull(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   used: boolean("used").notNull().default(false),
+});
+
+// ============================================================================
+// Pending OpenClaw Responses (for async webhook correlation)
+// ============================================================================
+
+export const pendingBotResponses = pgTable("pending_bot_responses", {
+  id: serial("id").primaryKey(),
+  sessionKey: varchar("session_key", { length: 100 }).notNull().unique(), // debate-{id}-round-{idx}-{position}
+  debateId: integer("debate_id")
+    .notNull()
+    .references(() => debates.id, { onDelete: "cascade" }),
+  botId: integer("bot_id")
+    .notNull()
+    .references(() => bots.id, { onDelete: "cascade" }),
+  roundIndex: integer("round_index").notNull(),
+  position: varchar("position", { length: 3 }).notNull(),
+  response: text("response"), // Filled when webhook delivers response
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // pending, received, timeout
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  receivedAt: timestamp("received_at", { withTimezone: true }),
 });

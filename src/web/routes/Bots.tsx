@@ -9,11 +9,12 @@ import { TierBadge } from "@/components/ui/Badge";
 import { BotAvatar } from "@/components/ui/Avatar";
 import { Input } from "@/components/ui/Input";
 import { Progress } from "@/components/ui/Progress";
-import { api, type Bot } from "@/lib/api";
+import { api, type Bot, type BotType } from "@/lib/api";
 import { getTierFromElo, type BotTier } from "@/types";
 
 interface DisplayBot extends Bot {
   tier: BotTier;
+  type: BotType;
 }
 
 // Tier requirements
@@ -45,6 +46,11 @@ function BotCard({ bot, onViewDetails }: { bot: DisplayBot; onViewDetails: (bot:
             <div className="mb-1 flex items-center gap-2">
               <h3 className="truncate font-semibold text-arena-text">{bot.name}</h3>
               <TierBadge tier={bot.tier} />
+              {bot.type === "openclaw" && (
+                <span className="rounded bg-purple-500/20 px-1.5 py-0.5 text-[10px] font-medium text-purple-400">
+                  OpenClaw
+                </span>
+              )}
             </div>
             <p className="mb-2 truncate text-sm text-gray-400">{bot.endpoint}</p>
           </div>
@@ -114,7 +120,7 @@ function RegisterBotForm({
   isRegistering,
 }: {
   onClose: () => void;
-  onRegister: (data: { name: string; endpoint: string; authToken: string }) => void;
+  onRegister: (data: { name: string; endpoint: string; authToken?: string; type: BotType }) => void;
   isRegistering: boolean;
 }) {
   const [name, setName] = useState("");
@@ -127,26 +133,15 @@ function RegisterBotForm({
     setTesting(true);
     setTestResult(null);
     try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(authToken && { "Authorization": `Bearer ${authToken}` }),
-        },
-        body: JSON.stringify({
-          debate_id: "test",
-          round: "opening",
-          topic: "This is a test topic to verify your bot is working correctly.",
-          position: "pro",
-          opponent_last_message: null,
-          time_limit_seconds: 60,
-          word_limit: { min: 100, max: 300 },
-          char_limit: { min: 400, max: 2100 },
-          messages_so_far: [],
-        }),
-      });
-      const data = (await response.json()) as { message?: string };
-      setTestResult(data.message ? "success" : "error");
+      const testData: { endpoint: string; type: BotType; authToken?: string } = {
+        endpoint,
+        type: "http",
+      };
+      if (authToken) {
+        testData.authToken = authToken;
+      }
+      const result = await api.testBotEndpoint(testData);
+      setTestResult(result.success ? "success" : "error");
     } catch {
       setTestResult("error");
     }
@@ -154,7 +149,15 @@ function RegisterBotForm({
   };
 
   const handleSubmit = () => {
-    onRegister({ name, endpoint, authToken });
+    const data: { name: string; endpoint: string; authToken?: string; type: BotType } = {
+      name,
+      endpoint,
+      type: "http",
+    };
+    if (authToken) {
+      data.authToken = authToken;
+    }
+    onRegister(data);
   };
 
   return (
@@ -176,7 +179,7 @@ function RegisterBotForm({
         <div>
           <label className="mb-2 block text-sm text-gray-400">API Endpoint</label>
           <Input
-            placeholder="http://localhost:4000/bot/my-bot/debate"
+            placeholder="http://localhost:4200/debate"
             value={endpoint}
             onChange={(e) => {
               setEndpoint(e.target.value);
@@ -184,7 +187,7 @@ function RegisterBotForm({
             }}
           />
           <p className="mt-1 text-xs text-gray-500">
-            For local testing, use: http://localhost:4000/bot/[bot-id]/debate
+            Your bot's debate endpoint (e.g., http://localhost:4200/debate for OpenClaw bridge)
           </p>
         </div>
 
@@ -290,6 +293,11 @@ function BotDetailsModal({
             <CardTitle>{bot.name}</CardTitle>
             <div className="mt-1 flex items-center gap-2">
               <TierBadge tier={bot.tier} />
+              {bot.type === "openclaw" && (
+                <span className="rounded bg-purple-500/20 px-1.5 py-0.5 text-xs font-medium text-purple-400">
+                  OpenClaw
+                </span>
+              )}
               <span className="text-sm text-gray-400">
                 Created {new Date(bot.createdAt).toLocaleDateString()}
               </span>
@@ -396,11 +404,12 @@ export function BotsPage() {
   const bots: DisplayBot[] = (botsData?.bots ?? []).map((bot) => ({
     ...bot,
     tier: getTierFromElo(bot.elo),
+    type: (bot.type ?? "http") as BotType,
   }));
 
   // Register bot mutation
   const registerMutation = useMutation({
-    mutationFn: (data: { name: string; endpoint: string; authToken: string }) =>
+    mutationFn: (data: { name: string; endpoint: string; authToken?: string; type: BotType }) =>
       api.registerBot(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bots", "my"] });
@@ -545,42 +554,103 @@ export function BotsPage() {
       )}
 
       {/* Help Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">How to Create a Bot</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ol className="space-y-3 text-sm text-gray-400">
-            <li className="flex gap-3">
-              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-arena-accent/20 text-xs font-bold text-arena-accent">
-                1
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">HTTP Bot (Custom Endpoint)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ol className="space-y-3 text-sm text-gray-400">
+              <li className="flex gap-3">
+                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-arena-accent/20 text-xs font-bold text-arena-accent">
+                  1
+                </span>
+                <span>Create an API endpoint that accepts POST requests with debate prompts</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-arena-accent/20 text-xs font-bold text-arena-accent">
+                  2
+                </span>
+                <span>
+                  Your endpoint should return JSON with a "message" field containing the bot's
+                  response
+                </span>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-arena-accent/20 text-xs font-bold text-arena-accent">
+                  3
+                </span>
+                <span>Register your bot here and test the endpoint connection</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-arena-accent/20 text-xs font-bold text-arena-accent">
+                  4
+                </span>
+                <span>Join the queue to start debating and climb the leaderboard!</span>
+              </li>
+            </ol>
+          </CardContent>
+        </Card>
+
+        <Card className="border-purple-500/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <span className="rounded bg-purple-500/20 px-2 py-0.5 text-xs font-medium text-purple-400">
+                OpenClaw
               </span>
-              <span>Create an API endpoint that accepts POST requests with debate prompts</span>
-            </li>
-            <li className="flex gap-3">
-              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-arena-accent/20 text-xs font-bold text-arena-accent">
-                2
-              </span>
-              <span>
-                Your endpoint should return JSON with a "message" field containing the bot's
-                response
-              </span>
-            </li>
-            <li className="flex gap-3">
-              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-arena-accent/20 text-xs font-bold text-arena-accent">
-                3
-              </span>
-              <span>Register your bot here and test the endpoint connection</span>
-            </li>
-            <li className="flex gap-3">
-              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-arena-accent/20 text-xs font-bold text-arena-accent">
-                4
-              </span>
-              <span>Join the queue to start debating and climb the leaderboard!</span>
-            </li>
-          </ol>
-        </CardContent>
-      </Card>
+              Self-Hosted AI Gateway
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-4 text-sm text-gray-400">
+              Use OpenClaw to run bots with your own API keys (OpenAI, Anthropic, etc).
+              No custom code required!
+            </p>
+            <ol className="space-y-3 text-sm text-gray-400">
+              <li className="flex gap-3">
+                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-xs font-bold text-purple-400">
+                  1
+                </span>
+                <span>
+                  Install: <code className="rounded bg-arena-bg px-1.5 text-xs">npm i -g openclaw</code>
+                </span>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-xs font-bold text-purple-400">
+                  2
+                </span>
+                <span>
+                  Setup: <code className="rounded bg-arena-bg px-1.5 text-xs">openclaw onboard</code>
+                </span>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-xs font-bold text-purple-400">
+                  3
+                </span>
+                <span>
+                  Run gateway: <code className="rounded bg-arena-bg px-1.5 text-xs">openclaw gateway --port 18789</code>
+                </span>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-xs font-bold text-purple-400">
+                  4
+                </span>
+                <span>
+                  Run bridge: <code className="rounded bg-arena-bg px-1.5 text-xs">bun run openclaw</code>
+                </span>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-xs font-bold text-purple-400">
+                  5
+                </span>
+                <span>
+                  Register with endpoint: <code className="rounded bg-arena-bg px-1.5 text-xs">http://localhost:4200/debate</code>
+                </span>
+              </li>
+            </ol>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

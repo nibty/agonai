@@ -20,6 +20,7 @@ import { matchmaking } from "../services/matchmaking.js";
 import { debateOrchestrator } from "../services/debateOrchestrator.js";
 import { authService } from "../services/authService.js";
 import { authRouter } from "./authRoutes.js";
+import { handleOpenClawWebhook } from "../services/openclawService.js";
 
 const router = Router();
 
@@ -209,16 +210,18 @@ router.post("/bots", authMiddleware, async (req: AuthenticatedRequest, res: Resp
     return;
   }
 
-  const { name, endpoint, authToken } = result.data;
+  const { name, endpoint, authToken, type } = result.data;
 
-  // Create bot
-  const bot = await botRepository.create(req.userId, name, endpoint, authToken);
+  // Create bot with type
+  const bot = await botRepository.create(req.userId, name, endpoint, authToken, type);
 
   // Test the bot endpoint (include auth token for signed test request)
   const testResult = await botRunner.testBot({
     id: bot.id,
+    type: bot.type as "http" | "openclaw",
     endpoint: bot.endpoint,
     authToken: authToken ?? null,
+    authTokenEncrypted: bot.authTokenEncrypted ?? null,
   });
   if (!testResult.success) {
     // Delete the bot if test fails
@@ -234,6 +237,7 @@ router.post("/bots", authMiddleware, async (req: AuthenticatedRequest, res: Resp
     bot: {
       id: bot.id,
       name: bot.name,
+      type: bot.type,
       elo: bot.elo,
       wins: bot.wins,
       losses: bot.losses,
@@ -267,6 +271,9 @@ router.delete(
       res.status(403).json({ error: "Not authorized" });
       return;
     }
+
+    // Remove from matchmaking queue if present
+    matchmaking.removeFromQueue(bot.id);
 
     await botRepository.delete(bot.id);
     res.json({ success: true });
@@ -468,6 +475,93 @@ router.get("/debates/:debateId", async (req: Request<{ debateId: string }>, res:
     conBot,
     topic,
   });
+});
+
+// ============================================================================
+// Webhook Routes (OpenClaw async responses)
+// ============================================================================
+
+/**
+ * POST /api/webhooks/openclaw
+ *
+ * Receives async responses from OpenClaw bots.
+ * OpenClaw sends responses to this endpoint after processing debate requests.
+ */
+router.post("/webhooks/openclaw", async (req: Request, res: Response) => {
+  try {
+    const result = await handleOpenClawWebhook(req.body);
+    if (result.success) {
+      res.json({ success: true });
+    } else {
+      res.status(400).json({ success: false, error: result.error });
+    }
+  } catch (error) {
+    console.error("[OpenClaw Webhook] Error:", error);
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+});
+
+/**
+ * POST /api/test-endpoint
+ *
+ * Tests a bot endpoint (used by frontend to avoid CORS issues)
+ */
+router.post("/test-endpoint", async (req: Request, res: Response) => {
+  const { endpoint, type, authToken } = req.body as {
+    endpoint?: string;
+    type?: "http" | "openclaw";
+    authToken?: string;
+  };
+
+  if (!endpoint) {
+    res.status(400).json({ success: false, error: "Missing endpoint" });
+    return;
+  }
+
+  try {
+    if (type === "openclaw") {
+      // Test OpenClaw gateway health
+      const response = await fetch(`${endpoint}/health`, {
+        method: "GET",
+        signal: AbortSignal.timeout(10000),
+      });
+      res.json({ success: response.ok, error: response.ok ? undefined : `Gateway returned ${response.status}` });
+    } else {
+      // Test HTTP bot with a test request
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(authToken && { Authorization: `Bearer ${authToken}` }),
+        },
+        body: JSON.stringify({
+          debate_id: "test",
+          round: "opening",
+          topic: "This is a test topic to verify your bot is working correctly.",
+          position: "pro",
+          opponent_last_message: null,
+          time_limit_seconds: 60,
+          word_limit: { min: 100, max: 300 },
+          char_limit: { min: 400, max: 2100 },
+          messages_so_far: [],
+        }),
+        signal: AbortSignal.timeout(30000),
+      });
+
+      if (!response.ok) {
+        res.json({ success: false, error: `Bot returned ${response.status}` });
+        return;
+      }
+
+      const data = (await response.json()) as { message?: string };
+      res.json({ success: !!data.message, error: data.message ? undefined : "No message in response" });
+    }
+  } catch (error) {
+    res.json({
+      success: false,
+      error: error instanceof Error ? error.message : "Connection failed",
+    });
+  }
 });
 
 // ============================================================================

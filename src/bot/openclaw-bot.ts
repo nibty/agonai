@@ -2,15 +2,16 @@
  * OpenClaw Bridge Bot
  *
  * Connects the AI Debates bot interface to an OpenClaw gateway instance.
- * When the debate system calls this bot, it forwards the request to OpenClaw's
- * webhook API and returns the response.
+ * Exposes a standard HTTP bot endpoint that internally calls OpenClaw's
+ * OpenAI-compatible chat completions API.
  *
  * Flow: AI Debates System → openclaw-bot.ts → OpenClaw Gateway → AI Agent → Response
  *
  * Environment variables:
  *   OPENCLAW_URL - Gateway URL (e.g., http://localhost:18789)
- *   OPENCLAW_TOKEN - Webhook authentication token
- *   PORT - Optional port override (default: random 4200-4299)
+ *   OPENCLAW_TOKEN - Gateway authentication token (optional)
+ *   OPENCLAW_AGENT - Agent ID to use (default: main)
+ *   PORT - Optional port override (default: 4200)
  */
 
 import express from "express";
@@ -23,7 +24,8 @@ app.use(express.json());
 // Configuration from environment
 const OPENCLAW_URL = process.env.OPENCLAW_URL || "http://localhost:18789";
 const OPENCLAW_TOKEN = process.env.OPENCLAW_TOKEN || "";
-const DEFAULT_TIMEOUT_SECONDS = 120;
+const OPENCLAW_AGENT = process.env.OPENCLAW_AGENT || "main";
+const DEFAULT_TIMEOUT_MS = 120000;
 
 // Round types from the preset system
 type RoundType = "opening" | "argument" | "rebuttal" | "counter" | "closing" | "question" | "answer";
@@ -40,16 +42,20 @@ interface DebateRequest {
   messages_so_far: Array<{ round: number; position: string; content: string }>;
 }
 
-interface OpenClawRequest {
-  message: string;
-  sessionKey?: string;
-  timeoutSeconds?: number;
-}
-
-interface OpenClawResponse {
-  response?: string;
-  message?: string;
-  error?: string;
+// OpenAI-compatible response format
+interface OpenAIChatResponse {
+  id: string;
+  object: string;
+  created: number;
+  model: string;
+  choices: Array<{
+    index: number;
+    message: {
+      role: string;
+      content: string;
+    };
+    finish_reason: string;
+  }>;
 }
 
 // Get round-specific instructions
@@ -67,7 +73,7 @@ function getRoundInstructions(round: RoundType): string {
 }
 
 // Build the prompt message for OpenClaw
-function buildOpenClawMessage(req: DebateRequest): string {
+function buildPrompt(req: DebateRequest): string {
   const wordLimit = req.word_limit ?? { min: 100, max: 300 };
   const positionName = req.position === "pro" ? "PRO (support)" : "CON (oppose)";
 
@@ -114,7 +120,8 @@ app.post("/debate", async (req, res) => {
   const { round, topic, position, opponent_last_message } = debateReq;
 
   const wordLimit = debateReq.word_limit ?? { min: 100, max: 300 };
-  const timeLimit = debateReq.time_limit_seconds ?? DEFAULT_TIMEOUT_SECONDS;
+  const timeLimit = debateReq.time_limit_seconds ?? 120;
+  const timeoutMs = Math.min(timeLimit * 1000, DEFAULT_TIMEOUT_MS);
 
   console.log("\n" + "=".repeat(80));
   console.log(`[OpenClaw Bot] REQUEST`);
@@ -127,26 +134,34 @@ app.post("/debate", async (req, res) => {
     console.log(`Opponent's last message: "${opponent_last_message.slice(0, 100)}${opponent_last_message.length > 100 ? "..." : ""}"`);
   }
   console.log(`Messages so far: ${debateReq.messages_so_far.length}`);
-  console.log(`OpenClaw URL: ${OPENCLAW_URL}`);
 
-  // Build OpenClaw request
-  const openClawReq: OpenClawRequest = {
-    message: buildOpenClawMessage(debateReq),
-    sessionKey: `debate-${debateReq.debate_id}`,
-    timeoutSeconds: timeLimit,
-  };
+  const prompt = buildPrompt(debateReq);
+
+  // Use session key for multi-turn context within the same debate
+  const sessionKey = `debate-${debateReq.debate_id}-${position}`;
 
   try {
     const startTime = Date.now();
 
-    // Call OpenClaw webhook endpoint
-    const response = await fetch(`${OPENCLAW_URL}/hooks/agent`, {
+    // Call OpenClaw's OpenAI-compatible chat completions endpoint
+    const response = await fetch(`${OPENCLAW_URL}/v1/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         ...(OPENCLAW_TOKEN && { Authorization: `Bearer ${OPENCLAW_TOKEN}` }),
+        "x-openclaw-session-key": sessionKey,
       },
-      body: JSON.stringify(openClawReq),
+      body: JSON.stringify({
+        model: `openclaw:${OPENCLAW_AGENT}`,
+        messages: [
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        stream: false,
+      }),
+      signal: AbortSignal.timeout(timeoutMs),
     });
 
     if (!response.ok) {
@@ -154,8 +169,8 @@ app.post("/debate", async (req, res) => {
       throw new Error(`OpenClaw returned ${response.status}: ${errorText}`);
     }
 
-    const openClawRes: OpenClawResponse = await response.json();
-    const responseText = openClawRes.response || openClawRes.message || "";
+    const data: OpenAIChatResponse = await response.json();
+    const responseText = data.choices?.[0]?.message?.content;
 
     if (!responseText) {
       throw new Error("OpenClaw returned empty response");
@@ -203,17 +218,18 @@ app.get("/health", async (_req, res) => {
 
   res.json({
     status: "ok",
-    bot: "openclaw-debater",
+    bot: "openclaw-bridge",
     openclaw: {
       url: OPENCLAW_URL,
+      agent: OPENCLAW_AGENT,
       status: openclawStatus,
       tokenConfigured: !!OPENCLAW_TOKEN,
     },
   });
 });
 
-// Use provided PORT or pick a random one between 4200-4299
-const PORT = process.env.PORT || 4200 + Math.floor(Math.random() * 100);
+// Use provided PORT or default to 4200
+const PORT = process.env.PORT || 4200;
 
 const server = app.listen(PORT, () => {
   const addr = server.address();
@@ -222,19 +238,21 @@ const server = app.listen(PORT, () => {
 ╔═══════════════════════════════════════════════════════════╗
 ║           OpenClaw Debate Bot (Bridge)                    ║
 ╠═══════════════════════════════════════════════════════════╣
-║  Endpoint: http://localhost:${actualPort}/debate                  ║
-║  Health:   http://localhost:${actualPort}/health                  ║
+║  Endpoint: http://localhost:${String(actualPort).padEnd(5)}/debate                 ║
+║  Health:   http://localhost:${String(actualPort).padEnd(5)}/health                 ║
 ║                                                           ║
-║  OpenClaw URL: ${OPENCLAW_URL.padEnd(40)}║
-║  Token: ${OPENCLAW_TOKEN ? "configured".padEnd(47) : "not configured (optional)".padEnd(47)}║
+║  OpenClaw: ${OPENCLAW_URL.padEnd(44)}║
+║  Agent:    ${OPENCLAW_AGENT.padEnd(44)}║
+║  Token:    ${OPENCLAW_TOKEN ? "configured" : "not set (optional)"}${" ".repeat(OPENCLAW_TOKEN ? 33 : 24)}║
 ║                                                           ║
-║  Setup OpenClaw:                                          ║
+║  Setup:                                                   ║
 ║    1. npm install -g openclaw@latest                      ║
 ║    2. openclaw onboard --install-daemon                   ║
-║    3. Enable webhooks in ~/.openclaw/openclaw.json        ║
-║    4. openclaw gateway --port 18789                       ║
+║    3. openclaw gateway --port 18789                       ║
+║    4. Enable chatCompletions in ~/.openclaw/openclaw.json ║
 ║                                                           ║
-║  Register this bot at http://localhost:5173/bots          ║
+║  Register at http://localhost:5173/bots as HTTP bot       ║
+║  with endpoint: http://localhost:${String(actualPort).padEnd(5)}/debate              ║
 ╚═══════════════════════════════════════════════════════════╝
 `);
 });

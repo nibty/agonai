@@ -42,6 +42,7 @@ function toPublic(bot: Bot): BotPublic {
     id: bot.id,
     ownerId: bot.ownerId,
     name: bot.name,
+    type: bot.type as "http" | "openclaw",
     elo: bot.elo,
     wins: bot.wins,
     losses: bot.losses,
@@ -71,13 +72,20 @@ export const botRepository = {
     return result.map(toPublic);
   },
 
-  async create(ownerId: number, name: string, endpoint: string, authToken?: string): Promise<Bot> {
+  async create(
+    ownerId: number,
+    name: string,
+    endpoint: string,
+    authToken?: string,
+    type: "http" | "openclaw" = "http"
+  ): Promise<Bot> {
     const result = await db
       .insert(bots)
       .values({
         ownerId,
         name,
         endpoint,
+        type,
         authTokenHash: authToken ? hashToken(authToken) : null,
         authTokenEncrypted: authToken ? encryptToken(authToken) : null,
       })

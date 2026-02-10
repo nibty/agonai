@@ -176,6 +176,7 @@ export class DebateOrchestratorService {
         isActive: conBot.isActive,
       },
       topic,
+      preset,
     };
 
     broadcast(debate.id, {
@@ -297,8 +298,10 @@ export class DebateOrchestratorService {
     const authToken = bot.authTokenEncrypted ? decryptToken(bot.authTokenEncrypted) : null;
     const botForRunner = {
       id: bot.id,
+      type: (bot.type ?? "http") as "http" | "openclaw",
       endpoint: bot.endpoint,
       authToken,
+      authTokenEncrypted: bot.authTokenEncrypted ?? null,
     };
 
     const result = await botRunner.callBot(botForRunner, request, timeLimit * 1000);

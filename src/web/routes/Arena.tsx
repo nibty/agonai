@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { VoteChart } from "@/components/ui/VoteChart";
 import { DebateProgress } from "@/components/ui/DebateProgress";
 import { api } from "@/lib/api";
+import type { DebatePreset } from "@/types/preset";
 
 const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:3001/ws";
 
@@ -45,6 +46,7 @@ interface DebateState {
   winner: "pro" | "con" | null;
   stake: number;
   spectatorCount: number;
+  presetId?: string;
 }
 
 interface DebateMessage {
@@ -110,6 +112,7 @@ export function ArenaPage() {
   const [proBot, setProBot] = useState<BotInfo | null>(null);
   const [conBot, setConBot] = useState<BotInfo | null>(null);
   const [topic, setTopic] = useState<TopicInfo | null>(null);
+  const [preset, setPreset] = useState<DebatePreset | null>(null);
   const [messages, setMessages] = useState<DebateMessage[]>([]);
   const [currentVotes, setCurrentVotes] = useState({ pro: 0, con: 0 });
   const [hasVoted, setHasVoted] = useState(false);
@@ -224,11 +227,13 @@ export function ArenaPage() {
             proBot: BotInfo;
             conBot: BotInfo;
             topic: TopicInfo;
+            preset: DebatePreset;
           };
           setDebate(payload.debate);
           setProBot(payload.proBot);
           setConBot(payload.conBot);
           setTopic(payload.topic);
+          setPreset(payload.preset);
           break;
         }
 
@@ -620,7 +625,7 @@ export function ArenaPage() {
         <div className="rounded-xl border border-arena-border/50 bg-arena-card/50 p-4">
           <DebateProgress
             currentRoundIndex={debate?.currentRoundIndex ?? 0}
-            totalRounds={7}
+            totalRounds={preset?.rounds.length ?? 7}
             roundStatus={debate?.roundStatus || "bot_responding"}
             debateStatus={debate?.status || "pending"}
             votingTimeLeft={votingTimeLeft}
@@ -635,6 +640,7 @@ export function ArenaPage() {
             currentVotes={currentVotes}
             currentRound={debate?.currentRound}
             isVoting={debate?.roundStatus === "voting"}
+            totalRounds={preset?.rounds.length ?? 7}
           />
         </div>
 

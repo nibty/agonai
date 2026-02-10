@@ -272,6 +272,7 @@ export interface DebateStartedPayload {
   proBot: BotPublic;
   conBot: BotPublic;
   topic: Topic;
+  preset: import("./presets.js").DebatePreset;
 }
 
 export interface RoundStartedPayload {
@@ -343,10 +344,14 @@ export interface ErrorPayload {
 // API Request/Response Types
 // ============================================================================
 
+export const BotTypeSchema = z.enum(["http", "openclaw"]).default("http");
+export type BotType = z.infer<typeof BotTypeSchema>;
+
 export const RegisterBotSchema = z.object({
   name: z.string().min(1).max(50),
   endpoint: z.string().url(),
   authToken: z.string().optional(),
+  type: BotTypeSchema,
 });
 
 export type RegisterBotRequest = z.infer<typeof RegisterBotSchema>;

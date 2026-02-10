@@ -6,12 +6,16 @@ import type {
   RoundConfig,
 } from "../types/index.js";
 import { BotResponseSchema, BOT_TIMEOUT_SECONDS } from "../types/index.js";
+import type { BotType } from "../db/types.js";
+import { callOpenClawBot, testOpenClawEndpoint } from "./openclawService.js";
 
 // Bot interface for the runner - needs endpoint for calling
 interface BotForRunner {
   id: number;
+  type: BotType;
   endpoint: string;
   authToken?: string | null; // Decrypted auth token for HMAC signing
+  authTokenEncrypted?: string | null; // For OpenClaw bots
 }
 
 // Message interface for building requests
@@ -49,12 +53,19 @@ export class BotRunnerService {
 
   /**
    * Call a bot's endpoint and get its response
+   * Handles both HTTP and OpenClaw bot types
    */
   async callBot(
     bot: BotForRunner,
     request: BotRequest,
     timeout = this.defaultTimeout
   ): Promise<BotCallResult> {
+    // Route to OpenClaw handler for OpenClaw bots
+    if (bot.type === "openclaw") {
+      return this.callOpenClawBot(bot, request, timeout);
+    }
+
+    // Standard HTTP bot handling
     const startTime = Date.now();
 
     try {
@@ -178,10 +189,36 @@ export class BotRunnerService {
   }
 
   /**
+   * Call an OpenClaw bot using async webhook flow
+   */
+  private async callOpenClawBot(
+    bot: BotForRunner,
+    request: BotRequest,
+    timeout: number
+  ): Promise<BotCallResult> {
+    // Use the OpenClaw service for async handling
+    return callOpenClawBot(
+      {
+        id: bot.id,
+        endpoint: bot.endpoint,
+        authTokenEncrypted: bot.authTokenEncrypted ?? null,
+      } as any,
+      request,
+      timeout
+    );
+  }
+
+  /**
    * Test a bot endpoint to verify it's working
    * @param bot - Bot with endpoint and optional authToken for signed requests
    */
   async testBot(bot: BotForRunner): Promise<{ success: boolean; error?: string }> {
+    // For OpenClaw bots, just test gateway connectivity
+    if (bot.type === "openclaw") {
+      return testOpenClawEndpoint(bot.endpoint, bot.authToken ?? undefined);
+    }
+
+    // For HTTP bots, send a test request
     const testRequest: BotRequest = {
       debate_id: "test",
       round: "opening",

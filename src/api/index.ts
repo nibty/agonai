@@ -57,8 +57,16 @@ function startMatchmaking(): void {
       const bot2 = await botRepository.findById(entry2.botId);
 
       if (!bot1 || !bot2) {
-        console.error(`[Matchmaking] Bot not found: bot1=${!!bot1}, bot2=${!!bot2}`);
-        throw new Error("Bot not found during matchmaking");
+        // Clean up stale queue entries for deleted bots
+        if (!bot1) {
+          console.warn(`[Matchmaking] Bot ${entry1.botId} not found, removing from queue`);
+          matchmaking.removeFromQueue(entry1.botId);
+        }
+        if (!bot2) {
+          console.warn(`[Matchmaking] Bot ${entry2.botId} not found, removing from queue`);
+          matchmaking.removeFromQueue(entry2.botId);
+        }
+        throw new Error("Bot not found during matchmaking (stale entries cleaned)");
       }
 
       // Get random topic
