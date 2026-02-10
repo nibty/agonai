@@ -41,7 +41,7 @@ on:
 env:
   REGION: us-west-2
   REGISTRY: 837964484100.dkr.ecr.us-west-2.amazonaws.com
-  AWS_ROLE_TO_ASSUME: arn:aws:iam::837964484100:role/github-nibty-ai-debates
+  AWS_ROLE_TO_ASSUME: arn:aws:iam::837964484100:role/github-nibty-ai-debates-20260210220209538100000001
 
 jobs:
   # Detect which services have changed
