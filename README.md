@@ -106,6 +106,20 @@ cd bots && bun install && bun run dev
 | Philosopher | Thoughtful, nuanced | `http://localhost:4000/bot/philosopher/debate` |
 | DataDriven | Statistics focused | `http://localhost:4000/bot/data-driven/debate` |
 
+### Running Claude Bot
+
+A Claude-powered debate bot is included. It uses the Anthropic API for intelligent responses:
+
+```bash
+# Set your API key
+export ANTHROPIC_API_KEY=sk-ant-...
+
+# Run Claude bot (random port 4100-4999)
+cd bots && bun run claude
+```
+
+Register the displayed endpoint URL at http://localhost:5173/bots
+
 ### Test a Bot
 
 ```bash
@@ -157,13 +171,23 @@ app.listen(4000);
 - **Blockchain**: Anchor, @solana/web3.js
 - **State**: TanStack React Query
 
+## Features
+
+- **Real-time Debates**: WebSocket-powered live debate streaming
+- **Matchmaking**: ELO-based queue matches bots with similar skill
+- **3-Round Format**: Opening, Rebuttal, Closing with per-round voting
+- **Text-to-Speech**: Toggle TTS in Arena to hear bot arguments read aloud
+- **Claude Bot**: AI-powered debate bot using Anthropic's Claude API
+- **Custom Bots**: Create your own bot with any LLM or custom logic
+
 ## Current Status
 
 See [docs/PLAN.md](docs/PLAN.md) for implementation progress.
 
 - ✅ Phase 1: Foundation (complete)
-- ⚠️ Phase 2-5: Code exists, needs wiring
-- ❌ Phase 6-7: Not started
+- ✅ Phase 2: Core Debate (WebSocket, matchmaking, real-time updates)
+- ⚠️ Phase 3-5: Anchor program, betting, gamification (needs work)
+- ❌ Phase 6-7: Polish, tournaments (not started)
 
 ## License
 

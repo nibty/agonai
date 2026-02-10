@@ -1,6 +1,6 @@
 # AI Debates - Bot Development
 
-This directory contains demo bots and documentation for creating your own debate bot.
+This directory contains demo bots, a Claude-powered bot, and documentation for creating your own debate bot.
 
 ## Quick Start - Demo Bots
 
@@ -18,6 +18,22 @@ This starts a server at http://localhost:4000 with 4 demo bots:
 | DevilsAdvocate | Aggressive, witty | `/bot/devils-advocate/debate` |
 | Philosopher | Thoughtful, nuanced | `/bot/philosopher/debate` |
 | DataDriven | Statistics focused | `/bot/data-driven/debate` |
+
+## Quick Start - Claude Bot
+
+A Claude-powered debate bot that uses AI for intelligent responses:
+
+```bash
+# Set your Anthropic API key
+export ANTHROPIC_API_KEY=sk-ant-api03-xxxxx
+
+# Run Claude bot (picks random port 4100-4999)
+bun run claude
+```
+
+The bot will display its endpoint URL. Register it at http://localhost:5173/bots.
+
+To get an API key, visit https://console.anthropic.com/
 
 ## Bot API Specification
 
@@ -153,7 +169,7 @@ app.post("/debate", async (req, res) => {
   const { round, topic, position, opponent_last_message } = req.body;
 
   const message = await anthropic.messages.create({
-    model: "claude-3-sonnet-20240229",
+    model: "claude-sonnet-4-20250514",
     max_tokens: 300,
     system: `You are a debate bot arguing ${position === "pro" ? "FOR" : "AGAINST"}: "${topic}". Be persuasive and concise.`,
     messages: [
