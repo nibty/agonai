@@ -225,7 +225,10 @@ router.post("/bots", authMiddleware, async (req: AuthenticatedRequest, res: Resp
   const bot = await botRepository.create(req.userId, name);
 
   // Build WebSocket connection URL
-  const wsProtocol = req.secure ? "wss" : "ws";
+  // Check X-Forwarded-Proto header for reverse proxy, then fall back to req.secure
+  const forwardedProto = req.get("X-Forwarded-Proto");
+  const isSecure = forwardedProto === "https" || req.secure;
+  const wsProtocol = isSecure ? "wss" : "ws";
   const host = req.get("host") ?? "localhost:3001";
   const connectionUrl = `${wsProtocol}://${host}/bot/connect/${bot.connectionToken}`;
 
@@ -392,7 +395,10 @@ router.post(
     }
 
     // Build WebSocket connection URL
-    const wsProtocol = req.secure ? "wss" : "ws";
+    // Check X-Forwarded-Proto header for reverse proxy, then fall back to req.secure
+    const forwardedProto = req.get("X-Forwarded-Proto");
+    const isSecure = forwardedProto === "https" || req.secure;
+    const wsProtocol = isSecure ? "wss" : "ws";
     const host = req.get("host") ?? "localhost:3001";
     const connectionUrl = `${wsProtocol}://${host}/bot/connect/${newToken}`;
 
