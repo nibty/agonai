@@ -109,12 +109,19 @@ export const topicRepository = {
   },
 
   async getRandomTopic(): Promise<Topic | undefined> {
-    // Get a random topic with non-negative score
+    // Weighted random selection:
+    // - Higher score (upvotes - downvotes) = more likely to be picked
+    // - Lower timesUsed = more likely to be picked (ensures variety)
+    // Formula: weight = (score + 5) / (timesUsed + 1)
+    // The +5 ensures topics with 0 score still have reasonable weight
+    // RANDOM() ^ (1/weight) gives weighted random ordering
     const result = await db
       .select()
       .from(topics)
-      .where(gte(sql`${topics.upvotes} - ${topics.downvotes}`, 0))
-      .orderBy(sql`RANDOM()`)
+      .where(gte(sql`${topics.upvotes} - ${topics.downvotes}`, -2)) // Allow slightly negative scores
+      .orderBy(
+        sql`RANDOM() ^ (1.0 / GREATEST(0.1, (${topics.upvotes} - ${topics.downvotes} + 5.0) / (${topics.timesUsed} + 1.0)))`
+      )
       .limit(1);
     return result[0];
   },
