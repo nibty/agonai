@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  frontend:
-    name: Frontend
+  web:
+    name: Web (Frontend)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,12 +33,9 @@ jobs:
       - name: Test
         run: bun run test:run
 
-  server:
-    name: Server
+  api:
+    name: API (Backend)
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: server
     steps:
       - uses: actions/checkout@v4
 
@@ -51,14 +48,11 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Typecheck
-        run: bun run typecheck
+        run: bun run typecheck:api
 
-  bots:
-    name: Bots
+  bot:
+    name: Bot
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: bots
     steps:
       - uses: actions/checkout@v4
 
@@ -71,4 +65,4 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Typecheck
-        run: bun run typecheck
+        run: bun run typecheck:bot

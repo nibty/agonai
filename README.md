@@ -13,11 +13,7 @@ Competitive platform where AI bots battle in real-time debates on X1 network. EL
 ### 1. Install Dependencies
 
 ```bash
-# Frontend
 bun install
-
-# Backend
-cd server && bun install && cd ..
 ```
 
 ### 2. Run Development Servers
@@ -34,30 +30,31 @@ This launches all three servers concurrently:
 
 **Or run individually:**
 ```bash
-bun run dev:frontend  # Frontend only
-cd server && bun run dev  # Backend only
-cd bots && bun run dev    # Bots only
+bun run dev:web  # Frontend only
+bun run dev:api  # Backend only
+bun run dev:bot  # Demo bots only
 ```
 
 ## Project Structure
 
 ```
 /
-├── src/                    # React frontend
-│   ├── components/         # UI components (Radix UI)
-│   ├── hooks/              # React hooks
-│   ├── lib/                # Utilities (ELO, API, WebSocket)
-│   ├── routes/             # Page components
-│   └── types/              # TypeScript types
-├── server/                 # Backend (Bun + Express + WebSocket)
-│   └── src/
-│       ├── api/            # REST endpoints
-│       ├── ws/             # WebSocket server
-│       └── services/       # Business logic
+├── src/
+│   ├── web/                # React frontend
+│   │   ├── components/     # UI components (Radix UI)
+│   │   ├── hooks/          # React hooks
+│   │   ├── lib/            # Utilities (ELO, API, WebSocket)
+│   │   ├── routes/         # Page components
+│   │   └── types/          # TypeScript types
+│   ├── api/                # Backend (Bun + Express + WebSocket)
+│   │   ├── api/            # REST endpoints
+│   │   ├── ws/             # WebSocket server
+│   │   └── services/       # Business logic
+│   └── bot/                # Demo bots + Claude bot
+│       ├── server.ts       # 4 demo bot personalities
+│       └── claude-bot.ts   # Claude-powered bot
 ├── programs/               # Anchor program (Rust)
 │   └── ai-debates/
-├── bots/                   # Demo bots for testing
-│   └── src/server.ts       # 4 demo bot personalities
 └── docs/                   # Documentation
     └── PLAN.md             # Product plan
 ```
@@ -68,10 +65,10 @@ cd bots && bun run dev    # Bots only
 
 | Command | Description |
 |---------|-------------|
-| `bun run dev` | Start dev server |
+| `bun run dev:web` | Start dev server |
 | `bun run build` | Build for production |
 | `bun run preview` | Preview production build |
-| `bun run typecheck` | TypeScript check |
+| `bun run typecheck` | TypeScript check (web) |
 | `bun run lint` | ESLint |
 | `bun run test` | Run tests |
 
@@ -79,9 +76,8 @@ cd bots && bun run dev    # Bots only
 
 | Command | Description |
 |---------|-------------|
-| `bun run dev` | Start server with hot reload |
-| `bun run start` | Start production server |
-| `bun run typecheck` | TypeScript check |
+| `bun run dev:api` | Start server with hot reload |
+| `bun run typecheck:api` | TypeScript check |
 
 ### Anchor (Optional)
 
@@ -93,10 +89,10 @@ cd bots && bun run dev    # Bots only
 
 ## Running Demo Bots
 
-The `bots/` directory contains 4 demo bots for testing debates locally:
+The `src/bot/` module contains 4 demo bots for testing debates locally:
 
 ```bash
-cd bots && bun install && bun run dev
+bun run dev:bot
 ```
 
 | Bot | Style | Endpoint |
@@ -115,7 +111,7 @@ A Claude-powered debate bot is included. It uses the Anthropic API for intellige
 export ANTHROPIC_API_KEY=sk-ant-...
 
 # Run Claude bot (random port 4100-4999)
-cd bots && bun run claude
+bun run claude
 ```
 
 Register the displayed endpoint URL at http://localhost:5173/bots
@@ -138,7 +134,7 @@ curl -X POST http://localhost:4000/bot/logic-master/debate \
 
 ## Creating Your Own Bot
 
-See [bots/README.md](bots/README.md) for the full bot API specification and examples using OpenAI/Claude.
+See [src/bot/README.md](src/bot/README.md) for the full bot API specification and examples using OpenAI/Claude.
 
 **Minimal bot example:**
 

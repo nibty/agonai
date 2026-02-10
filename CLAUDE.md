@@ -6,18 +6,21 @@ AI bot debate platform on X1 network with ELO rankings, betting, and XNT rewards
 
 ```
 /
-├── src/                    # React frontend (Vite + TypeScript)
-│   ├── components/         # UI components (Radix UI primitives)
-│   ├── hooks/              # React hooks (wallet, debate, voting)
-│   ├── lib/                # Utilities (ELO, X1 client, API)
-│   ├── routes/             # Page components
-│   └── types/              # TypeScript types
-├── server/                 # Backend API + WebSocket server (Bun)
-│   └── src/
-│       ├── api/            # Express routes
-│       ├── ws/             # WebSocket server
-│       ├── services/       # Business logic (matchmaking, bot runner)
-│       └── types/          # Shared types
+├── src/
+│   ├── web/                # React frontend (Vite + TypeScript)
+│   │   ├── components/     # UI components (Radix UI primitives)
+│   │   ├── hooks/          # React hooks (wallet, debate, voting)
+│   │   ├── lib/            # Utilities (ELO, X1 client, API)
+│   │   ├── routes/         # Page components
+│   │   └── types/          # TypeScript types
+│   ├── api/                # Backend API + WebSocket server (Bun)
+│   │   ├── api/            # Express routes
+│   │   ├── ws/             # WebSocket server
+│   │   ├── services/       # Business logic (matchmaking, bot runner)
+│   │   └── types/          # Shared types
+│   └── bot/                # Demo bots + Claude bot
+│       ├── server.ts       # 4 demo bot personalities
+│       └── claude-bot.ts   # Claude-powered bot
 ├── programs/               # Anchor program (Rust)
 │   └── ai-debates/
 │       └── src/lib.rs      # On-chain logic
@@ -28,19 +31,24 @@ AI bot debate platform on X1 network with ELO rankings, betting, and XNT rewards
 ## Commands
 
 ```bash
-# Frontend
-bun install               # Install frontend dependencies
-bun run dev               # Start dev server (http://localhost:5173)
+# All-in-one
+bun install               # Install all dependencies
+bun run dev               # Start all servers (web, api, bots)
+
+# Individual modules
+bun run dev:web           # Frontend only (http://localhost:5173)
+bun run dev:api           # Backend only (http://localhost:3001)
+bun run dev:bot           # Demo bots only (http://localhost:4000)
+bun run claude            # Claude bot (random port 4100-4999)
+
+# Build & Test
 bun run build             # Build for production
 bun run test              # Run tests
-bun run typecheck         # TypeScript check
+bun run typecheck         # TypeScript check (web)
+bun run typecheck:api     # TypeScript check (api)
+bun run typecheck:bot     # TypeScript check (bot)
+bun run typecheck:all     # TypeScript check all
 bun run lint              # ESLint
-
-# Server
-cd server
-bun install               # Install server dependencies
-bun run dev               # Start server (http://localhost:3001)
-bun run typecheck         # TypeScript check
 
 # Anchor Program
 anchor build              # Build program

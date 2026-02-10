@@ -37,9 +37,9 @@
     /* Path aliases */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/web/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src/web"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

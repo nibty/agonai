@@ -4,10 +4,16 @@ import path from "path";
 
 export default defineConfig({
   plugins: [react()],
+  root: "src/web",
+  publicDir: "../../public",
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(__dirname, "./src/web"),
     },
+  },
+  build: {
+    outDir: "../../dist",
+    emptyOutDir: true,
   },
   define: {
     // Polyfills for Solana wallet adapter
