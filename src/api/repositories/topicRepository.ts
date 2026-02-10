@@ -114,13 +114,13 @@ export const topicRepository = {
     // - Lower timesUsed = more likely to be picked (ensures variety)
     // Formula: weight = (score + 5) / (timesUsed + 1)
     // The +5 ensures topics with 0 score still have reasonable weight
-    // RANDOM() ^ (1/weight) gives weighted random ordering
+    // RANDOM() ^ (1/weight) with DESC ordering - higher weight = higher values = picked first
     const result = await db
       .select()
       .from(topics)
       .where(gte(sql`${topics.upvotes} - ${topics.downvotes}`, -2)) // Allow slightly negative scores
       .orderBy(
-        sql`RANDOM() ^ (1.0 / GREATEST(0.1, (${topics.upvotes} - ${topics.downvotes} + 5.0) / (${topics.timesUsed} + 1.0)))`
+        desc(sql`RANDOM() ^ (1.0 / GREATEST(0.1, (${topics.upvotes} - ${topics.downvotes} + 5.0) / (${topics.timesUsed} + 1.0)))`)
       )
       .limit(1);
     return result[0];
