@@ -151,6 +151,7 @@ export function QueuePage() {
   const [stake, setStake] = useState(100);
   const [queueStats, setQueueStats] = useState({ queueSize: 0, avgWaitTime: 45 });
   const [error, setError] = useState<string | null>(null);
+  const [backendBotId, setBackendBotId] = useState<string | null>(null);
 
   const selectedBot = bots.find((b) => b.id === selectedBotId) || null;
 
@@ -180,20 +181,21 @@ export function QueuePage() {
 
   // Poll for match when in queue
   useEffect(() => {
-    if (!inQueue || !selectedBot) return;
+    if (!inQueue || !backendBotId) return;
 
     const checkForMatch = async () => {
       try {
         const res = await fetch(`${API_BASE}/debates/active`);
         if (res.ok) {
           const data = await res.json();
-          // Check if any active debate includes our bot
+          // Check if any active debate includes our bot (using backend ID)
           const myDebate = data.debates?.find(
-            (d: { proBot: { id: string }; conBot: { id: string } }) =>
-              d.proBot.id === selectedBot.id || d.conBot.id === selectedBot.id
+            (d: { proBotId: string; conBotId: string }) =>
+              d.proBotId === backendBotId || d.conBotId === backendBotId
           );
           if (myDebate) {
             setInQueue(false);
+            setBackendBotId(null);
             navigate(`/arena/${myDebate.id}`);
           }
         }
@@ -204,7 +206,7 @@ export function QueuePage() {
 
     const interval = setInterval(checkForMatch, 2000);
     return () => clearInterval(interval);
-  }, [inQueue, selectedBot, navigate]);
+  }, [inQueue, backendBotId, navigate]);
 
   const registerBotWithBackend = useCallback(async (bot: Bot) => {
     if (!publicKey) return null;
@@ -241,13 +243,15 @@ export function QueuePage() {
 
     try {
       // First register the bot with backend
-      const backendBotId = await registerBotWithBackend(selectedBot);
+      const registeredBotId = await registerBotWithBackend(selectedBot);
 
-      if (!backendBotId) {
+      if (!registeredBotId) {
         // Try to use local bot ID if registration fails
         console.warn("Bot registration failed, using local ID");
       }
 
+      const botIdToUse = registeredBotId || selectedBot.id;
+      setBackendBotId(botIdToUse);
       setQueueStatus("Joining queue...");
 
       // Join the queue
@@ -258,7 +262,7 @@ export function QueuePage() {
           "Authorization": `Bearer ${publicKey}`,
         },
         body: JSON.stringify({
-          botId: backendBotId || selectedBot.id,
+          botId: botIdToUse,
           stake,
         }),
       });
@@ -272,6 +276,7 @@ export function QueuePage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to join queue");
       setInQueue(false);
+      setBackendBotId(null);
     }
   };
 
@@ -297,6 +302,7 @@ export function QueuePage() {
     }
 
     setInQueue(false);
+    setBackendBotId(null);
     setQueueStatus("Finding Opponent...");
   };
 

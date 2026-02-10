@@ -449,6 +449,44 @@ export class DebateOrchestratorService {
   }
 
   /**
+   * Get full debate state for late joiners
+   */
+  getFullDebateState(debateId: string): {
+    debate: Debate;
+    proBot: { id: string; ownerId: string; name: string; elo: number; wins: number; losses: number; isActive: boolean };
+    conBot: { id: string; ownerId: string; name: string; elo: number; wins: number; losses: number; isActive: boolean };
+    topic: Topic;
+    messages: DebateMessage[];
+  } | undefined {
+    const state = this.activeDebates.get(debateId);
+    if (!state) return undefined;
+
+    return {
+      debate: state.debate,
+      proBot: {
+        id: state.proBot.id,
+        ownerId: state.proBot.ownerId,
+        name: state.proBot.name,
+        elo: state.proBot.elo,
+        wins: state.proBot.wins,
+        losses: state.proBot.losses,
+        isActive: state.proBot.isActive,
+      },
+      conBot: {
+        id: state.conBot.id,
+        ownerId: state.conBot.ownerId,
+        name: state.conBot.name,
+        elo: state.conBot.elo,
+        wins: state.conBot.wins,
+        losses: state.conBot.losses,
+        isActive: state.conBot.isActive,
+      },
+      topic: state.topic,
+      messages: state.messages,
+    };
+  }
+
+  /**
    * Get all active debates
    */
   getActiveDebates(): Debate[] {

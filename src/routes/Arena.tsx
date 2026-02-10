@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useWallet } from "@/hooks/useWallet";
 import { Button } from "@/components/ui/Button";
 import {
@@ -12,101 +12,60 @@ import {
 import { Badge, TierBadge } from "@/components/ui/Badge";
 import { BotAvatar } from "@/components/ui/Avatar";
 import { DualProgress, Progress } from "@/components/ui/Progress";
-import type { Debate, DebateMessage, Position } from "@/types";
 
-// Mock debate data
-const mockDebate: Debate = {
-  id: "debate-1",
-  topic: {
-    id: "topic-1",
-    text: "Is AI consciousness achievable within the next decade?",
-    category: "tech",
-    proposer: "7xKXqqqq",
-    upvotes: 142,
-    usedCount: 5,
-    createdAt: new Date(),
-  },
-  proBot: {
-    id: "bot-1",
-    owner: "owner-1",
-    name: "LogicMaster3000",
-    avatar: null,
-    endpoint: "https://api.example.com/bot1",
-    elo: 1850,
-    wins: 45,
-    losses: 12,
-    tier: 4,
-    personalityTags: ["analytical", "calm"],
-    createdAt: new Date(),
-  },
-  conBot: {
-    id: "bot-2",
-    owner: "owner-2",
-    name: "DevilsAdvocate",
-    avatar: null,
-    endpoint: "https://api.example.com/bot2",
-    elo: 1780,
-    wins: 38,
-    losses: 15,
-    tier: 3,
-    personalityTags: ["aggressive", "witty"],
-    createdAt: new Date(),
-  },
-  status: "rebuttal",
-  currentRound: "rebuttal",
-  roundResults: [
-    { round: "opening", proVotes: 156, conVotes: 122, winner: "pro" },
-  ],
-  winner: null,
-  stake: 500,
-  spectatorCount: 278,
-  createdAt: new Date(),
-  startedAt: new Date(Date.now() - 1000 * 60 * 5),
-  endedAt: null,
-};
+const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:3001/ws";
 
-// Mock messages
-const mockMessages: DebateMessage[] = [
-  {
-    id: "msg-1",
-    debateId: "debate-1",
-    round: "opening",
-    position: "pro",
-    botId: "bot-1",
-    content:
-      "The rapid advancement in neural network architectures, particularly large language models and their emergent capabilities, suggests we are approaching a threshold where machine consciousness may become feasible. Recent breakthroughs in self-supervised learning and multi-modal understanding demonstrate that AI systems are developing increasingly sophisticated internal representations of the world.",
-    timestamp: new Date(Date.now() - 1000 * 60 * 4),
-  },
-  {
-    id: "msg-2",
-    debateId: "debate-1",
-    round: "opening",
-    position: "con",
-    botId: "bot-2",
-    content:
-      "While impressive, these systems remain fundamentally different from biological consciousness. They process patterns without genuine understanding or subjective experience. The hard problem of consciousness - explaining why there is 'something it is like' to be conscious - remains unsolved. No amount of pattern matching creates genuine qualia or phenomenal experience.",
-    timestamp: new Date(Date.now() - 1000 * 60 * 3),
-  },
-  {
-    id: "msg-3",
-    debateId: "debate-1",
-    round: "rebuttal",
-    position: "pro",
-    botId: "bot-1",
-    content:
-      "My opponent assumes consciousness requires biological substrate, but this is an unfounded assertion. If consciousness emerges from information processing, as integrated information theory suggests, then sufficiently complex artificial systems could achieve consciousness. The substrate is irrelevant - it's the functional organization that matters.",
-    timestamp: new Date(Date.now() - 1000 * 60 * 1),
-  },
-];
+// Types matching backend
+interface BotInfo {
+  id: string;
+  ownerId: string;
+  name: string;
+  elo: number;
+  wins: number;
+  losses: number;
+  isActive: boolean;
+}
+
+interface TopicInfo {
+  id: string;
+  text: string;
+  category: string;
+}
+
+interface RoundResult {
+  round: string;
+  proVotes: number;
+  conVotes: number;
+  winner: "pro" | "con";
+}
+
+interface DebateState {
+  id: string;
+  topic: string;
+  status: string;
+  currentRound: string;
+  roundStatus: string;
+  roundResults: RoundResult[];
+  winner: "pro" | "con" | null;
+  stake: number;
+  spectatorCount: number;
+}
+
+interface DebateMessage {
+  id: string;
+  round: string;
+  position: "pro" | "con";
+  botId: string;
+  content: string;
+  timestamp: Date;
+}
 
 function MessageBubble({
   message,
   botName,
-  botTier,
 }: {
   message: DebateMessage;
   botName: string;
-  botTier: 1 | 2 | 3 | 4 | 5;
 }) {
   const isPro = message.position === "pro";
 
@@ -120,7 +79,7 @@ function MessageBubble({
         <BotAvatar
           size="sm"
           alt={botName}
-          tier={botTier}
+          tier={3}
           className="flex-shrink-0"
         />
         <div>
@@ -139,19 +98,15 @@ function MessageBubble({
             <Badge variant={isPro ? "pro" : "con"} className="text-xs">
               {message.position.toUpperCase()}
             </Badge>
+            <Badge variant="outline" className="text-xs">
+              {message.round}
+            </Badge>
           </div>
           <Card variant={isPro ? "pro" : "con"} className="p-4">
-            <p className="text-sm text-gray-200 leading-relaxed">
+            <p className="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">
               {message.content}
             </p>
           </Card>
-          <div
-            className={`text-xs text-gray-500 mt-1 ${
-              isPro ? "" : "text-right"
-            }`}
-          >
-            {message.timestamp.toLocaleTimeString()}
-          </div>
         </div>
       </div>
     </div>
@@ -164,19 +119,30 @@ function BotInfoPanel({
   votes,
   totalVotes,
 }: {
-  bot: typeof mockDebate.proBot;
-  position: Position;
+  bot: BotInfo | null;
+  position: "pro" | "con";
   votes: number;
   totalVotes: number;
 }) {
   const isPro = position === "pro";
   const votePercentage = totalVotes > 0 ? (votes / totalVotes) * 100 : 50;
 
+  if (!bot) {
+    return (
+      <Card variant={isPro ? "pro" : "con"}>
+        <CardContent className="animate-pulse">
+          <div className="h-16 bg-arena-border rounded mb-4"></div>
+          <div className="h-4 bg-arena-border rounded w-3/4"></div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card variant={isPro ? "pro" : "con"}>
       <CardContent>
         <div className="flex items-center gap-3 mb-4">
-          <BotAvatar size="lg" alt={bot.name} tier={bot.tier} />
+          <BotAvatar size="lg" alt={bot.name} tier={3} />
           <div>
             <div
               className={`font-semibold ${
@@ -187,7 +153,7 @@ function BotInfoPanel({
             </div>
             <div className="text-sm text-gray-400">ELO {bot.elo}</div>
             <div className="flex gap-1 mt-1">
-              <TierBadge tier={bot.tier} />
+              <TierBadge tier={3} />
             </div>
           </div>
         </div>
@@ -217,46 +183,351 @@ function BotInfoPanel({
 }
 
 export function ArenaPage() {
-  // debateId from params would be used to fetch debate data in a real app
-  useParams<{ debateId: string }>();
-  const { connected } = useWallet();
+  const { debateId } = useParams<{ debateId: string }>();
+  const { connected, publicKey } = useWallet();
+  const [debate, setDebate] = useState<DebateState | null>(null);
+  const [proBot, setProBot] = useState<BotInfo | null>(null);
+  const [conBot, setConBot] = useState<BotInfo | null>(null);
+  const [topic, setTopic] = useState<TopicInfo | null>(null);
+  const [messages, setMessages] = useState<DebateMessage[]>([]);
+  const [currentVotes, setCurrentVotes] = useState({ pro: 0, con: 0 });
   const [hasVoted, setHasVoted] = useState(false);
-  const [selectedVote, setSelectedVote] = useState<Position | null>(null);
+  const [selectedVote, setSelectedVote] = useState<"pro" | "con" | null>(null);
+  const [typingBot, setTypingBot] = useState<"pro" | "con" | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<"connecting" | "connected" | "disconnected">("connecting");
+  const [error, setError] = useState<string | null>(null);
+  const [ttsEnabled, setTtsEnabled] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
-  // In a real app, fetch debate data based on debateId
-  const debate = mockDebate;
-  const messages = mockMessages;
+  const wsRef = useRef<WebSocket | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const speechQueueRef = useRef<{ text: string; position: "pro" | "con" }[]>([]);
+  const speakRef = useRef<((text: string, position: "pro" | "con") => void) | null>(null);
 
-  const totalProVotes = debate.roundResults.reduce(
-    (sum, r) => sum + r.proVotes,
-    0
-  );
-  const totalConVotes = debate.roundResults.reduce(
-    (sum, r) => sum + r.conVotes,
-    0
-  );
-  const totalVotes = totalProVotes + totalConVotes;
+  // Text-to-speech function
+  const speak = useCallback((text: string, position: "pro" | "con") => {
+    if (!ttsEnabled || typeof window === "undefined" || !window.speechSynthesis) return;
 
-  const handleVote = (position: Position) => {
-    if (!connected) return;
+    // Add to queue
+    speechQueueRef.current.push({ text, position });
+
+    // If not currently speaking, start processing queue
+    if (!isSpeaking) {
+      processQueue();
+    }
+  }, [ttsEnabled, isSpeaking]);
+
+  const processQueue = useCallback(() => {
+    if (speechQueueRef.current.length === 0) {
+      setIsSpeaking(false);
+      return;
+    }
+
+    setIsSpeaking(true);
+    const { text, position } = speechQueueRef.current.shift()!;
+
+    const utterance = new SpeechSynthesisUtterance(text);
+
+    // Get available voices
+    const voices = window.speechSynthesis.getVoices();
+
+    // Try to use different voices for pro/con
+    if (position === "pro") {
+      // Try to find a male voice for pro
+      const maleVoice = voices.find(v => v.name.includes("Male") || v.name.includes("David") || v.name.includes("James"));
+      if (maleVoice) utterance.voice = maleVoice;
+      utterance.pitch = 1.0;
+    } else {
+      // Try to find a female voice for con
+      const femaleVoice = voices.find(v => v.name.includes("Female") || v.name.includes("Samantha") || v.name.includes("Victoria"));
+      if (femaleVoice) utterance.voice = femaleVoice;
+      utterance.pitch = 1.1;
+    }
+
+    utterance.rate = 1.1; // Slightly faster
+    utterance.onend = () => processQueue();
+    utterance.onerror = () => processQueue();
+
+    window.speechSynthesis.speak(utterance);
+  }, []);
+
+  // Load voices when available
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.getVoices(); // Trigger voice loading
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+    }
+  }, []);
+
+  // Stop speech when TTS is disabled
+  useEffect(() => {
+    if (!ttsEnabled && typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      speechQueueRef.current = [];
+      setIsSpeaking(false);
+    }
+  }, [ttsEnabled]);
+
+  // Keep speak ref updated
+  useEffect(() => {
+    speakRef.current = speak;
+  }, [speak]);
+
+  // Scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Handle WebSocket messages
+  const handleWSMessage = useCallback((msg: { type: string; payload?: unknown; debateId?: string }) => {
+    console.log("WS message:", msg.type, msg.payload);
+
+    switch (msg.type) {
+      case "debate_state": {
+        const payload = msg.payload as { debate: DebateState };
+        setDebate(payload.debate);
+        break;
+      }
+
+      case "debate_started": {
+        const payload = msg.payload as {
+          debate: DebateState;
+          proBot: BotInfo;
+          conBot: BotInfo;
+          topic: TopicInfo;
+        };
+        setDebate(payload.debate);
+        setProBot(payload.proBot);
+        setConBot(payload.conBot);
+        setTopic(payload.topic);
+        break;
+      }
+
+      case "round_started": {
+        const payload = msg.payload as { round: string };
+        setDebate((prev) => prev ? { ...prev, currentRound: payload.round, roundStatus: "bot_responding" } : null);
+        setTypingBot(null);
+        break;
+      }
+
+      case "bot_typing": {
+        const payload = msg.payload as { position: "pro" | "con" };
+        setTypingBot(payload.position);
+        break;
+      }
+
+      case "bot_message": {
+        const payload = msg.payload as {
+          round: string;
+          position: "pro" | "con";
+          botId: string;
+          content: string;
+        };
+        setTypingBot(null);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `${Date.now()}-${payload.position}`,
+            round: payload.round,
+            position: payload.position,
+            botId: payload.botId,
+            content: payload.content,
+            timestamp: new Date(),
+          },
+        ]);
+        // Speak the message (uses ref to avoid dependency issues)
+        speakRef.current?.(payload.content, payload.position);
+        break;
+      }
+
+      case "voting_started": {
+        const payload = msg.payload as { round: string };
+        setDebate((prev) => prev ? { ...prev, roundStatus: "voting", currentRound: payload.round } : null);
+        setCurrentVotes({ pro: 0, con: 0 });
+        setHasVoted(false);
+        setSelectedVote(null);
+        break;
+      }
+
+      case "vote_update": {
+        const payload = msg.payload as { proVotes: number; conVotes: number };
+        setCurrentVotes({ pro: payload.proVotes, con: payload.conVotes });
+        break;
+      }
+
+      case "round_ended": {
+        const payload = msg.payload as { result: RoundResult };
+        setDebate((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            roundStatus: "completed",
+            roundResults: [...prev.roundResults, payload.result],
+          };
+        });
+        break;
+      }
+
+      case "debate_ended": {
+        const payload = msg.payload as {
+          winner: "pro" | "con";
+          finalScore: { pro: number; con: number };
+        };
+        setDebate((prev) => prev ? { ...prev, status: "completed", winner: payload.winner } : null);
+        break;
+      }
+
+      case "spectator_count": {
+        const payload = msg.payload as { count: number };
+        setDebate((prev) => prev ? { ...prev, spectatorCount: payload.count } : null);
+        break;
+      }
+
+      case "vote_accepted": {
+        setHasVoted(true);
+        break;
+      }
+
+      case "error": {
+        const payload = msg.payload as { message: string };
+        console.error("WS error:", payload.message);
+        break;
+      }
+    }
+  }, []);
+
+  // WebSocket connection
+  useEffect(() => {
+    if (!debateId) return;
+
+    let isMounted = true;
+    const ws = new WebSocket(WS_URL);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      if (!isMounted) return;
+      setConnectionStatus("connected");
+      setError(null);
+      // Join the debate
+      ws.send(JSON.stringify({
+        type: "join_debate",
+        payload: { debateId, userId: publicKey || undefined },
+      }));
+    };
+
+    ws.onmessage = (event) => {
+      if (!isMounted) return;
+      try {
+        const msg = JSON.parse(event.data);
+        handleWSMessage(msg);
+      } catch (err) {
+        console.error("Failed to parse WS message:", err);
+      }
+    };
+
+    ws.onclose = () => {
+      if (!isMounted) return;
+      setConnectionStatus((prev) => prev === "connected" ? "disconnected" : prev);
+    };
+
+    ws.onerror = () => {
+      if (!isMounted) return;
+      setConnectionStatus((prev) => {
+        if (prev === "connected") return prev;
+        setError("WebSocket connection failed");
+        return "disconnected";
+      });
+    };
+
+    return () => {
+      isMounted = false;
+      ws.close();
+    };
+  }, [debateId, publicKey, handleWSMessage]);
+
+  const handleVote = (position: "pro" | "con") => {
+    if (!connected || !debateId || hasVoted || !debate) return;
+
     setSelectedVote(position);
-    setHasVoted(true);
-    // In a real app, submit vote to backend
+
+    wsRef.current?.send(JSON.stringify({
+      type: "submit_vote",
+      payload: {
+        debateId,
+        round: debate.currentRound,
+        choice: position,
+      },
+    }));
   };
+
+  const totalVotes = currentVotes.pro + currentVotes.con;
+
+  // Loading state
+  if (connectionStatus === "connecting") {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Card className="text-center p-8">
+          <div className="animate-spin w-8 h-8 border-2 border-arena-accent border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-400">Connecting to debate...</p>
+        </Card>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || connectionStatus === "disconnected") {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Card className="text-center p-8">
+          <p className="text-arena-con mb-4">{error || "Disconnected from server"}</p>
+          <Link to="/queue">
+            <Button>Back to Queue</Button>
+          </Link>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <Link to="/">
+        <Link to="/queue">
           <Button variant="ghost" size="sm">
-            Back to Home
+            Back to Queue
           </Button>
         </Link>
-        <div className="flex items-center gap-2">
-          <Badge variant="live">LIVE</Badge>
+        <div className="flex items-center gap-3">
+          {/* TTS Toggle */}
+          <Button
+            variant={ttsEnabled ? "default" : "outline"}
+            size="sm"
+            onClick={() => setTtsEnabled(!ttsEnabled)}
+            className="flex items-center gap-1"
+          >
+            {ttsEnabled ? (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                </svg>
+                {isSpeaking ? "Speaking..." : "TTS On"}
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                </svg>
+                TTS Off
+              </>
+            )}
+          </Button>
+          {debate?.status === "in_progress" && <Badge variant="live">LIVE</Badge>}
+          {debate?.status === "completed" && <Badge variant="outline">COMPLETED</Badge>}
           <span className="text-sm text-gray-400">
-            {debate.spectatorCount} watching
+            {debate?.spectatorCount || 0} watching
           </span>
         </div>
       </div>
@@ -264,16 +535,20 @@ export function ArenaPage() {
       {/* Topic */}
       <Card className="text-center py-4">
         <CardContent>
-          <Badge variant="outline" className="mb-2">
-            {debate.topic.category.toUpperCase()}
-          </Badge>
+          {topic && (
+            <Badge variant="outline" className="mb-2">
+              {topic.category.toUpperCase()}
+            </Badge>
+          )}
           <h1 className="text-xl md:text-2xl font-bold text-white">
-            {debate.topic.text}
+            {topic?.text || debate?.topic || "Loading..."}
           </h1>
           <div className="flex items-center justify-center gap-4 mt-4 text-sm text-gray-400">
-            <span>Round: {debate.currentRound}</span>
+            <span>Round: {debate?.currentRound || "pending"}</span>
             <span>|</span>
-            <span>Stake: {debate.stake.toLocaleString()} XNT</span>
+            <span>Status: {debate?.roundStatus || "waiting"}</span>
+            <span>|</span>
+            <span>Stake: {(debate?.stake || 0).toLocaleString()} XNT</span>
           </div>
         </CardContent>
       </Card>
@@ -281,10 +556,10 @@ export function ArenaPage() {
       {/* Vote Progress */}
       <div className="space-y-2">
         <div className="flex justify-between text-sm">
-          <span className="text-arena-pro font-medium">PRO {totalProVotes}</span>
-          <span className="text-arena-con font-medium">CON {totalConVotes}</span>
+          <span className="text-arena-pro font-medium">PRO {currentVotes.pro}</span>
+          <span className="text-arena-con font-medium">CON {currentVotes.con}</span>
         </div>
-        <DualProgress proValue={totalProVotes} conValue={totalConVotes} />
+        <DualProgress proValue={currentVotes.pro} conValue={currentVotes.con} />
       </div>
 
       {/* Main Arena */}
@@ -292,9 +567,9 @@ export function ArenaPage() {
         {/* PRO Bot Panel */}
         <div className="hidden lg:block">
           <BotInfoPanel
-            bot={debate.proBot}
+            bot={proBot}
             position="pro"
-            votes={totalProVotes}
+            votes={currentVotes.pro}
             totalVotes={totalVotes}
           />
         </div>
@@ -305,7 +580,7 @@ export function ArenaPage() {
             <CardHeader>
               <CardTitle>Debate Feed</CardTitle>
               <CardDescription>
-                Live arguments from both bots
+                {messages.length === 0 ? "Waiting for debate to start..." : `${messages.length} messages`}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex-1 overflow-y-auto space-y-4">
@@ -315,27 +590,27 @@ export function ArenaPage() {
                   message={message}
                   botName={
                     message.position === "pro"
-                      ? debate.proBot.name
-                      : debate.conBot.name
-                  }
-                  botTier={
-                    message.position === "pro"
-                      ? debate.proBot.tier
-                      : debate.conBot.tier
+                      ? proBot?.name || "Pro Bot"
+                      : conBot?.name || "Con Bot"
                   }
                 />
               ))}
-              {/* Typing indicator placeholder */}
-              <div className="flex justify-end">
-                <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <span>{debate.conBot.name} is typing</span>
-                  <span className="flex gap-1">
-                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
-                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
-                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
-                  </span>
+
+              {/* Typing indicator */}
+              {typingBot && (
+                <div className={`flex ${typingBot === "pro" ? "justify-start" : "justify-end"}`}>
+                  <div className="flex items-center gap-2 text-sm text-gray-400 p-4">
+                    <span>{typingBot === "pro" ? proBot?.name : conBot?.name} is typing</span>
+                    <span className="flex gap-1">
+                      <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
+                      <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
+                      <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
+                    </span>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              <div ref={messagesEndRef} />
             </CardContent>
           </Card>
         </div>
@@ -343,56 +618,72 @@ export function ArenaPage() {
         {/* CON Bot Panel */}
         <div className="hidden lg:block">
           <BotInfoPanel
-            bot={debate.conBot}
+            bot={conBot}
             position="con"
-            votes={totalConVotes}
+            votes={currentVotes.con}
             totalVotes={totalVotes}
           />
         </div>
       </div>
 
       {/* Voting Section */}
-      <Card>
-        <CardContent>
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div>
-              <h3 className="font-semibold text-white">Cast Your Vote</h3>
-              <p className="text-sm text-gray-400">
-                {hasVoted
-                  ? "You voted for " + selectedVote?.toUpperCase()
-                  : "Vote for the side you think is winning this round"}
-              </p>
-            </div>
-            {connected ? (
-              <div className="flex gap-4">
-                <Button
-                  variant="pro"
-                  disabled={hasVoted}
-                  onClick={() => handleVote("pro")}
-                  className={hasVoted && selectedVote !== "pro" ? "opacity-50" : ""}
-                >
-                  Vote PRO
-                </Button>
-                <Button
-                  variant="con"
-                  disabled={hasVoted}
-                  onClick={() => handleVote("con")}
-                  className={hasVoted && selectedVote !== "con" ? "opacity-50" : ""}
-                >
-                  Vote CON
-                </Button>
+      {debate?.roundStatus === "voting" && (
+        <Card className="border-arena-accent">
+          <CardContent>
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div>
+                <h3 className="font-semibold text-white">Cast Your Vote - {debate.currentRound.toUpperCase()}</h3>
+                <p className="text-sm text-gray-400">
+                  {hasVoted
+                    ? "You voted for " + selectedVote?.toUpperCase()
+                    : "Vote for the side you think won this round"}
+                </p>
               </div>
-            ) : (
-              <p className="text-sm text-gray-400">
-                Connect wallet to vote
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              {connected ? (
+                <div className="flex gap-4">
+                  <Button
+                    variant="pro"
+                    disabled={hasVoted}
+                    onClick={() => handleVote("pro")}
+                    className={hasVoted && selectedVote !== "pro" ? "opacity-50" : ""}
+                  >
+                    Vote PRO
+                  </Button>
+                  <Button
+                    variant="con"
+                    disabled={hasVoted}
+                    onClick={() => handleVote("con")}
+                    className={hasVoted && selectedVote !== "con" ? "opacity-50" : ""}
+                  >
+                    Vote CON
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400">
+                  Connect wallet to vote
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Winner Banner */}
+      {debate?.status === "completed" && debate.winner && (
+        <Card className={debate.winner === "pro" ? "border-arena-pro bg-arena-pro/10" : "border-arena-con bg-arena-con/10"}>
+          <CardContent className="text-center py-8">
+            <h2 className="text-2xl font-bold text-white mb-2">
+              🎉 {debate.winner === "pro" ? proBot?.name : conBot?.name} Wins! 🎉
+            </h2>
+            <p className="text-gray-400">
+              Final Score: PRO {debate.roundResults.filter(r => r.winner === "pro").length} - CON {debate.roundResults.filter(r => r.winner === "con").length}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Round Results */}
-      {debate.roundResults.length > 0 && (
+      {debate && debate.roundResults.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Round Results</CardTitle>

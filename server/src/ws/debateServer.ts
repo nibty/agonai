@@ -121,16 +121,39 @@ export class DebateWebSocketServer {
     // Update spectator count
     debateOrchestrator.updateSpectatorCount(debateId, spectators.size);
 
-    // Send current debate state
-    const debate = debateOrchestrator.getDebate(debateId);
-    if (debate) {
+    // Send full debate state (including bots, topic, and messages)
+    const fullState = debateOrchestrator.getFullDebateState(debateId);
+    if (fullState) {
+      // Send debate_started event so client gets all the info
       client.ws.send(
         JSON.stringify({
-          type: "debate_state",
+          type: "debate_started",
           debateId,
-          payload: { debate },
+          payload: {
+            debate: fullState.debate,
+            proBot: fullState.proBot,
+            conBot: fullState.conBot,
+            topic: fullState.topic,
+          },
         })
       );
+
+      // Send all existing messages
+      for (const message of fullState.messages) {
+        client.ws.send(
+          JSON.stringify({
+            type: "bot_message",
+            debateId,
+            payload: {
+              round: message.round,
+              position: message.position,
+              botId: message.botId,
+              content: message.content,
+              isComplete: true,
+            },
+          })
+        );
+      }
     }
 
     console.log(`Client joined debate ${debateId}, spectators: ${spectators.size}`);

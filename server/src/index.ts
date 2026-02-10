@@ -30,18 +30,27 @@ let matchmakingInterval: ReturnType<typeof setInterval>;
 
 function startMatchmaking(): void {
   matchmakingInterval = setInterval(() => {
+    const stats = matchmaking.getStats();
+    if (stats.queueSize >= 2) {
+      console.log(`[Matchmaking] Queue has ${stats.queueSize} entries, attempting to match...`);
+    }
+
     const matches = matchmaking.runMatchmaking((entry1, entry2) => {
+      console.log(`[Matchmaking] Creating debate between bot ${entry1.botId} and ${entry2.botId}`);
+
       // Get bots
       const bot1 = store.getBotById(entry1.botId);
       const bot2 = store.getBotById(entry2.botId);
 
       if (!bot1 || !bot2) {
+        console.error(`[Matchmaking] Bot not found: bot1=${!!bot1}, bot2=${!!bot2}`);
         throw new Error("Bot not found during matchmaking");
       }
 
       // Get random topic
       const topic = store.getRandomTopic();
       if (!topic) {
+        console.error("[Matchmaking] No topics available!");
         throw new Error("No topics available");
       }
 

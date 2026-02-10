@@ -225,7 +225,7 @@ export function voteTopic(
 
 export function getRandomTopic(): Topic | undefined {
   const available = Array.from(topics.values()).filter(
-    (t) => t.upvotes > t.downvotes
+    (t) => t.upvotes >= t.downvotes // Include topics with 0-0 score
   );
   if (available.length === 0) return undefined;
 
