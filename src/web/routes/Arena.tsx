@@ -110,8 +110,11 @@ export function ArenaPage() {
   const [error, setError] = useState<string | null>(null);
   const [ttsEnabled, setTtsEnabled] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [votingTimeLeft, setVotingTimeLeft] = useState(0);
+  const [votingDuration, setVotingDuration] = useState(0);
 
   const wsRef = useRef<WebSocket | null>(null);
+  const votingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const speechQueueRef = useRef<{ text: string; position: "pro" | "con" }[]>([]);
   const speakRef = useRef<((text: string, position: "pro" | "con") => void) | null>(null);
@@ -255,13 +258,35 @@ export function ArenaPage() {
         }
 
         case "voting_started": {
-          const payload = msg.payload as { round: string; roundIndex: number };
+          const payload = msg.payload as { round: string; roundIndex: number; timeLimit: number };
           setDebate((prev) =>
             prev ? { ...prev, roundStatus: "voting", currentRound: payload.round, currentRoundIndex: payload.roundIndex } : null
           );
           setCurrentVotes({ pro: 0, con: 0 });
           setHasVoted(false);
           setSelectedVote(null);
+
+          // Start voting countdown timer
+          const duration = payload.timeLimit || 60;
+          setVotingDuration(duration);
+          setVotingTimeLeft(duration);
+
+          // Clear any existing timer
+          if (votingTimerRef.current) {
+            clearInterval(votingTimerRef.current);
+          }
+
+          votingTimerRef.current = setInterval(() => {
+            setVotingTimeLeft((prev) => {
+              if (prev <= 1) {
+                if (votingTimerRef.current) {
+                  clearInterval(votingTimerRef.current);
+                }
+                return 0;
+              }
+              return prev - 1;
+            });
+          }, 1000);
           break;
         }
 
@@ -273,6 +298,12 @@ export function ArenaPage() {
 
         case "round_ended": {
           const payload = msg.payload as { result: RoundResult };
+          // Clear voting timer
+          if (votingTimerRef.current) {
+            clearInterval(votingTimerRef.current);
+            votingTimerRef.current = null;
+          }
+          setVotingTimeLeft(0);
           setDebate((prev) => {
             if (!prev) return null;
             return {
@@ -362,6 +393,9 @@ export function ArenaPage() {
     return () => {
       isMounted = false;
       ws.close();
+      if (votingTimerRef.current) {
+        clearInterval(votingTimerRef.current);
+      }
     };
   }, [debateId, publicKey, handleWSMessage]);
 
@@ -474,9 +508,19 @@ export function ArenaPage() {
         {/* Voting Panel */}
         {debate?.roundStatus === "voting" && (
           <div className="rounded-lg border border-arena-accent/50 bg-arena-accent/5 p-3">
-            <div className="mb-2 text-center text-sm font-medium text-white">
-              Vote Now - {debate.currentRound}
+            <div className="mb-2 flex items-center justify-between text-sm">
+              <span className="font-medium text-white">Vote Now - {debate.currentRound}</span>
+              <span className="text-xs text-gray-400">{votingTimeLeft}s</span>
             </div>
+
+            {/* Time progress bar */}
+            <div className="mb-3 h-1.5 overflow-hidden rounded-full bg-arena-bg/50">
+              <div
+                className="h-full rounded-full bg-arena-accent transition-all duration-1000 ease-linear"
+                style={{ width: `${votingDuration > 0 ? (votingTimeLeft / votingDuration) * 100 : 0}%` }}
+              />
+            </div>
+
             {connected ? (
               <div className="flex gap-2">
                 <Button
