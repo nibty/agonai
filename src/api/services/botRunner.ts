@@ -4,7 +4,12 @@ import type {
   DebateRound,
   DebatePosition,
 } from "../types/index.js";
-import { BotResponseSchema, BOT_TIMEOUT_SECONDS } from "../types/index.js";
+import {
+  BotResponseSchema,
+  BOT_TIMEOUT_SECONDS,
+  ROUND_WORD_LIMITS,
+  ROUND_CHAR_LIMITS,
+} from "../types/index.js";
 
 // Bot interface for the runner - needs endpoint for calling
 interface BotForRunner {
@@ -137,6 +142,8 @@ export class BotRunnerService {
       position,
       opponent_last_message: lastOpponentMessage?.content ?? null,
       time_limit_seconds: timeLimit,
+      word_limit: ROUND_WORD_LIMITS[round],
+      char_limit: ROUND_CHAR_LIMITS[round],
       messages_so_far: previousMessages.map((m) => ({
         round: m.round,
         position: m.position,
@@ -156,6 +163,8 @@ export class BotRunnerService {
       position: "pro",
       opponent_last_message: null,
       time_limit_seconds: 30,
+      word_limit: ROUND_WORD_LIMITS.opening,
+      char_limit: ROUND_CHAR_LIMITS.opening,
       messages_so_far: [],
     };
 

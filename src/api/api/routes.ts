@@ -4,6 +4,7 @@ import {
   SubmitTopicSchema,
   JoinQueueSchema,
   PlaceBetSchema,
+  DEBATE_FORMAT,
 } from "../types/index.js";
 import {
   userRepository,
@@ -63,6 +64,15 @@ router.use("/auth", authRouter);
 
 router.get("/health", (_req: Request, res: Response) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+/**
+ * GET /api/debate-format
+ *
+ * Returns the debate format specification including timing, word limits, and rules.
+ */
+router.get("/debate-format", (_req: Request, res: Response) => {
+  res.json(DEBATE_FORMAT);
 });
 
 router.get("/stats", async (_req: Request, res: Response) => {
