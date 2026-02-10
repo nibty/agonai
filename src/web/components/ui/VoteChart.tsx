@@ -93,7 +93,7 @@ export function VoteChart({
           {/* Draw connecting lines */}
           {scores.length > 1 &&
             scores.slice(1).map((point, i) => {
-              const prev = scores[i];
+              const prev = scores[i]!;
               const x1 = (i / (scores.length - 1)) * 100;
               const x2 = ((i + 1) / (scores.length - 1)) * 100;
               const y1 = getY(prev.score);

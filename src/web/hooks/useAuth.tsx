@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useRef, type ReactNode } from "react";
 import { useWallet } from "./useWallet";
 import { api } from "@/lib/api";
 
@@ -19,6 +19,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const wasConnectedRef = useRef(connected); // Track if wallet was already connected on mount
 
   const authenticate = useCallback(async () => {
     if (!publicKey || !signMessage) {
@@ -36,40 +37,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { challenge } = await api.getChallenge(walletAddress);
 
       // Sign the challenge
-      console.log(`[Auth FE] Challenge length: ${challenge.length}`);
-      console.log(`[Auth FE] Challenge first 50 chars: "${challenge.slice(0, 50)}"`);
       const messageBytes = new TextEncoder().encode(challenge);
-      console.log(`[Auth FE] Message bytes length: ${messageBytes.length}`);
-      // Log first 10 bytes to compare with backend
-      console.log(`[Auth FE] Message first 10 bytes: ${Array.from(messageBytes.slice(0, 10)).join(",")}`);
-      // Simple checksum for comparison
-      const checksum = Array.from(messageBytes).reduce((a, b) => a + b, 0);
-      console.log(`[Auth FE] Message checksum: ${checksum}`);
-      // Find all newline positions
-      const newlinePositions: string[] = [];
-      for (let i = 0; i < messageBytes.length; i++) {
-        if (messageBytes[i] === 10 || messageBytes[i] === 13) {
-          newlinePositions.push(`${i}:${messageBytes[i]}`);
-        }
-      }
-      console.log(`[Auth FE] Newlines (pos:byte): ${newlinePositions.join(", ")}`);
       const signature = await signMessage(messageBytes);
-      console.log(`[Auth] Signature length: ${signature.length}`);
-      console.log(`[Auth] Signature first 8 bytes: ${Array.from(signature.slice(0, 8)).join(",")}`);
 
-      // Convert signature to base64 using Buffer-like approach
+      // Convert signature to base64
       let binary = "";
       for (let i = 0; i < signature.length; i++) {
         binary += String.fromCharCode(signature[i]!);
       }
       const signatureBase64 = btoa(binary);
-      console.log(`[Auth] Signature base64: ${signatureBase64.slice(0, 20)}...`);
-
-      // Verify encoding round-trip
-      const decoded = Uint8Array.from(atob(signatureBase64), c => c.charCodeAt(0));
-      console.log(`[Auth] Decoded first 8 bytes: ${Array.from(decoded.slice(0, 8)).join(",")}`);
-      console.log(`[Auth] Encoding match: ${Array.from(signature.slice(0, 8)).join(",") === Array.from(decoded.slice(0, 8)).join(",")}`);
-
 
       // Verify with API and get token
       const { token, user } = await api.verifyChallenge(walletAddress, signatureBase64);
@@ -115,8 +91,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // NOTE: We intentionally do NOT auto-authenticate when wallet connects.
-  // Users must explicitly click "Sign In" to avoid unexpected wallet popups on page reload.
+  // Auto-authenticate when wallet freshly connects (not on page reload)
+  useEffect(() => {
+    // Only auto-authenticate if wallet just connected (wasn't connected before)
+    if (connected && !wasConnectedRef.current && publicKey && !isAuthenticated && !isAuthenticating) {
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        void authenticate();
+      }
+    }
+    // Update ref to track current state for next render
+    wasConnectedRef.current = connected;
+  }, [connected, publicKey, isAuthenticated, isAuthenticating, authenticate]);
 
   // Clear auth state when wallet disconnects
   useEffect(() => {

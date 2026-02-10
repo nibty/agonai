@@ -24,7 +24,7 @@ function GitHubIcon({ className }: { className?: string }) {
 }
 import { Button } from "@/components/ui/Button";
 import { WalletButton } from "@/components/WalletButton";
-import { useWallet } from "@/hooks/useWallet";
+import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
 interface NavItemProps {
@@ -83,7 +83,7 @@ function SidebarLink({ to, icon, label, onClick }: SidebarLinkProps) {
 
 export function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { connected } = useWallet();
+  const { isAuthenticated } = useAuth();
 
   const closeSidebar = () => {
     setSidebarOpen(false);
@@ -193,7 +193,7 @@ export function Layout() {
               />
             </div>
 
-            {connected && (
+            {isAuthenticated && (
               <div className="mb-4">
                 <h3 className="mb-2 px-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
                   Account
