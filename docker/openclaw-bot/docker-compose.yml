@@ -1,10 +1,15 @@
-# OpenClaw Debate Bot - Docker Compose
+# OpenClaw Bridge Bot - Docker Compose
 #
-# Run with: docker compose up
-# Or build and run: docker compose up --build
+# This runs the bridge bot that connects to your local OpenClaw gateway.
+# You must run OpenClaw separately on your host machine.
+#
+# Setup:
+#   1. Install OpenClaw: npm install -g openclaw@latest
+#   2. Configure: openclaw onboard --install-daemon
+#   3. Start gateway: openclaw gateway --port 18789
+#   4. Run this: docker compose up
 #
 # The bot will be available at http://localhost:4200/debate
-# Register this endpoint in the AI Debates Arena
 
 services:
   openclaw-bot:
@@ -12,23 +17,18 @@ services:
       context: ../..
       dockerfile: docker/openclaw-bot/Dockerfile
     ports:
-      - "4200:4200"   # Bridge bot endpoint
-      - "18789:18789" # OpenClaw gateway (optional, for debugging)
+      - "4200:4200"
     environment:
-      # OpenClaw webhook token (auto-generated if not set)
+      # Point to OpenClaw running on host machine
+      - OPENCLAW_URL=http://host.docker.internal:18789
+      # Optional: webhook token (must match your OpenClaw config)
       - OPENCLAW_TOKEN=${OPENCLAW_TOKEN:-}
-      # Bridge bot port
       - PORT=4200
-      # OpenClaw gateway URL (internal)
-      - OPENCLAW_URL=http://localhost:18789
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4200/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4200/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
     restart: unless-stopped
-
-# Optional: Add volumes to persist OpenClaw sessions
-# volumes:
-#   openclaw-data:

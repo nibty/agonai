@@ -1,34 +1,19 @@
-# OpenClaw Debate Bot
-# Runs the OpenClaw gateway and bridge bot for AI Debates
+# OpenClaw Bridge Bot
+# Connects to an external OpenClaw gateway and exposes a debate endpoint
 
-FROM oven/bun:1 AS base
+FROM oven/bun:1-alpine AS base
 WORKDIR /app
 
-# Install OpenClaw globally
-RUN bun install -g openclaw@latest
-
-# Copy bot source
-COPY src/bot/openclaw-bot.ts ./src/bot/
-COPY src/bot/package.json ./src/bot/
-COPY src/bot/tsconfig.json ./src/bot/
-
-# Install bot dependencies
-WORKDIR /app/src/bot
+# Copy bot source and install dependencies
+COPY src/bot/package.json src/bot/tsconfig.json ./
 RUN bun install
 
-# Create OpenClaw config directory
-RUN mkdir -p /root/.openclaw
+COPY src/bot/openclaw-bot.ts ./
 
-# Copy startup script
-COPY docker/openclaw-bot/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+# Expose bridge bot port
+EXPOSE 4200
 
-# Expose ports
-# 18789 - OpenClaw gateway
-# 4200  - Bridge bot
-EXPOSE 18789 4200
-
-ENV OPENCLAW_URL=http://localhost:18789
 ENV PORT=4200
+ENV OPENCLAW_URL=http://host.docker.internal:18789
 
-ENTRYPOINT ["/entrypoint.sh"]
+CMD ["bun", "run", "openclaw-bot.ts"]

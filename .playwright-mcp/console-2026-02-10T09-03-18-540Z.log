@@ -1,0 +1,114 @@
+[      70ms] [WARNING] Module "buffer" has been externalized for browser compatibility. Cannot access "buffer.Buffer" in client code. See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details. @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/chunk-6AW7ZTLG.js?v=9ff014b7:209
+[      86ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[      87ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  361586ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  361586ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  374538ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  374538ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  407064ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  407064ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  410658ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  410659ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  426246ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  426246ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  434461ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  434461ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  545577ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  545577ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  545583ms] ReferenceError: wasConnectedRef is not defined
+    at http://localhost:5173/hooks/useAuth.tsx?t=1770714743938:87:5
+    at Object.react_stack_bottom_frame (http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-dom_client.js?v=9ff014b7:18569:20)
+    at runWithFiberInDEV (http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-dom_client.js?v=9ff014b7:999:72)
+    at commitHookEffectListMount (http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-dom_client.js?v=9ff014b7:9413:163)
+    at commitHookPassiveMountEffects (http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-dom_client.js?v=9ff014b7:9467:60)
+    at commitPassiveMountOnFiber (http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-dom_client.js?v=9ff014b7:11042:29)
+    at recursivelyTraversePassiveMountEffects (http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-dom_client.js?v=9ff014b7:11012:13)
+    at commitPassiveMountOnFiber (http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-dom_client.js?v=9ff014b7:11203:13)
+    at recursivelyTraversePassiveMountEffects (http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-dom_client.js?v=9ff014b7:11012:13)
+    at commitPassiveMountOnFiber (http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-dom_client.js?v=9ff014b7:11035:13)
+[  545582ms] [WARNING] %s
+
+%s
+ An error occurred in the <AuthProvider> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-dom_client.js?v=9ff014b7:6967
+[  551109ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  551109ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  555925ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  555926ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  576137ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  576137ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  656947ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  656947ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  665700ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  665700ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  676400ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  676400ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  682542ms] [ERROR] The final argument passed to %s changed size between renders. The order and size of this array must remain constant.
+
+Previous: %s
+Incoming: %s useEffect [false, , false, false, async () => {
+    if (!publicKey || !signMessage) {
+      setError("Wallet not connected");
+      return;
+    }
+    setIsAuthenticating(true);
+    setError(null);
+    try {
+      const walletAddress = publicKey.toBase58();
+      const { challenge } = await api.getChallenge(walletAddress);
+      const messageBytes = new TextEncoder().encode(challenge);
+      const signature = await signMessage(messageBytes);
+      let binary = "";
+      for (let i = 0; i < signature.length; i++) {
+        binary += String.fromCharCode(signature[i]);
+      }
+      const signatureBase64 = btoa(binary);
+      const { token, user } = await api.verifyChallenge(walletAddress, signatureBase64);
+      localStorage.setItem("auth_token", token);
+      api.setAuthToken(token);
+      setUserId(user.id);
+      setIsAuthenticated(true);
+    } catch (err) {
+      console.error("Authentication failed:", err);
+      setError(err instanceof Error ? err.message : "Authentication failed");
+    } finally {
+      setIsAuthenticating(false);
+    }
+  }] [false, , false, false, false, async () => {
+    if (!publicKey || !signMessage) {
+      setError("Wallet not connected");
+      return;
+    }
+    setIsAuthenticating(true);
+    setError(null);
+    try {
+      const walletAddress = publicKey.toBase58();
+      const { challenge } = await api.getChallenge(walletAddress);
+      const messageBytes = new TextEncoder().encode(challenge);
+      const signature = await signMessage(messageBytes);
+      let binary = "";
+      for (let i = 0; i < signature.length; i++) {
+        binary += String.fromCharCode(signature[i]);
+      }
+      const signatureBase64 = btoa(binary);
+      const { token, user } = await api.verifyChallenge(walletAddress, signatureBase64);
+      localStorage.setItem("auth_token", token);
+      api.setAuthToken(token);
+      setUserId(user.id);
+      setIsAuthenticated(true);
+    } catch (err) {
+      console.error("Authentication failed:", err);
+      setError(err instanceof Error ? err.message : "Authentication failed");
+    } finally {
+      setIsAuthenticating(false);
+    }
+  }] @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-dom_client.js?v=9ff014b7:5629
+[  682542ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  682542ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  763359ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  763359ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  769401ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[  769401ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[ 1267018ms] [WARNING] Module "buffer" has been externalized for browser compatibility. Cannot access "buffer.Buffer" in client code. See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details. @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/chunk-6AW7ZTLG.js?v=9ff014b7:209
+[ 1267034ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
+[ 1267034ms] [WARNING] No routes matched location "/debates"  @ http://localhost:5173/@fs/Users/nick/projects/ai-debates/node_modules/.vite/deps/react-router-dom.js?v=9ff014b7:637
