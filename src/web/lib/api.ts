@@ -153,6 +153,10 @@ class ApiClient {
     return this.request("GET", "/debates/active");
   }
 
+  async getRecentDebates(limit = 10): Promise<{ debates: Debate[] }> {
+    return this.request("GET", `/debates/recent?limit=${limit}`);
+  }
+
   async getDebate(debateId: string): Promise<DebateDetails> {
     return this.request("GET", `/debates/${debateId}`);
   }

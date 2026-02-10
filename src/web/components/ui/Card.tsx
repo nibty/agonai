@@ -1,37 +1,38 @@
 import { forwardRef, type HTMLAttributes } from "react";
-import { cva, type VariantProps } from "class-variance-authority";
+import { Card as FlowbiteCard } from "flowbite-react";
 import { cn } from "@/lib/utils";
 
-const cardVariants = cva(
-  "rounded-xl border bg-arena-card text-white shadow-sm transition-all duration-200",
-  {
-    variants: {
-      variant: {
-        default: "border-arena-border",
-        glow: "border-arena-accent/50 shadow-lg shadow-arena-accent/10 animate-glow",
-        pro: "border-arena-pro/50 shadow-lg shadow-arena-pro/10",
-        con: "border-arena-con/50 shadow-lg shadow-arena-con/10",
-      },
-      padding: {
-        none: "",
-        sm: "p-4",
-        md: "p-6",
-        lg: "p-8",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      padding: "md",
-    },
-  }
-);
+type CardVariant = "default" | "glow" | "pro" | "con";
+type CardPadding = "none" | "sm" | "md" | "lg";
 
-export interface CardProps
-  extends HTMLAttributes<HTMLDivElement>, VariantProps<typeof cardVariants> {}
+export interface CardProps extends HTMLAttributes<HTMLDivElement> {
+  variant?: CardVariant;
+  padding?: CardPadding;
+}
+
+const variantClasses: Record<CardVariant, string> = {
+  default: "",
+  glow: "border-arena-accent/50 shadow-lg shadow-arena-accent/10 animate-glow",
+  pro: "border-arena-pro/50 shadow-lg shadow-arena-pro/10",
+  con: "border-arena-con/50 shadow-lg shadow-arena-con/10",
+};
+
+const paddingClasses: Record<CardPadding, string> = {
+  none: "[&>div]:!p-0",
+  sm: "[&>div]:!p-4",
+  md: "[&>div]:!p-6",
+  lg: "[&>div]:!p-8",
+};
 
 const Card = forwardRef<HTMLDivElement, CardProps>(
-  ({ className, variant, padding, ...props }, ref) => (
-    <div ref={ref} className={cn(cardVariants({ variant, padding }), className)} {...props} />
+  ({ className, variant = "default", padding = "md", children, ...props }, ref) => (
+    <FlowbiteCard
+      ref={ref}
+      className={cn(variantClasses[variant], paddingClasses[padding], className)}
+      {...props}
+    >
+      {children}
+    </FlowbiteCard>
   )
 );
 Card.displayName = "Card";
@@ -48,7 +49,7 @@ export interface CardTitleProps extends HTMLAttributes<HTMLHeadingElement> {}
 const CardTitle = forwardRef<HTMLHeadingElement, CardTitleProps>(({ className, ...props }, ref) => (
   <h3
     ref={ref}
-    className={cn("text-xl font-semibold leading-none tracking-tight text-white", className)}
+    className={cn("text-xl font-semibold leading-none tracking-tight text-arena-text", className)}
     {...props}
   />
 ));

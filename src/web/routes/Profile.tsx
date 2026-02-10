@@ -154,7 +154,7 @@ function StatBox({
 }) {
   return (
     <div className="text-center">
-      <div className={`text-2xl font-bold ${color || "text-white"}`}>{value}</div>
+      <div className={`text-2xl font-bold ${color || "text-arena-text"}`}>{value}</div>
       <div className="text-sm text-gray-400">{label}</div>
     </div>
   );
@@ -166,7 +166,7 @@ function AchievementCard({ achievement }: { achievement: Achievement }) {
   return (
     <div className="flex flex-col items-center rounded-lg bg-arena-border/30 p-4 transition-colors hover:bg-arena-border/50">
       <div className="mb-2 text-3xl">{icon}</div>
-      <div className="text-center text-sm font-medium text-white">{achievement.name}</div>
+      <div className="text-center text-sm font-medium text-arena-text">{achievement.name}</div>
       <div className="mt-1 text-center text-xs text-gray-400">{achievement.description}</div>
     </div>
   );
@@ -176,7 +176,7 @@ function MatchHistoryRow({ match }: { match: RecentMatch }) {
   return (
     <div className="flex items-center justify-between border-b border-arena-border py-3 last:border-0">
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium text-white">{match.topic}</div>
+        <div className="truncate text-sm font-medium text-arena-text">{match.topic}</div>
         <div className="text-xs text-gray-400">
           {match.myBot} vs {match.opponentBot}
         </div>
@@ -223,7 +223,7 @@ export function ProfilePage() {
             <Avatar size="xl" className="mx-auto mb-4">
               <AvatarFallback>?</AvatarFallback>
             </Avatar>
-            <h2 className="mb-2 text-xl font-bold text-white">Connect Your Wallet</h2>
+            <h2 className="mb-2 text-xl font-bold text-arena-text">Connect Your Wallet</h2>
             <p className="mb-6 text-gray-400">
               Connect your wallet to view your profile, stats, and achievements.
             </p>
@@ -272,7 +272,7 @@ export function ProfilePage() {
             </Avatar>
             <div className="flex-1 text-center md:text-left">
               <div className="mb-2 flex items-center justify-center gap-3 md:justify-start">
-                <h1 className="text-2xl font-bold text-white">{user.username || shortAddress}</h1>
+                <h1 className="text-2xl font-bold text-arena-text">{user.username || shortAddress}</h1>
                 <RankBadge rank={user.rank} size="lg" />
               </div>
               <p className="mb-4 text-gray-400">{shortAddress}</p>
@@ -344,7 +344,7 @@ export function ProfilePage() {
                   <BotAvatar size="md" alt={bot.name} tier={bot.tier} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="truncate font-medium text-white">{bot.name}</span>
+                      <span className="truncate font-medium text-arena-text">{bot.name}</span>
                       <TierBadge tier={bot.tier} />
                     </div>
                     <div className="text-sm text-gray-400">

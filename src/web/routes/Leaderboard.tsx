@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { Trophy, Clock, MessageSquare } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/Card";
-import { RankBadge, TierBadge } from "@/components/ui/Badge";
+import { RankBadge, TierBadge, Badge } from "@/components/ui/Badge";
 import { BotAvatar } from "@/components/ui/Avatar";
 import { Select } from "@/components/ui/Input";
-import { api, type BotPublic } from "@/lib/api";
+import { api, type BotPublic, type Debate } from "@/lib/api";
 import type { Rank, BotTier } from "@/types";
 import { getRankFromElo, getTierFromElo } from "@/types";
 
@@ -53,7 +55,7 @@ function LeaderboardRow({ bot, rank }: { bot: LeaderboardBot; rank: number }) {
         <BotAvatar size="md" alt={bot.name} tier={bot.tier} />
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="truncate font-semibold text-white">{bot.name}</span>
+            <span className="truncate font-semibold text-arena-text">{bot.name}</span>
             <TierBadge tier={bot.tier} size="sm" />
           </div>
           <div className="truncate text-sm text-gray-400">Owner: #{bot.ownerId}</div>
@@ -67,7 +69,7 @@ function LeaderboardRow({ bot, rank }: { bot: LeaderboardBot; rank: number }) {
           <div className="text-xs text-gray-400">ELO</div>
         </div>
         <div className="text-center">
-          <div className="font-medium text-white">{winRate}%</div>
+          <div className="font-medium text-arena-text">{winRate}%</div>
           <div className="text-xs text-gray-400">Win Rate</div>
         </div>
         <div className="text-center">
@@ -115,14 +117,14 @@ function TopThree({ bots }: { bots: LeaderboardBot[] }) {
           }`}
         />
         <div className="mb-2 text-center">
-          <div className="font-bold text-white">{bot.name}</div>
+          <div className="font-bold text-arena-text">{bot.name}</div>
           <div className="text-sm text-gray-400">{bot.wins}W / {bot.losses}L</div>
           <div className="mt-1 text-lg font-bold text-arena-accent">{bot.elo} ELO</div>
         </div>
         <div
           className={`w-24 ${heights[position]} rounded-t-lg border-l-2 border-r-2 border-t-2 ${colors[position]} flex items-start justify-center pt-2`}
         >
-          <span className="text-2xl font-bold text-white">{labels[position]}</span>
+          <span className="text-2xl font-bold text-arena-text">{labels[position]}</span>
         </div>
       </div>
     );
@@ -134,6 +136,127 @@ function TopThree({ bots }: { bots: LeaderboardBot[] }) {
       {first && <PodiumSpot bot={first} position={1} />}
       {third && <PodiumSpot bot={third} position={3} />}
     </div>
+  );
+}
+
+function RecentDebates() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["recentDebates"],
+    queryFn: () => api.getRecentDebates(10),
+    staleTime: 30_000,
+  });
+
+  const debates = data?.debates || [];
+
+  const getStatusBadge = (status: Debate["status"]) => {
+    switch (status) {
+      case "completed":
+        return <Badge variant="pro" className="text-xs">Completed</Badge>;
+      case "in_progress":
+        return <Badge variant="live" className="text-xs">Live</Badge>;
+      case "voting":
+        return <Badge variant="gold" className="text-xs">Voting</Badge>;
+      default:
+        return <Badge variant="outline" className="text-xs">{status}</Badge>;
+    }
+  };
+
+  const getWinnerText = (debate: Debate) => {
+    if (debate.status !== "completed" || !debate.winner) return null;
+    const winnerName = debate.winner === "pro" ? debate.proBotName : debate.conBotName;
+    return (
+      <span className={debate.winner === "pro" ? "text-arena-pro" : "text-arena-con"}>
+        {winnerName} won
+      </span>
+    );
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Recent Debates
+            </CardTitle>
+            <CardDescription>Latest completed and active debates</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <p className="py-8 text-center text-arena-text-muted">Loading recent debates...</p>
+        ) : debates.length === 0 ? (
+          <p className="py-8 text-center text-arena-text-muted">No debates yet. Be the first to start one!</p>
+        ) : (
+          <div className="space-y-3">
+            {debates.map((debate) => (
+              <Link
+                key={debate.id}
+                to={`/arena/${debate.id}`}
+                className="flex items-center gap-4 rounded-lg bg-arena-card/50 p-4 transition-colors hover:bg-arena-card"
+              >
+                {/* Bots */}
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <BotAvatar size="sm" alt={debate.proBotName || "Pro"} tier={getTierFromElo(debate.proBotElo || 1000)} />
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium text-arena-pro">{debate.proBotName}</div>
+                      <div className="text-xs text-arena-text-dim">{debate.proBotElo} ELO</div>
+                    </div>
+                  </div>
+                  <span className="text-arena-text-muted">vs</span>
+                  <div className="flex items-center gap-2">
+                    <BotAvatar size="sm" alt={debate.conBotName || "Con"} tier={getTierFromElo(debate.conBotElo || 1000)} />
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium text-arena-con">{debate.conBotName}</div>
+                      <div className="text-xs text-arena-text-dim">{debate.conBotElo} ELO</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Topic */}
+                <div className="hidden flex-1 md:block">
+                  <div className="truncate text-sm text-arena-text">{debate.topic}</div>
+                </div>
+
+                {/* Status & Result */}
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    {getStatusBadge(debate.status)}
+                    {debate.status === "completed" && (
+                      <div className="mt-1 flex items-center gap-1 text-xs">
+                        <Trophy className="h-3 w-3" />
+                        {getWinnerText(debate)}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-arena-text-dim">
+                    <Clock className="h-3 w-3" />
+                    {formatDate(debate.createdAt)}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -165,7 +288,7 @@ export function LeaderboardPage() {
     <div className="space-y-8">
       {/* Header */}
       <div className="text-center">
-        <h1 className="mb-2 text-3xl font-bold text-white">Leaderboard</h1>
+        <h1 className="mb-2 text-3xl font-bold text-arena-text">Leaderboard</h1>
         <p className="text-gray-400">Top performing bots ranked by ELO rating</p>
       </div>
 
@@ -206,7 +329,7 @@ export function LeaderboardPage() {
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Card className="text-center">
           <CardContent className="py-4">
-            <div className="text-2xl font-bold text-white">{bots.length}</div>
+            <div className="text-2xl font-bold text-arena-text">{bots.length}</div>
             <div className="text-sm text-gray-400">Ranked Bots</div>
           </CardContent>
         </Card>
@@ -228,7 +351,7 @@ export function LeaderboardPage() {
         </Card>
         <Card className="text-center">
           <CardContent className="py-4">
-            <div className="text-2xl font-bold text-white">
+            <div className="text-2xl font-bold text-arena-text">
               {bots.filter((b) => b.tier === 5).length}
             </div>
             <div className="text-sm text-gray-400">Tier 5 Bots</div>
@@ -274,6 +397,9 @@ export function LeaderboardPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Recent Debates */}
+      <RecentDebates />
 
       {/* Rank Tiers Explanation */}
       <Card>

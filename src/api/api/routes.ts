@@ -404,6 +404,30 @@ router.get("/debates/active", (_req: Request, res: Response) => {
   res.json({ debates });
 });
 
+router.get("/debates/recent", async (req: Request, res: Response) => {
+  const limit = Math.min(50, parseInt(req.query["limit"] as string) || 10);
+  const debates = await debateRepository.getRecent(limit);
+
+  // Fetch bot names for each debate
+  const debatesWithBots = await Promise.all(
+    debates.map(async (debate) => {
+      const [proBot, conBot] = await Promise.all([
+        debate.proBotId ? botRepository.findById(debate.proBotId) : null,
+        debate.conBotId ? botRepository.findById(debate.conBotId) : null,
+      ]);
+      return {
+        ...debate,
+        proBotName: proBot?.name ?? "Unknown",
+        proBotElo: proBot?.elo ?? 0,
+        conBotName: conBot?.name ?? "Unknown",
+        conBotElo: conBot?.elo ?? 0,
+      };
+    })
+  );
+
+  res.json({ debates: debatesWithBots });
+});
+
 router.get("/debates/:debateId", async (req: Request<{ debateId: string }>, res: Response) => {
   const debateId = parseInt(req.params.debateId, 10);
   if (isNaN(debateId)) {

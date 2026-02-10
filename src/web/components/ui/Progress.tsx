@@ -1,65 +1,41 @@
-import {
-  forwardRef,
-  type ComponentPropsWithoutRef,
-  type ComponentRef,
-  type HTMLAttributes,
-} from "react";
-import * as ProgressPrimitive from "@radix-ui/react-progress";
-import { cva, type VariantProps } from "class-variance-authority";
+import { forwardRef, type HTMLAttributes } from "react";
+import { Progress as FlowbiteProgress } from "flowbite-react";
 import { cn } from "@/lib/utils";
 
-const progressVariants = cva("relative w-full overflow-hidden rounded-full bg-arena-border", {
-  variants: {
-    size: {
-      sm: "h-1",
-      md: "h-2",
-      lg: "h-3",
-      xl: "h-4",
-    },
-  },
-  defaultVariants: {
-    size: "md",
-  },
-});
+type ProgressSize = "sm" | "md" | "lg" | "xl";
+type ProgressVariant = "default" | "accent" | "pro" | "con" | "gradient";
 
-const indicatorVariants = cva("h-full w-full flex-1 transition-all duration-300 ease-in-out", {
-  variants: {
-    variant: {
-      default: "bg-arena-text-muted",
-      accent: "bg-arena-accent",
-      pro: "bg-arena-pro",
-      con: "bg-arena-con",
-      gradient: "bg-gradient-to-r from-arena-accent to-purple-500",
-    },
-  },
-  defaultVariants: {
-    variant: "accent",
-  },
-});
-
-export interface ProgressProps
-  extends
-    ComponentPropsWithoutRef<typeof ProgressPrimitive.Root>,
-    VariantProps<typeof progressVariants>,
-    VariantProps<typeof indicatorVariants> {
+export interface ProgressProps extends Omit<HTMLAttributes<HTMLDivElement>, "color"> {
+  value?: number;
+  size?: ProgressSize;
+  variant?: ProgressVariant;
   indicatorClassName?: string;
 }
 
-const Progress = forwardRef<ComponentRef<typeof ProgressPrimitive.Root>, ProgressProps>(
-  ({ className, value, size, variant, indicatorClassName, ...props }, ref) => (
-    <ProgressPrimitive.Root
+const variantToFlowbiteColor = {
+  default: "dark",
+  accent: "blue",
+  pro: "green",
+  con: "red",
+  gradient: "indigo",
+} as const;
+
+const Progress = forwardRef<HTMLDivElement, ProgressProps>(
+  ({ className, value = 0, size = "md", variant = "accent", ...props }, ref) => (
+    <FlowbiteProgress
       ref={ref}
-      className={cn(progressVariants({ size }), className)}
+      progress={value}
+      size={size}
+      color={variantToFlowbiteColor[variant]}
+      className={cn(
+        variant === "gradient" && "[&_div]:bg-gradient-to-r [&_div]:from-arena-accent [&_div]:to-purple-500",
+        className
+      )}
       {...props}
-    >
-      <ProgressPrimitive.Indicator
-        className={cn(indicatorVariants({ variant }), indicatorClassName)}
-        style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
-      />
-    </ProgressPrimitive.Root>
+    />
   )
 );
-Progress.displayName = ProgressPrimitive.Root.displayName;
+Progress.displayName = "Progress";
 
 // Dual progress for debates (pro vs con)
 export interface DualProgressProps extends HTMLAttributes<HTMLDivElement> {
@@ -68,18 +44,18 @@ export interface DualProgressProps extends HTMLAttributes<HTMLDivElement> {
   size?: "sm" | "md" | "lg" | "xl";
 }
 
+const sizeClasses = {
+  sm: "h-1",
+  md: "h-2",
+  lg: "h-3",
+  xl: "h-4",
+};
+
 const DualProgress = forwardRef<HTMLDivElement, DualProgressProps>(
   ({ className, proValue, conValue, size = "lg", ...props }, ref) => {
     const total = proValue + conValue;
     // Show 50/50 when no votes yet
     const proPercentage = total === 0 ? 50 : (proValue / total) * 100;
-
-    const sizeClasses = {
-      sm: "h-1",
-      md: "h-2",
-      lg: "h-3",
-      xl: "h-4",
-    };
 
     return (
       <div

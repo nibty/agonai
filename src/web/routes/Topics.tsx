@@ -65,7 +65,7 @@ function TopicCard({
                   ? "text-arena-pro"
                   : hasVoted === "down"
                     ? "text-arena-con"
-                    : "text-white"
+                    : "text-arena-text"
               }`}
             >
               {topic.upvotes - topic.downvotes}
@@ -101,7 +101,7 @@ function TopicCard({
               </span>
               <span className="text-xs text-gray-500">{timeAgo}</span>
             </div>
-            <p className="mb-2 font-medium text-white">{topic.text}</p>
+            <p className="mb-2 font-medium text-arena-text">{topic.text}</p>
             <div className="flex items-center gap-4 text-xs text-gray-400">
               {topic.proposerId && <span>by User #{topic.proposerId}</span>}
               <span>Used {topic.timesUsed} times</span>
@@ -247,7 +247,7 @@ export function TopicsPage() {
       {/* Header */}
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
         <div>
-          <h1 className="text-3xl font-bold text-white">Debate Topics</h1>
+          <h1 className="text-3xl font-bold text-arena-text">Debate Topics</h1>
           <p className="mt-1 text-gray-400">Browse and vote on topics, or submit your own</p>
         </div>
         {connected ? (
@@ -266,7 +266,7 @@ export function TopicsPage() {
               className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                 selectedCategory === "all"
                   ? "bg-arena-accent/20 text-arena-accent"
-                  : "bg-arena-border/50 text-gray-400 hover:text-white"
+                  : "bg-arena-border/50 text-gray-400 hover:text-arena-text"
               }`}
             >
               All
@@ -278,7 +278,7 @@ export function TopicsPage() {
                 className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                   selectedCategory === cat.value
                     ? "bg-arena-accent/20 text-arena-accent"
-                    : "bg-arena-border/50 text-gray-400 hover:text-white"
+                    : "bg-arena-border/50 text-gray-400 hover:text-arena-text"
                 }`}
               >
                 {cat.label}
@@ -328,7 +328,7 @@ export function TopicsPage() {
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Card className="text-center">
           <CardContent className="py-4">
-            <div className="text-2xl font-bold text-white">{topics.length}</div>
+            <div className="text-2xl font-bold text-arena-text">{topics.length}</div>
             <div className="text-sm text-gray-400">Total Topics</div>
           </CardContent>
         </Card>
@@ -350,7 +350,7 @@ export function TopicsPage() {
         </Card>
         <Card className="text-center">
           <CardContent className="py-4">
-            <div className="text-2xl font-bold text-white">{categories.length}</div>
+            <div className="text-2xl font-bold text-arena-text">{categories.length}</div>
             <div className="text-sm text-gray-400">Categories</div>
           </CardContent>
         </Card>

@@ -43,7 +43,7 @@ function BotCard({ bot, onViewDetails }: { bot: DisplayBot; onViewDetails: (bot:
           <BotAvatar size="lg" alt={bot.name} tier={bot.tier} />
           <div className="min-w-0 flex-1">
             <div className="mb-1 flex items-center gap-2">
-              <h3 className="truncate font-semibold text-white">{bot.name}</h3>
+              <h3 className="truncate font-semibold text-arena-text">{bot.name}</h3>
               <TierBadge tier={bot.tier} />
             </div>
             <p className="mb-2 truncate text-sm text-gray-400">{bot.endpoint}</p>
@@ -56,7 +56,7 @@ function BotCard({ bot, onViewDetails }: { bot: DisplayBot; onViewDetails: (bot:
             <div className="text-xs text-gray-400">ELO</div>
           </div>
           <div>
-            <div className="text-lg font-bold text-white">
+            <div className="text-lg font-bold text-arena-text">
               <span className="text-arena-pro">{bot.wins}</span>
               <span className="text-gray-400">/</span>
               <span className="text-arena-con">{bot.losses}</span>
@@ -64,7 +64,7 @@ function BotCard({ bot, onViewDetails }: { bot: DisplayBot; onViewDetails: (bot:
             <div className="text-xs text-gray-400">W/L</div>
           </div>
           <div>
-            <div className="text-lg font-bold text-white">{winRate}%</div>
+            <div className="text-lg font-bold text-arena-text">{winRate}%</div>
             <div className="text-xs text-gray-400">Win Rate</div>
           </div>
         </div>
@@ -75,7 +75,7 @@ function BotCard({ bot, onViewDetails }: { bot: DisplayBot; onViewDetails: (bot:
             <div className="space-y-1">
               <div className="flex justify-between text-xs">
                 <span className="text-gray-400">ELO</span>
-                <span className="text-white">
+                <span className="text-arena-text">
                   {bot.elo} / {nextTierReqs.minElo}
                 </span>
               </div>
@@ -84,7 +84,7 @@ function BotCard({ bot, onViewDetails }: { bot: DisplayBot; onViewDetails: (bot:
             <div className="space-y-1">
               <div className="flex justify-between text-xs">
                 <span className="text-gray-400">Wins</span>
-                <span className="text-white">
+                <span className="text-arena-text">
                   {bot.wins} / {nextTierReqs.minWins}
                 </span>
               </div>
@@ -260,7 +260,7 @@ function BotDetailsModal({
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-gray-400">
-            Are you sure you want to delete <strong className="text-white">{bot.name}</strong>? This
+            Are you sure you want to delete <strong className="text-arena-text">{bot.name}</strong>? This
             action cannot be undone.
           </p>
           <div className="flex gap-3">
@@ -321,7 +321,7 @@ function BotDetailsModal({
               <div className="text-xs text-gray-400">Losses</div>
             </div>
             <div className="rounded-lg bg-arena-bg p-3">
-              <div className="text-xl font-bold text-white">{winRate}%</div>
+              <div className="text-xl font-bold text-arena-text">{winRate}%</div>
               <div className="text-xs text-gray-400">Win Rate</div>
             </div>
           </div>
@@ -437,7 +437,7 @@ export function BotsPage() {
                 />
               </svg>
             </div>
-            <h2 className="mb-2 text-xl font-bold text-white">Connect Your Wallet</h2>
+            <h2 className="mb-2 text-xl font-bold text-arena-text">Connect Your Wallet</h2>
             <p className="mb-6 text-gray-400">
               Connect your wallet to manage your debate bots and track their performance.
             </p>
@@ -480,7 +480,7 @@ export function BotsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white">My Bots</h1>
+          <h1 className="text-3xl font-bold text-arena-text">My Bots</h1>
           <p className="mt-1 text-gray-400">
             Manage your AI debate bots and track their performance
           </p>
@@ -492,7 +492,7 @@ export function BotsPage() {
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Card className="text-center">
           <CardContent className="py-4">
-            <div className="text-2xl font-bold text-white">{bots.length}</div>
+            <div className="text-2xl font-bold text-arena-text">{bots.length}</div>
             <div className="text-sm text-gray-400">Total Bots</div>
           </CardContent>
         </Card>
@@ -514,7 +514,7 @@ export function BotsPage() {
         </Card>
         <Card className="text-center">
           <CardContent className="py-4">
-            <div className="text-2xl font-bold text-white">
+            <div className="text-2xl font-bold text-arena-text">
               {bots.length > 0 ? Math.max(...bots.map((b) => b.tier)) : 0}
             </div>
             <div className="text-sm text-gray-400">Max Tier</div>

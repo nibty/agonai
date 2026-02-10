@@ -1,0 +1,213 @@
+/* Theme definitions adapted from Flowbite themes */
+/* Each theme provides light and dark mode variants */
+/* Colors use HSL format: H S% L% */
+
+/* ============================================
+   DEFAULT THEME (Blue accent, Inter font)
+   ============================================ */
+.theme-default {
+  --arena-bg: 210 40% 98%;
+  --arena-card: 0 0% 100%;
+  --arena-border: 214 32% 91%;
+  --arena-accent: 217 91% 60%;
+  --arena-accent-light: 213 94% 68%;
+  --arena-pro: 142 71% 45%;
+  --arena-con: 0 84% 60%;
+  --arena-text: 222 47% 11%;
+  --arena-text-muted: 215 16% 47%;
+  --arena-text-dim: 214 20% 69%;
+  --arena-voting: 48 96% 53%;
+  --arena-gold: 45 93% 47%;
+  --arena-silver: 215 14% 57%;
+}
+
+.theme-default.dark {
+  --arena-bg: 222 47% 4%;
+  --arena-card: 223 47% 8%;
+  --arena-border: 217 33% 17%;
+  --arena-accent: 217 91% 60%;
+  --arena-accent-light: 213 94% 68%;
+  --arena-pro: 142 71% 45%;
+  --arena-con: 0 84% 60%;
+  --arena-text: 210 40% 98%;
+  --arena-text-muted: 215 20% 65%;
+  --arena-text-dim: 217 19% 45%;
+  --arena-voting: 48 96% 53%;
+  --arena-gold: 45 93% 47%;
+  --arena-silver: 215 14% 57%;
+}
+
+/* ============================================
+   ENTERPRISE THEME (Cyan accent, refined)
+   ============================================ */
+.theme-enterprise {
+  --arena-bg: 240 5% 98%;
+  --arena-card: 0 0% 100%;
+  --arena-border: 240 6% 90%;
+  --arena-accent: 187 78% 36%;
+  --arena-accent-light: 186 78% 42%;
+  --arena-pro: 142 71% 38%;
+  --arena-con: 0 72% 51%;
+  --arena-text: 240 6% 10%;
+  --arena-text-muted: 240 4% 46%;
+  --arena-text-dim: 240 5% 65%;
+  --arena-voting: 45 93% 47%;
+  --arena-gold: 45 93% 40%;
+  --arena-silver: 240 4% 65%;
+}
+
+.theme-enterprise.dark {
+  --arena-bg: 240 6% 4%;
+  --arena-card: 240 6% 8%;
+  --arena-border: 240 5% 26%;
+  --arena-accent: 187 78% 46%;
+  --arena-accent-light: 186 93% 56%;
+  --arena-pro: 142 71% 45%;
+  --arena-con: 0 84% 60%;
+  --arena-text: 240 5% 98%;
+  --arena-text-muted: 240 4% 65%;
+  --arena-text-dim: 240 4% 46%;
+  --arena-voting: 48 96% 53%;
+  --arena-gold: 45 93% 47%;
+  --arena-silver: 240 4% 65%;
+}
+
+/* ============================================
+   MINIMAL THEME (Stone colors, warm tones)
+   ============================================ */
+.theme-minimal {
+  --arena-bg: 60 9% 98%;
+  --arena-card: 0 0% 100%;
+  --arena-border: 60 5% 90%;
+  --arena-accent: 25 5% 26%;
+  --arena-accent-light: 30 6% 35%;
+  --arena-pro: 142 71% 38%;
+  --arena-con: 0 72% 51%;
+  --arena-text: 24 10% 10%;
+  --arena-text-muted: 25 6% 45%;
+  --arena-text-dim: 30 6% 65%;
+  --arena-voting: 45 93% 47%;
+  --arena-gold: 45 93% 40%;
+  --arena-silver: 30 6% 65%;
+}
+
+.theme-minimal.dark {
+  --arena-bg: 20 14% 4%;
+  --arena-card: 24 10% 10%;
+  --arena-border: 25 5% 26%;
+  --arena-accent: 30 6% 65%;
+  --arena-accent-light: 33 5% 80%;
+  --arena-pro: 142 71% 45%;
+  --arena-con: 0 84% 60%;
+  --arena-text: 60 9% 98%;
+  --arena-text-muted: 30 6% 65%;
+  --arena-text-dim: 25 6% 45%;
+  --arena-voting: 48 96% 53%;
+  --arena-gold: 45 93% 47%;
+  --arena-silver: 30 6% 65%;
+}
+
+/* ============================================
+   MONO THEME (Indigo accent, sharp edges)
+   ============================================ */
+.theme-mono {
+  --arena-bg: 0 0% 98%;
+  --arena-card: 0 0% 100%;
+  --arena-border: 0 0% 90%;
+  --arena-accent: 239 84% 67%;
+  --arena-accent-light: 239 84% 74%;
+  --arena-pro: 142 71% 38%;
+  --arena-con: 0 72% 51%;
+  --arena-text: 0 0% 9%;
+  --arena-text-muted: 0 0% 45%;
+  --arena-text-dim: 0 0% 64%;
+  --arena-voting: 45 93% 47%;
+  --arena-gold: 45 93% 40%;
+  --arena-silver: 0 0% 64%;
+}
+
+.theme-mono.dark {
+  --arena-bg: 0 0% 4%;
+  --arena-card: 0 0% 9%;
+  --arena-border: 0 0% 25%;
+  --arena-accent: 239 84% 67%;
+  --arena-accent-light: 239 84% 74%;
+  --arena-pro: 142 71% 45%;
+  --arena-con: 0 84% 60%;
+  --arena-text: 0 0% 98%;
+  --arena-text-muted: 0 0% 64%;
+  --arena-text-dim: 0 0% 45%;
+  --arena-voting: 48 96% 53%;
+  --arena-gold: 45 93% 47%;
+  --arena-silver: 0 0% 64%;
+}
+
+/* ============================================
+   PLAYFUL THEME (Pink accent, rounded)
+   ============================================ */
+.theme-playful {
+  --arena-bg: 210 40% 98%;
+  --arena-card: 0 0% 100%;
+  --arena-border: 214 32% 91%;
+  --arena-accent: 330 81% 60%;
+  --arena-accent-light: 330 81% 68%;
+  --arena-pro: 142 71% 45%;
+  --arena-con: 0 84% 60%;
+  --arena-text: 222 47% 11%;
+  --arena-text-muted: 215 16% 47%;
+  --arena-text-dim: 214 12% 69%;
+  --arena-voting: 48 96% 53%;
+  --arena-gold: 45 93% 47%;
+  --arena-silver: 215 14% 57%;
+}
+
+.theme-playful.dark {
+  --arena-bg: 222 47% 4%;
+  --arena-card: 222 47% 8%;
+  --arena-border: 217 33% 17%;
+  --arena-accent: 330 81% 60%;
+  --arena-accent-light: 330 81% 70%;
+  --arena-pro: 142 71% 45%;
+  --arena-con: 0 84% 60%;
+  --arena-text: 210 40% 98%;
+  --arena-text-muted: 215 20% 65%;
+  --arena-text-dim: 217 19% 45%;
+  --arena-voting: 48 96% 53%;
+  --arena-gold: 45 93% 47%;
+  --arena-silver: 215 14% 57%;
+}
+
+/* ============================================
+   ARENA THEME (Original dark-first theme)
+   ============================================ */
+.theme-arena {
+  --arena-bg: 240 20% 98%;
+  --arena-card: 0 0% 100%;
+  --arena-border: 240 6% 90%;
+  --arena-accent: 239 84% 60%;
+  --arena-accent-light: 250 84% 70%;
+  --arena-pro: 142 71% 40%;
+  --arena-con: 0 84% 55%;
+  --arena-text: 240 10% 10%;
+  --arena-text-muted: 240 5% 40%;
+  --arena-text-dim: 240 5% 55%;
+  --arena-voting: 48 96% 45%;
+  --arena-gold: 45 93% 40%;
+  --arena-silver: 210 11% 50%;
+}
+
+.theme-arena.dark {
+  --arena-bg: 240 33% 4%;
+  --arena-card: 240 20% 8%;
+  --arena-border: 240 24% 15%;
+  --arena-accent: 239 84% 67%;
+  --arena-accent-light: 250 84% 75%;
+  --arena-pro: 142 71% 45%;
+  --arena-con: 0 84% 60%;
+  --arena-text: 0 0% 98%;
+  --arena-text-muted: 240 5% 65%;
+  --arena-text-dim: 240 5% 45%;
+  --arena-voting: 48 96% 53%;
+  --arena-gold: 45 93% 47%;
+  --arena-silver: 210 11% 71%;
+}

@@ -13,7 +13,7 @@ function StatCard({ label, value, suffix }: { label: string; value: number; suff
   return (
     <Card className="text-center">
       <CardContent>
-        <div className="text-3xl font-bold text-white">
+        <div className="text-3xl font-bold text-arena-text">
           {value.toLocaleString()}
           {suffix && <span className="text-arena-accent">{suffix}</span>}
         </div>
@@ -108,7 +108,7 @@ export function HomePage() {
           </span>
           Powered by X1 Network
         </div>
-        <h1 className="mb-6 text-5xl font-bold text-white md:text-6xl">
+        <h1 className="mb-6 text-5xl font-bold text-arena-text md:text-6xl">
           AI Debates Arena
           <span className="block text-arena-accent">on X1</span>
         </h1>
@@ -149,7 +149,7 @@ export function HomePage() {
       {/* Live Debates Section */}
       <section>
         <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-white">Live Debates</h2>
+          <h2 className="text-2xl font-bold text-arena-text">Live Debates</h2>
           <Link to="/leaderboard">
             <Button variant="ghost" size="sm">
               View All
@@ -178,7 +178,7 @@ export function HomePage() {
 
       {/* How It Works Section */}
       <section className="py-8">
-        <h2 className="mb-8 text-center text-2xl font-bold text-white">How It Works</h2>
+        <h2 className="mb-8 text-center text-2xl font-bold text-arena-text">How It Works</h2>
         <div className="grid gap-6 md:grid-cols-3">
           <Card>
             <CardContent className="text-center">
@@ -220,7 +220,7 @@ export function HomePage() {
 
       {/* CTA Section */}
       <section className="rounded-2xl border border-arena-accent/30 bg-gradient-to-r from-arena-accent/20 to-arena-pro/20 py-12 text-center">
-        <h2 className="mb-4 text-3xl font-bold text-white">Ready to Enter the Arena?</h2>
+        <h2 className="mb-4 text-3xl font-bold text-arena-text">Ready to Enter the Arena?</h2>
         <p className="mb-6 text-gray-400">
           Join thousands of AI enthusiasts competing in the ultimate debate platform.
         </p>

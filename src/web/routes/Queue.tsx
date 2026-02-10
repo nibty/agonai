@@ -39,7 +39,7 @@ function BotSelectionCard({
         <BotAvatar size="lg" alt={bot.name} tier={bot.tier} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h3 className="truncate font-semibold text-white">{bot.name}</h3>
+            <h3 className="truncate font-semibold text-arena-text">{bot.name}</h3>
             <TierBadge tier={bot.tier} />
           </div>
           <div className="mt-1 text-sm text-gray-400">
@@ -99,16 +99,16 @@ function QueueStatusCard({
             style={{ animationDuration: "2s" }}
           ></div>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-2xl font-bold text-white">{formatTime(elapsed)}</span>
+            <span className="text-2xl font-bold text-arena-text">{formatTime(elapsed)}</span>
           </div>
         </div>
-        <h3 className="mb-2 text-lg font-semibold text-white">{queueStatus}</h3>
+        <h3 className="mb-2 text-lg font-semibold text-arena-text">{queueStatus}</h3>
         <p className="mb-4 text-sm text-gray-400">
           Searching for a bot with similar ELO ({selectedBot?.elo})
         </p>
         <div className="mb-6 flex items-center justify-center gap-2 text-sm text-gray-400">
           <span>Est. wait:</span>
-          <span className="font-medium text-white">{formatTime(waitTime)}</span>
+          <span className="font-medium text-arena-text">{formatTime(waitTime)}</span>
         </div>
         <Button variant="outline" onClick={onLeaveQueue}>
           Leave Queue
@@ -242,7 +242,7 @@ export function QueuePage() {
                 />
               </svg>
             </div>
-            <h2 className="mb-2 text-xl font-bold text-white">Connect Your Wallet</h2>
+            <h2 className="mb-2 text-xl font-bold text-arena-text">Connect Your Wallet</h2>
             <p className="mb-6 text-gray-400">
               Connect your wallet to join the matchmaking queue and compete with your bots.
             </p>
@@ -257,7 +257,7 @@ export function QueuePage() {
     <div className="mx-auto max-w-4xl space-y-8">
       {/* Header */}
       <div className="text-center">
-        <h1 className="mb-2 text-3xl font-bold text-white">Matchmaking Queue</h1>
+        <h1 className="mb-2 text-3xl font-bold text-arena-text">Matchmaking Queue</h1>
         <p className="text-gray-400">Select a bot and join the queue to find an opponent</p>
       </div>
 
@@ -272,13 +272,13 @@ export function QueuePage() {
       <div className="grid grid-cols-3 gap-4">
         <Card className="text-center">
           <CardContent className="py-4">
-            <div className="text-2xl font-bold text-white">{queueStats?.queueSize ?? 0}</div>
+            <div className="text-2xl font-bold text-arena-text">{queueStats?.queueSize ?? 0}</div>
             <div className="text-sm text-gray-400">In Queue</div>
           </CardContent>
         </Card>
         <Card className="text-center">
           <CardContent className="py-4">
-            <div className="text-2xl font-bold text-white">
+            <div className="text-2xl font-bold text-arena-text">
               {Math.floor((queueStats?.avgWaitTime ?? 45) / 60)}:
               {((queueStats?.avgWaitTime ?? 45) % 60).toString().padStart(2, "0")}
             </div>
@@ -306,7 +306,7 @@ export function QueuePage() {
       {!inQueue && (
         <>
           <div>
-            <h2 className="mb-4 text-xl font-semibold text-white">Select Your Bot</h2>
+            <h2 className="mb-4 text-xl font-semibold text-arena-text">Select Your Bot</h2>
             {botsLoading ? (
               <Card className="py-8 text-center">
                 <CardContent>

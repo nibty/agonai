@@ -1,37 +1,45 @@
 import { forwardRef, useState, type HTMLAttributes, type ImgHTMLAttributes } from "react";
-import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
-const avatarVariants = cva("relative inline-flex shrink-0 overflow-hidden rounded-full", {
-  variants: {
-    size: {
-      xs: "h-6 w-6 text-[10px]",
-      sm: "h-8 w-8 text-xs",
-      md: "h-10 w-10 text-sm",
-      lg: "h-14 w-14 text-lg",
-      xl: "h-20 w-20 text-2xl",
-      "2xl": "h-24 w-24 text-3xl",
-    },
-    ring: {
-      none: "",
-      default: "ring-2 ring-arena-border",
-      accent: "ring-2 ring-arena-accent",
-      pro: "ring-2 ring-arena-pro",
-      con: "ring-2 ring-arena-con",
-    },
-  },
-  defaultVariants: {
-    size: "md",
-    ring: "none",
-  },
-});
+type AvatarSize = "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
+type AvatarRing = "none" | "default" | "accent" | "pro" | "con";
 
-export interface AvatarProps
-  extends HTMLAttributes<HTMLDivElement>, VariantProps<typeof avatarVariants> {}
+export interface AvatarProps extends HTMLAttributes<HTMLDivElement> {
+  size?: AvatarSize;
+  ring?: AvatarRing;
+}
+
+const sizeClasses: Record<AvatarSize, string> = {
+  xs: "h-6 w-6 text-[10px]",
+  sm: "h-8 w-8 text-xs",
+  md: "h-10 w-10 text-sm",
+  lg: "h-14 w-14 text-lg",
+  xl: "h-20 w-20 text-2xl",
+  "2xl": "h-24 w-24 text-3xl",
+};
+
+const ringClasses: Record<AvatarRing, string> = {
+  none: "",
+  default: "ring-2 ring-arena-border",
+  accent: "ring-2 ring-arena-accent",
+  pro: "ring-2 ring-arena-pro",
+  con: "ring-2 ring-arena-con",
+};
 
 const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
-  ({ className, size, ring, ...props }, ref) => (
-    <div ref={ref} className={cn(avatarVariants({ size, ring }), className)} {...props} />
+  ({ className, size = "md", ring = "none", children, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(
+        "relative inline-flex shrink-0 overflow-hidden rounded-full",
+        sizeClasses[size],
+        ringClasses[ring],
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </div>
   )
 );
 Avatar.displayName = "Avatar";

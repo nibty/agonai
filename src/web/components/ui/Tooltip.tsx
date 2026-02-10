@@ -1,35 +1,92 @@
 import * as React from "react";
-import * as TooltipPrimitive from "@radix-ui/react-tooltip";
+import { Tooltip as FlowbiteTooltip } from "flowbite-react";
 import { cn } from "@/lib/utils";
 
-const TooltipProvider = TooltipPrimitive.Provider;
+const TooltipProvider = ({ children }: { children: React.ReactNode }) => {
+  return <>{children}</>;
+};
+TooltipProvider.displayName = "TooltipProvider";
 
-const Tooltip = TooltipPrimitive.Root;
+interface TooltipContextValue {
+  content: React.ReactNode;
+  setContent: (content: React.ReactNode) => void;
+}
 
-const TooltipTrigger = TooltipPrimitive.Trigger;
+const TooltipContext = React.createContext<TooltipContextValue | null>(null);
 
-const TooltipContent = React.forwardRef<
-  React.ComponentRef<typeof TooltipPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content>
->(({ className, sideOffset = 4, ...props }, ref) => (
-  <TooltipPrimitive.Content
-    ref={ref}
-    sideOffset={sideOffset}
-    className={cn(
-      "animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 overflow-hidden rounded-md border border-arena-border bg-arena-card px-3 py-1.5 text-sm text-white shadow-md",
-      className
-    )}
-    {...props}
-  />
-));
-TooltipContent.displayName = TooltipPrimitive.Content.displayName;
+interface TooltipProps {
+  children: React.ReactNode;
+  delayDuration?: number;
+}
 
-const TooltipArrow = React.forwardRef<
-  React.ComponentRef<typeof TooltipPrimitive.Arrow>,
-  React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Arrow>
->(({ className, ...props }, ref) => (
-  <TooltipPrimitive.Arrow ref={ref} className={cn("fill-arena-card", className)} {...props} />
-));
-TooltipArrow.displayName = TooltipPrimitive.Arrow.displayName;
+const Tooltip = ({ children }: TooltipProps) => {
+  const [content, setContent] = React.useState<React.ReactNode>(null);
 
-export { Tooltip, TooltipTrigger, TooltipContent, TooltipArrow, TooltipProvider };
+  return (
+    <TooltipContext.Provider value={{ content, setContent }}>
+      {children}
+    </TooltipContext.Provider>
+  );
+};
+Tooltip.displayName = "Tooltip";
+
+interface TooltipTriggerProps extends React.HTMLAttributes<HTMLElement> {
+  asChild?: boolean;
+}
+
+const TooltipTrigger = React.forwardRef<HTMLElement, TooltipTriggerProps>(
+  ({ children, asChild, ...props }, ref) => {
+    if (asChild && React.isValidElement(children)) {
+      return children;
+    }
+    return (
+      <span ref={ref as React.Ref<HTMLSpanElement>} {...props}>
+        {children}
+      </span>
+    );
+  }
+);
+TooltipTrigger.displayName = "TooltipTrigger";
+
+interface TooltipContentProps extends React.HTMLAttributes<HTMLDivElement> {
+  sideOffset?: number;
+  side?: "top" | "right" | "bottom" | "left";
+}
+
+const TooltipContent = React.forwardRef<HTMLDivElement, TooltipContentProps>(
+  ({ className: _className, sideOffset: _sideOffset = 4, side: _side = "top", children }) => {
+    const context = React.useContext(TooltipContext);
+
+    React.useEffect(() => {
+      context?.setContent(children);
+    }, [children, context]);
+
+    return null;
+  }
+);
+TooltipContent.displayName = "TooltipContent";
+
+const TooltipArrow = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn("fill-arena-card", className)} {...props} />
+  )
+);
+TooltipArrow.displayName = "TooltipArrow";
+
+// Simple tooltip wrapper that combines trigger and content
+interface SimpleTooltipProps {
+  content: React.ReactNode;
+  children: React.ReactNode;
+  placement?: "top" | "right" | "bottom" | "left";
+}
+
+const SimpleTooltip = ({ content, children, placement = "top" }: SimpleTooltipProps) => {
+  return (
+    <FlowbiteTooltip content={content} placement={placement}>
+      {children}
+    </FlowbiteTooltip>
+  );
+};
+SimpleTooltip.displayName = "SimpleTooltip";
+
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipArrow, TooltipProvider, SimpleTooltip };

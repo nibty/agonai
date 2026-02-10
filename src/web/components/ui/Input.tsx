@@ -1,4 +1,4 @@
-import { forwardRef, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
+import { forwardRef, type InputHTMLAttributes, type TextareaHTMLAttributes, type SelectHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {}
@@ -9,7 +9,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       <input
         type={type}
         className={cn(
-          "flex h-10 w-full rounded-lg border border-arena-border bg-arena-card px-3 py-2 text-sm text-white",
+          "flex h-10 w-full rounded-lg border border-arena-border bg-arena-card px-3 py-2 text-sm text-arena-text",
           "placeholder:text-arena-text-dim",
           "focus:border-transparent focus:outline-none focus:ring-2 focus:ring-arena-accent",
           "disabled:cursor-not-allowed disabled:opacity-50",
@@ -31,7 +31,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <textarea
         className={cn(
-          "flex min-h-[80px] w-full rounded-lg border border-arena-border bg-arena-card px-3 py-2 text-sm text-white",
+          "flex min-h-[80px] w-full rounded-lg border border-arena-border bg-arena-card px-3 py-2 text-sm text-arena-text",
           "placeholder:text-arena-text-dim",
           "focus:border-transparent focus:outline-none focus:ring-2 focus:ring-arena-accent",
           "disabled:cursor-not-allowed disabled:opacity-50",
@@ -46,7 +46,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
 
 Textarea.displayName = "Textarea";
 
-export interface SelectProps extends InputHTMLAttributes<HTMLSelectElement> {
+export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   children: React.ReactNode;
 }
 
@@ -55,7 +55,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     return (
       <select
         className={cn(
-          "flex h-10 w-full rounded-lg border border-arena-border bg-arena-card px-3 py-2 text-sm text-white",
+          "flex h-10 w-full rounded-lg border border-arena-border bg-arena-card px-3 py-2 text-sm text-arena-text",
           "focus:border-transparent focus:outline-none focus:ring-2 focus:ring-arena-accent",
           "disabled:cursor-not-allowed disabled:opacity-50",
           className

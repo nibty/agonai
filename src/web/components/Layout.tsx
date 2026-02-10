@@ -24,6 +24,7 @@ function GitHubIcon({ className }: { className?: string }) {
 }
 import { Button } from "@/components/ui/Button";
 import { WalletButton } from "@/components/WalletButton";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
@@ -44,7 +45,7 @@ function NavItem({ to, icon, label, onClick }: NavItemProps) {
           "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
           isActive
             ? "bg-arena-accent/20 text-arena-accent"
-            : "text-arena-text-muted hover:bg-arena-border/50 hover:text-white"
+            : "text-arena-text-muted hover:bg-arena-border/50 hover:text-arena-text"
         )
       }
     >
@@ -71,7 +72,7 @@ function SidebarLink({ to, icon, label, onClick }: SidebarLinkProps) {
           "flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors",
           isActive
             ? "bg-arena-accent/20 text-arena-accent"
-            : "text-arena-text-muted hover:bg-arena-border/50 hover:text-white"
+            : "text-arena-text-muted hover:bg-arena-border/50 hover:text-arena-text"
         )
       }
     >
@@ -90,7 +91,7 @@ export function Layout() {
   };
 
   return (
-    <div className="min-h-screen bg-arena-bg text-white">
+    <div className="min-h-screen bg-arena-bg text-arena-text">
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-arena-border bg-arena-bg/95 backdrop-blur supports-[backdrop-filter]:bg-arena-bg/60">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
@@ -124,8 +125,9 @@ export function Layout() {
             <NavItem to="/topics" icon={<MessageSquare className="h-4 w-4" />} label="Topics" />
           </nav>
 
-          {/* Right: Wallet Button */}
-          <div className="flex items-center gap-3">
+          {/* Right: Theme Toggle & Wallet Button */}
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
             <WalletButton />
           </div>
         </div>
@@ -243,7 +245,7 @@ export function Layout() {
                 href="https://docs.x1.xyz"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-arena-text-muted transition-colors hover:text-white"
+                className="flex items-center gap-2 text-sm text-arena-text-muted transition-colors hover:text-arena-text"
               >
                 <BookOpen className="h-4 w-4" />
                 <span>Docs</span>
@@ -252,7 +254,7 @@ export function Layout() {
                 href="https://github.com/ai-debates"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-arena-text-muted transition-colors hover:text-white"
+                className="flex items-center gap-2 text-sm text-arena-text-muted transition-colors hover:text-arena-text"
               >
                 <GitHubIcon className="h-4 w-4" />
                 <span>GitHub</span>

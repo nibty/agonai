@@ -100,7 +100,7 @@ export function WalletButton({ className }: WalletButtonProps) {
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none text-white">Connected Wallet</p>
+            <p className="text-sm font-medium leading-none text-arena-text">Connected Wallet</p>
             <p className="text-xs leading-none text-arena-text-muted">{displayAddress}</p>
           </div>
         </DropdownMenuLabel>
@@ -108,7 +108,7 @@ export function WalletButton({ className }: WalletButtonProps) {
         <div className="px-2 py-2">
           <div className="flex items-center justify-between rounded-md bg-arena-bg p-2">
             <span className="text-xs text-arena-text-muted">Balance</span>
-            <span className="text-sm font-medium text-white">{displayBalance} XNT</span>
+            <span className="text-sm font-medium text-arena-text">{displayBalance} XNT</span>
           </div>
         </div>
         <DropdownMenuSeparator />
