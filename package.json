@@ -26,6 +26,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "checks": "bun run lint && bun run format:check && bun run typecheck:all && bun run test:run",
     "claude": "bun --hot src/bot/claude-bot.ts"
   },
   "dependencies": {
