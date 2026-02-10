@@ -2,7 +2,7 @@ import { useParams, Link } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useWallet } from "@/hooks/useWallet";
 import { Button } from "@/components/ui/Button";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/Card";
+import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { BotAvatar } from "@/components/ui/Avatar";
 import { DualProgress } from "@/components/ui/Progress";
@@ -60,28 +60,31 @@ function MessageBubble({ message, botName }: { message: DebateMessage; botName: 
   return (
     <div className={`flex ${isPro ? "justify-start" : "justify-end"}`}>
       <div
-        className={`max-w-[80%] ${isPro ? "order-1" : "order-2"} flex gap-4 ${
+        className={`max-w-[85%] ${isPro ? "order-1" : "order-2"} flex gap-3 ${
           isPro ? "" : "flex-row-reverse"
         }`}
       >
-        <BotAvatar size="md" alt={botName} tier={3} className="flex-shrink-0" />
+        <BotAvatar size="sm" alt={botName} tier={3} className="flex-shrink-0" />
         <div>
-          <div className={`mb-2 flex items-center gap-2 ${isPro ? "" : "justify-end"}`}>
-            <span className={`font-semibold ${isPro ? "text-arena-pro" : "text-arena-con"}`}>
+          <div className={`mb-1 flex items-center gap-1.5 ${isPro ? "" : "justify-end"}`}>
+            <span
+              className={`text-xs font-medium ${isPro ? "text-arena-pro" : "text-arena-con"}`}
+            >
               {botName}
             </span>
-            <Badge variant={isPro ? "pro" : "con"} className="text-xs">
-              {message.position.toUpperCase()}
-            </Badge>
-            <Badge variant="outline" className="text-xs">
-              {message.round}
-            </Badge>
+            <span className="text-[10px] uppercase text-gray-500">{message.round}</span>
           </div>
-          <Card variant={isPro ? "pro" : "con"} className="p-5">
-            <p className="whitespace-pre-wrap text-base leading-relaxed text-gray-100">
+          <div
+            className={`rounded-lg border px-3 py-2 ${
+              isPro
+                ? "border-arena-pro/30 bg-arena-pro/5"
+                : "border-arena-con/30 bg-arena-con/5"
+            }`}
+          >
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-200">
               {message.content}
             </p>
-          </Card>
+          </div>
         </div>
       </div>
     </div>
@@ -421,271 +424,199 @@ export function ArenaPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <Link to="/queue">
-          <Button variant="ghost" size="sm">
-            Back to Queue
-          </Button>
-        </Link>
-        <div className="flex items-center gap-3">
-          {/* TTS Toggle */}
-          <Button
-            variant={ttsEnabled ? "default" : "outline"}
-            size="sm"
-            onClick={() => setTtsEnabled(!ttsEnabled)}
-            className="flex items-center gap-1"
-          >
-            {ttsEnabled ? (
-              <>
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
-                  />
-                </svg>
-                {isSpeaking ? "Speaking..." : "TTS On"}
-              </>
-            ) : (
-              <>
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"
-                  />
-                </svg>
-                TTS Off
-              </>
-            )}
-          </Button>
+    <div className="flex h-[calc(100vh-theme(spacing.16)-theme(spacing.16))] flex-col">
+      {/* Compact Header Bar */}
+      <div className="flex flex-shrink-0 items-center justify-between border-b border-arena-border/50 pb-2">
+        <div className="flex items-center gap-4">
+          <Link to="/queue" className="text-sm text-gray-400 transition-colors hover:text-white">
+            ← Back
+          </Link>
+          <div className="h-4 w-px bg-arena-border" />
           {debate?.status === "in_progress" && <Badge variant="live">LIVE</Badge>}
           {debate?.status === "completed" && <Badge variant="outline">COMPLETED</Badge>}
-          <span className="text-sm text-gray-400">{debate?.spectatorCount || 0} watching</span>
+          <span className="text-xs text-gray-500">{debate?.spectatorCount || 0} watching</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setTtsEnabled(!ttsEnabled)}
+            className={`rounded px-2 py-1 text-xs transition-colors ${
+              ttsEnabled
+                ? "bg-arena-accent/20 text-arena-accent"
+                : "text-gray-500 hover:text-gray-300"
+            }`}
+          >
+            {ttsEnabled ? (isSpeaking ? "Speaking..." : "TTS On") : "TTS Off"}
+          </button>
         </div>
       </div>
 
-      {/* Topic */}
-      <Card className="py-4 text-center">
-        <CardContent>
+      {/* Topic + Bots Row */}
+      <div className="flex flex-shrink-0 items-center gap-4 border-b border-arena-border/30 py-3">
+        {/* PRO Bot */}
+        <div className="flex items-center gap-2">
+          <BotAvatar size="sm" alt={proBot?.name || "Pro"} tier={3} />
+          <div className="text-sm">
+            <span className="font-semibold text-arena-pro">{proBot?.name || "Pro Bot"}</span>
+            <span className="ml-1.5 text-xs text-gray-500">{proBot?.elo || "---"}</span>
+          </div>
+        </div>
+
+        {/* Topic - Center */}
+        <div className="flex min-w-0 flex-1 flex-col items-center text-center">
           {topic && (
-            <Badge variant="outline" className="mb-2">
-              {topic.category.toUpperCase()}
-            </Badge>
+            <span className="text-[10px] font-medium uppercase tracking-wider text-gray-500">
+              {topic.category}
+            </span>
           )}
-          <h1 className="text-xl font-bold text-white md:text-2xl">
+          <h1 className="max-w-2xl truncate text-sm font-semibold text-white">
             {topic?.text || debate?.topic || "Loading..."}
           </h1>
-          <div className="mt-4 flex items-center justify-center gap-4 text-sm text-gray-400">
-            <span>Round: {debate?.currentRound || "pending"}</span>
-            <span>|</span>
-            <span>Status: {debate?.roundStatus || "waiting"}</span>
-            <span>|</span>
-            <span>Stake: {(debate?.stake || 0).toLocaleString()} XNT</span>
+          <div className="flex items-center gap-3 text-[10px] text-gray-500">
+            <span className="uppercase">{debate?.currentRound || "pending"}</span>
+            <span className="h-1 w-1 rounded-full bg-gray-600" />
+            <span>{(debate?.stake || 0).toLocaleString()} XNT</span>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Vote Progress */}
-      <div className="space-y-2">
-        <div className="flex justify-between text-sm">
-          <span className="font-medium text-arena-pro">PRO {currentVotes.pro}</span>
-          <span className="font-medium text-arena-con">CON {currentVotes.con}</span>
-        </div>
-        <DualProgress proValue={currentVotes.pro} conValue={currentVotes.con} />
-      </div>
-
-      {/* Bot Info Bar */}
-      <div className="flex items-center justify-between gap-4 rounded-lg border border-arena-border bg-arena-card p-3">
-        {/* PRO Bot */}
-        <div className="flex items-center gap-3">
-          <BotAvatar size="md" alt={proBot?.name || "Pro"} tier={3} />
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-arena-pro">{proBot?.name || "Pro Bot"}</span>
-              <Badge variant="pro" className="text-xs">PRO</Badge>
-            </div>
-            <div className="text-sm text-gray-400">
-              ELO {proBot?.elo || "---"} · {proBot?.wins || 0}W/{proBot?.losses || 0}L
-            </div>
-          </div>
-        </div>
-
-        {/* VS */}
-        <div className="flex flex-col items-center">
-          <span className="text-lg font-bold text-gray-500">VS</span>
         </div>
 
         {/* CON Bot */}
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <div className="flex items-center justify-end gap-2">
-              <Badge variant="con" className="text-xs">CON</Badge>
-              <span className="font-semibold text-arena-con">{conBot?.name || "Con Bot"}</span>
-            </div>
-            <div className="text-sm text-gray-400">
-              ELO {conBot?.elo || "---"} · {conBot?.wins || 0}W/{conBot?.losses || 0}L
-            </div>
+        <div className="flex items-center gap-2">
+          <div className="text-right text-sm">
+            <span className="font-semibold text-arena-con">{conBot?.name || "Con Bot"}</span>
+            <span className="ml-1.5 text-xs text-gray-500">{conBot?.elo || "---"}</span>
           </div>
-          <BotAvatar size="md" alt={conBot?.name || "Con"} tier={3} />
+          <BotAvatar size="sm" alt={conBot?.name || "Con"} tier={3} />
         </div>
       </div>
 
-      {/* Debate Feed - Full Width, Large Height */}
-      <Card className="flex min-h-[calc(100vh-400px)] flex-col">
-        <CardHeader className="flex-shrink-0 border-b border-arena-border pb-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Debate Feed</CardTitle>
-              <CardDescription>
-                {messages.length === 0
-                  ? "Waiting for debate to start..."
-                  : `${messages.length} messages`}
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="flex-1 space-y-6 overflow-y-auto py-6">
-          {messages.map((message) => (
-            <MessageBubble
-              key={message.id}
-              message={message}
-              botName={
-                message.position === "pro"
-                  ? proBot?.name || "Pro Bot"
-                  : conBot?.name || "Con Bot"
-              }
-            />
-          ))}
+      {/* Vote Progress Bar */}
+      <div className="flex flex-shrink-0 items-center gap-2 py-2">
+        <span className="w-16 text-right text-xs font-medium text-arena-pro">
+          {currentVotes.pro} PRO
+        </span>
+        <div className="flex-1">
+          <DualProgress proValue={currentVotes.pro} conValue={currentVotes.con} />
+        </div>
+        <span className="w-16 text-xs font-medium text-arena-con">CON {currentVotes.con}</span>
+      </div>
 
-          {/* Typing indicator */}
-          {typingBot && (
-            <div className={`flex ${typingBot === "pro" ? "justify-start" : "justify-end"}`}>
-              <div className="flex items-center gap-2 p-4 text-sm text-gray-400">
-                <span>{typingBot === "pro" ? proBot?.name : conBot?.name} is typing</span>
-                <span className="flex gap-1">
-                  <span
-                    className="h-2 w-2 animate-bounce rounded-full bg-gray-400"
-                    style={{ animationDelay: "0ms" }}
-                  ></span>
-                  <span
-                    className="h-2 w-2 animate-bounce rounded-full bg-gray-400"
-                    style={{ animationDelay: "150ms" }}
-                  ></span>
-                  <span
-                    className="h-2 w-2 animate-bounce rounded-full bg-gray-400"
-                    style={{ animationDelay: "300ms" }}
-                  ></span>
+      {/* Debate Feed - Takes remaining space */}
+      <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg border border-arena-border/50 bg-arena-card/50">
+        <div className="absolute inset-0 overflow-y-auto p-4">
+          <div className="space-y-4">
+            {messages.length === 0 && (
+              <div className="flex h-full items-center justify-center py-20 text-sm text-gray-500">
+                Waiting for debate to start...
+              </div>
+            )}
+            {messages.map((message) => (
+              <MessageBubble
+                key={message.id}
+                message={message}
+                botName={
+                  message.position === "pro" ? proBot?.name || "Pro Bot" : conBot?.name || "Con Bot"
+                }
+              />
+            ))}
+
+            {/* Typing indicator */}
+            {typingBot && (
+              <div className={`flex ${typingBot === "pro" ? "justify-start" : "justify-end"}`}>
+                <div className="flex items-center gap-2 text-xs text-gray-400">
+                  <span>{typingBot === "pro" ? proBot?.name : conBot?.name} is typing</span>
+                  <span className="flex gap-0.5">
+                    <span
+                      className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400"
+                      style={{ animationDelay: "0ms" }}
+                    />
+                    <span
+                      className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400"
+                      style={{ animationDelay: "150ms" }}
+                    />
+                    <span
+                      className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400"
+                      style={{ animationDelay: "300ms" }}
+                    />
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Bar: Voting or Results */}
+      <div className="flex-shrink-0 pt-3">
+        {/* Voting Section */}
+        {debate?.roundStatus === "voting" && (
+          <div className="flex items-center justify-between rounded-lg border border-arena-accent/50 bg-arena-accent/5 px-4 py-3">
+            <div className="text-sm">
+              <span className="font-medium text-white">Vote Now</span>
+              <span className="ml-2 text-xs text-gray-400">
+                {hasVoted ? `Voted ${selectedVote?.toUpperCase()}` : debate.currentRound}
+              </span>
+            </div>
+            {connected ? (
+              <div className="flex gap-2">
+                <Button
+                  variant="pro"
+                  size="sm"
+                  disabled={hasVoted}
+                  onClick={() => handleVote("pro")}
+                  className={hasVoted && selectedVote !== "pro" ? "opacity-40" : ""}
+                >
+                  PRO
+                </Button>
+                <Button
+                  variant="con"
+                  size="sm"
+                  disabled={hasVoted}
+                  onClick={() => handleVote("con")}
+                  className={hasVoted && selectedVote !== "con" ? "opacity-40" : ""}
+                >
+                  CON
+                </Button>
+              </div>
+            ) : (
+              <span className="text-xs text-gray-400">Connect wallet to vote</span>
+            )}
+          </div>
+        )}
+
+        {/* Winner Banner */}
+        {debate?.status === "completed" && debate.winner && (
+          <div
+            className={`rounded-lg border px-4 py-3 text-center ${
+              debate.winner === "pro"
+                ? "border-arena-pro/50 bg-arena-pro/10"
+                : "border-arena-con/50 bg-arena-con/10"
+            }`}
+          >
+            <span className="font-semibold text-white">
+              {debate.winner === "pro" ? proBot?.name : conBot?.name} Wins!
+            </span>
+            <span className="ml-2 text-sm text-gray-400">
+              {debate.roundResults.filter((r) => r.winner === "pro").length} -{" "}
+              {debate.roundResults.filter((r) => r.winner === "con").length}
+            </span>
+          </div>
+        )}
+
+        {/* Round Results - Compact inline */}
+        {debate && debate.roundResults.length > 0 && debate.status !== "completed" && (
+          <div className="flex items-center justify-center gap-4 pt-2 text-xs text-gray-500">
+            {debate.roundResults.map((result, index) => (
+              <div key={index} className="flex items-center gap-1">
+                <span className="capitalize">{result.round}:</span>
+                <span className={result.winner === "pro" ? "text-arena-pro" : "text-arena-con"}>
+                  {result.winner.toUpperCase()}
                 </span>
               </div>
-            </div>
-          )}
-
-          <div ref={messagesEndRef} />
-        </CardContent>
-      </Card>
-
-      {/* Voting Section */}
-      {debate?.roundStatus === "voting" && (
-        <Card className="border-arena-accent">
-          <CardContent>
-            <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-              <div>
-                <h3 className="font-semibold text-white">
-                  Cast Your Vote - {debate.currentRound.toUpperCase()}
-                </h3>
-                <p className="text-sm text-gray-400">
-                  {hasVoted
-                    ? "You voted for " + selectedVote?.toUpperCase()
-                    : "Vote for the side you think won this round"}
-                </p>
-              </div>
-              {connected ? (
-                <div className="flex gap-4">
-                  <Button
-                    variant="pro"
-                    disabled={hasVoted}
-                    onClick={() => handleVote("pro")}
-                    className={hasVoted && selectedVote !== "pro" ? "opacity-50" : ""}
-                  >
-                    Vote PRO
-                  </Button>
-                  <Button
-                    variant="con"
-                    disabled={hasVoted}
-                    onClick={() => handleVote("con")}
-                    className={hasVoted && selectedVote !== "con" ? "opacity-50" : ""}
-                  >
-                    Vote CON
-                  </Button>
-                </div>
-              ) : (
-                <p className="text-sm text-gray-400">Connect wallet to vote</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Winner Banner */}
-      {debate?.status === "completed" && debate.winner && (
-        <Card
-          className={
-            debate.winner === "pro"
-              ? "border-arena-pro bg-arena-pro/10"
-              : "border-arena-con bg-arena-con/10"
-          }
-        >
-          <CardContent className="py-8 text-center">
-            <h2 className="mb-2 text-2xl font-bold text-white">
-              🎉 {debate.winner === "pro" ? proBot?.name : conBot?.name} Wins! 🎉
-            </h2>
-            <p className="text-gray-400">
-              Final Score: PRO {debate.roundResults.filter((r) => r.winner === "pro").length} - CON{" "}
-              {debate.roundResults.filter((r) => r.winner === "con").length}
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Round Results */}
-      {debate && debate.roundResults.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Round Results</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {debate.roundResults.map((result, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between border-b border-arena-border py-2 last:border-0"
-                >
-                  <span className="font-medium capitalize text-white">{result.round}</span>
-                  <div className="flex items-center gap-4">
-                    <span className="text-arena-pro">{result.proVotes}</span>
-                    <span className="text-gray-400">-</span>
-                    <span className="text-arena-con">{result.conVotes}</span>
-                    <Badge variant={result.winner === "pro" ? "pro" : "con"}>
-                      {result.winner.toUpperCase()} wins
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
