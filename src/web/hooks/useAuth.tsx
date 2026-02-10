@@ -19,7 +19,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const wasConnectedRef = useRef(connected); // Track if wallet was already connected on mount
+  const hasTriedAutoAuth = useRef(false); // Only auto-auth once per session
 
   const authenticate = useCallback(async () => {
     if (!publicKey || !signMessage) {
@@ -91,26 +91,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Auto-authenticate when wallet freshly connects (not on page reload)
+  // Auto-authenticate when wallet connects (only once per connection)
   useEffect(() => {
-    // Only auto-authenticate if wallet just connected (wasn't connected before)
-    if (connected && !wasConnectedRef.current && publicKey && !isAuthenticated && !isAuthenticating) {
-      const token = localStorage.getItem("auth_token");
-      if (!token) {
-        void authenticate();
-      }
+    if (connected && publicKey && !isAuthenticated && !isAuthenticating && !hasTriedAutoAuth.current) {
+      hasTriedAutoAuth.current = true;
+      void authenticate();
     }
-    // Update ref to track current state for next render
-    wasConnectedRef.current = connected;
   }, [connected, publicKey, isAuthenticated, isAuthenticating, authenticate]);
 
-  // Clear auth state when wallet disconnects
+  // Reset auto-auth flag and clear auth state when wallet disconnects
   useEffect(() => {
-    if (!connected && isAuthenticated) {
-      localStorage.removeItem("auth_token");
-      api.setAuthToken(null);
-      setIsAuthenticated(false);
-      setUserId(null);
+    if (!connected) {
+      hasTriedAutoAuth.current = false;
+      if (isAuthenticated) {
+        localStorage.removeItem("auth_token");
+        api.setAuthToken(null);
+        setIsAuthenticated(false);
+        setUserId(null);
+      }
     }
   }, [connected, isAuthenticated]);
 
