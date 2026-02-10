@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useWallet } from "@/hooks/useWallet";
 import { Button } from "@/components/ui/Button";
@@ -15,48 +15,76 @@ import { Input } from "@/components/ui/Input";
 import { Progress } from "@/components/ui/Progress";
 import type { Bot } from "@/types";
 
-// Mock user's bots
-const mockUserBots: Bot[] = [
+// Default demo bots (can be edited)
+const defaultBots: Bot[] = [
   {
     id: "bot-1",
     owner: "user-wallet",
-    name: "LogicMaster3000",
+    name: "LogicMaster",
     avatar: null,
-    endpoint: "https://api.example.com/bot1",
-    elo: 1850,
-    wins: 45,
-    losses: 12,
-    tier: 4,
+    endpoint: "http://localhost:4000/bot/logic-master/debate",
+    elo: 1200,
+    wins: 0,
+    losses: 0,
+    tier: 1,
     personalityTags: ["analytical", "calm"],
-    createdAt: new Date("2024-01-15"),
+    createdAt: new Date(),
   },
   {
     id: "bot-2",
     owner: "user-wallet",
-    name: "AggressiveDebater",
+    name: "DevilsAdvocate",
     avatar: null,
-    endpoint: "https://api.example.com/bot2",
-    elo: 1480,
-    wins: 24,
-    losses: 10,
-    tier: 3,
+    endpoint: "http://localhost:4000/bot/devils-advocate/debate",
+    elo: 1200,
+    wins: 0,
+    losses: 0,
+    tier: 1,
     personalityTags: ["aggressive", "witty"],
-    createdAt: new Date("2024-02-01"),
+    createdAt: new Date(),
   },
   {
     id: "bot-3",
     owner: "user-wallet",
-    name: "NoviceBot",
+    name: "Philosopher",
     avatar: null,
-    endpoint: "https://api.example.com/bot3",
-    elo: 1050,
-    wins: 5,
-    losses: 8,
+    endpoint: "http://localhost:4000/bot/philosopher/debate",
+    elo: 1200,
+    wins: 0,
+    losses: 0,
     tier: 1,
-    personalityTags: ["balanced"],
-    createdAt: new Date("2024-03-01"),
+    personalityTags: ["thoughtful", "nuanced"],
+    createdAt: new Date(),
+  },
+  {
+    id: "bot-4",
+    owner: "user-wallet",
+    name: "DataDriven",
+    avatar: null,
+    endpoint: "http://localhost:4000/bot/data-driven/debate",
+    elo: 1200,
+    wins: 0,
+    losses: 0,
+    tier: 1,
+    personalityTags: ["statistical", "factual"],
+    createdAt: new Date(),
   },
 ];
+
+// Load bots from localStorage or use defaults
+function loadBots(): Bot[] {
+  const saved = localStorage.getItem("ai-debates-bots");
+  if (saved) {
+    const parsed = JSON.parse(saved) as Bot[];
+    return parsed.map((b) => ({ ...b, createdAt: new Date(b.createdAt) }));
+  }
+  return defaultBots;
+}
+
+// Save bots to localStorage
+function saveBots(bots: Bot[]) {
+  localStorage.setItem("ai-debates-bots", JSON.stringify(bots));
+}
 
 // Tier requirements
 const tierRequirements = {
@@ -181,7 +209,13 @@ function BotCard({
   );
 }
 
-function RegisterBotForm({ onClose }: { onClose: () => void }) {
+function RegisterBotForm({
+  onClose,
+  onRegister,
+}: {
+  onClose: () => void;
+  onRegister: (bot: Omit<Bot, "id" | "elo" | "wins" | "losses" | "tier" | "createdAt">) => void;
+}) {
   const [name, setName] = useState("");
   const [endpoint, setEndpoint] = useState("");
   const [tags, setTags] = useState("");
@@ -191,16 +225,36 @@ function RegisterBotForm({ onClose }: { onClose: () => void }) {
   const handleTest = async () => {
     setTesting(true);
     setTestResult(null);
-    // Simulate API test
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setTestResult(endpoint.startsWith("https://") ? "success" : "error");
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          debate_id: "test",
+          round: "opening",
+          topic: "This is a test",
+          position: "pro",
+          opponent_last_message: null,
+          time_limit_seconds: 60,
+          messages_so_far: [],
+        }),
+      });
+      const data = await response.json();
+      setTestResult(data.message ? "success" : "error");
+    } catch {
+      setTestResult("error");
+    }
     setTesting(false);
   };
 
   const handleSubmit = () => {
-    // In a real app, this would submit to the backend
-    console.log({ name, endpoint, tags: tags.split(",").map((t) => t.trim()) });
-    onClose();
+    onRegister({
+      owner: "user-wallet",
+      name,
+      avatar: null,
+      endpoint,
+      personalityTags: tags.split(",").map((t) => t.trim()).filter(Boolean),
+    });
   };
 
   return (
@@ -226,12 +280,15 @@ function RegisterBotForm({ onClose }: { onClose: () => void }) {
             API Endpoint
           </label>
           <Input
-            placeholder="https://api.yourbot.com/debate"
+            placeholder="http://localhost:4000/bot/my-bot/debate"
             value={endpoint}
-            onChange={(e) => setEndpoint(e.target.value)}
+            onChange={(e) => {
+              setEndpoint(e.target.value);
+              setTestResult(null);
+            }}
           />
           <p className="text-xs text-gray-500 mt-1">
-            Your endpoint must respond to POST requests with debate prompts
+            For local testing, use: http://localhost:4000/bot/[bot-id]/debate
           </p>
         </div>
 
@@ -259,7 +316,7 @@ function RegisterBotForm({ onClose }: { onClose: () => void }) {
           >
             {testResult === "success"
               ? "Endpoint is responding correctly!"
-              : "Failed to connect to endpoint. Make sure it's accessible."}
+              : "Failed to connect. Make sure your bot server is running."}
           </div>
         )}
 
@@ -274,7 +331,7 @@ function RegisterBotForm({ onClose }: { onClose: () => void }) {
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!name || !endpoint || testResult !== "success"}
+            disabled={!name || !endpoint}
             className="flex-1"
           >
             Register Bot
@@ -289,12 +346,173 @@ function RegisterBotForm({ onClose }: { onClose: () => void }) {
   );
 }
 
+function EditBotForm({
+  bot,
+  onSave,
+  onCancel,
+  onDelete,
+}: {
+  bot: Bot;
+  onSave: (updated: Bot) => void;
+  onCancel: () => void;
+  onDelete: () => void;
+}) {
+  const [name, setName] = useState(bot.name);
+  const [endpoint, setEndpoint] = useState(bot.endpoint);
+  const [tags, setTags] = useState(bot.personalityTags.join(", "));
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleTest = async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          debate_id: "test",
+          round: "opening",
+          topic: "This is a test",
+          position: "pro",
+          opponent_last_message: null,
+          time_limit_seconds: 60,
+          messages_so_far: [],
+        }),
+      });
+      const data = await response.json();
+      setTestResult(data.message ? "success" : "error");
+    } catch {
+      setTestResult("error");
+    }
+    setTesting(false);
+  };
+
+  const handleSave = () => {
+    onSave({
+      ...bot,
+      name,
+      endpoint,
+      personalityTags: tags.split(",").map((t) => t.trim()).filter(Boolean),
+    });
+  };
+
+  if (showDeleteConfirm) {
+    return (
+      <Card variant="glow">
+        <CardHeader>
+          <CardTitle className="text-arena-con">Delete Bot?</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-gray-400">
+            Are you sure you want to delete <strong className="text-white">{bot.name}</strong>?
+            This action cannot be undone.
+          </p>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} className="flex-1">
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={onDelete} className="flex-1">
+              Delete Bot
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card variant="glow">
+      <CardHeader>
+        <CardTitle>Edit Bot</CardTitle>
+        <CardDescription>Update your bot's configuration</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <label className="block text-sm text-gray-400 mb-2">Bot Name</label>
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm text-gray-400 mb-2">API Endpoint</label>
+          <Input
+            value={endpoint}
+            onChange={(e) => {
+              setEndpoint(e.target.value);
+              setTestResult(null);
+            }}
+            placeholder="http://localhost:4000/bot/my-bot/debate"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            For local testing, use: http://localhost:4000/bot/[bot-id]/debate
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm text-gray-400 mb-2">Personality Tags</label>
+          <Input
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
+            placeholder="analytical, calm, witty"
+          />
+        </div>
+
+        {testResult && (
+          <div
+            className={`p-3 rounded-lg ${
+              testResult === "success"
+                ? "bg-arena-pro/20 text-arena-pro"
+                : "bg-arena-con/20 text-arena-con"
+            }`}
+          >
+            {testResult === "success"
+              ? "Endpoint is responding correctly!"
+              : "Failed to connect. Make sure your bot server is running."}
+          </div>
+        )}
+
+        <div className="flex gap-3 pt-2">
+          <Button
+            variant="outline"
+            onClick={handleTest}
+            disabled={!endpoint || testing}
+          >
+            {testing ? "Testing..." : "Test Endpoint"}
+          </Button>
+          <Button onClick={handleSave} disabled={!name || !endpoint} className="flex-1">
+            Save Changes
+          </Button>
+        </div>
+
+        <div className="flex gap-3 pt-2 border-t border-arena-border">
+          <Button variant="ghost" onClick={onCancel} className="flex-1">
+            Cancel
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="text-arena-con hover:text-arena-con hover:bg-arena-con/10"
+          >
+            Delete Bot
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function BotDetailsModal({
   bot,
   onClose,
+  onEdit,
 }: {
   bot: Bot;
   onClose: () => void;
+  onEdit: () => void;
 }) {
   const winRate =
     bot.wins + bot.losses > 0
@@ -399,6 +617,9 @@ function BotDetailsModal({
           <Button variant="outline" onClick={onClose} className="flex-1">
             Close
           </Button>
+          <Button variant="secondary" onClick={onEdit} className="flex-1">
+            Edit Bot
+          </Button>
           <Link to="/queue" className="flex-1">
             <Button className="w-full">Enter Queue</Button>
           </Link>
@@ -410,8 +631,48 @@ function BotDetailsModal({
 
 export function BotsPage() {
   const { connected, connect } = useWallet();
+  const [bots, setBots] = useState<Bot[]>([]);
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [selectedBot, setSelectedBot] = useState<Bot | null>(null);
+  const [editingBot, setEditingBot] = useState<Bot | null>(null);
+
+  // Load bots on mount
+  useEffect(() => {
+    setBots(loadBots());
+  }, []);
+
+  // Save bots whenever they change
+  useEffect(() => {
+    if (bots.length > 0) {
+      saveBots(bots);
+    }
+  }, [bots]);
+
+  const handleSaveBot = (updated: Bot) => {
+    setBots((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
+    setEditingBot(null);
+    setSelectedBot(null);
+  };
+
+  const handleDeleteBot = (botId: string) => {
+    setBots((prev) => prev.filter((b) => b.id !== botId));
+    setEditingBot(null);
+    setSelectedBot(null);
+  };
+
+  const handleRegisterBot = (newBot: Omit<Bot, "id" | "elo" | "wins" | "losses" | "tier" | "createdAt">) => {
+    const bot: Bot = {
+      ...newBot,
+      id: `bot-${Date.now()}`,
+      elo: 1200,
+      wins: 0,
+      losses: 0,
+      tier: 1,
+      createdAt: new Date(),
+    };
+    setBots((prev) => [...prev, bot]);
+    setShowRegisterForm(false);
+  };
 
   if (!connected) {
     return (
@@ -447,6 +708,20 @@ export function BotsPage() {
     );
   }
 
+  // Show edit form
+  if (editingBot) {
+    return (
+      <div className="max-w-xl mx-auto">
+        <EditBotForm
+          bot={editingBot}
+          onSave={handleSaveBot}
+          onCancel={() => setEditingBot(null)}
+          onDelete={() => handleDeleteBot(editingBot.id)}
+        />
+      </div>
+    );
+  }
+
   // Show bot details modal
   if (selectedBot) {
     return (
@@ -454,6 +729,10 @@ export function BotsPage() {
         <BotDetailsModal
           bot={selectedBot}
           onClose={() => setSelectedBot(null)}
+          onEdit={() => {
+            setEditingBot(selectedBot);
+            setSelectedBot(null);
+          }}
         />
       </div>
     );
@@ -463,7 +742,10 @@ export function BotsPage() {
   if (showRegisterForm) {
     return (
       <div className="max-w-xl mx-auto">
-        <RegisterBotForm onClose={() => setShowRegisterForm(false)} />
+        <RegisterBotForm
+          onClose={() => setShowRegisterForm(false)}
+          onRegister={handleRegisterBot}
+        />
       </div>
     );
   }
@@ -488,7 +770,7 @@ export function BotsPage() {
         <Card className="text-center">
           <CardContent className="py-4">
             <div className="text-2xl font-bold text-white">
-              {mockUserBots.length}
+              {bots.length}
             </div>
             <div className="text-sm text-gray-400">Total Bots</div>
           </CardContent>
@@ -496,7 +778,7 @@ export function BotsPage() {
         <Card className="text-center">
           <CardContent className="py-4">
             <div className="text-2xl font-bold text-arena-accent">
-              {Math.max(...mockUserBots.map((b) => b.elo))}
+              {bots.length > 0 ? Math.max(...bots.map((b) => b.elo)) : 0}
             </div>
             <div className="text-sm text-gray-400">Highest ELO</div>
           </CardContent>
@@ -504,7 +786,7 @@ export function BotsPage() {
         <Card className="text-center">
           <CardContent className="py-4">
             <div className="text-2xl font-bold text-arena-pro">
-              {mockUserBots.reduce((sum, b) => sum + b.wins, 0)}
+              {bots.reduce((sum, b) => sum + b.wins, 0)}
             </div>
             <div className="text-sm text-gray-400">Total Wins</div>
           </CardContent>
@@ -512,7 +794,7 @@ export function BotsPage() {
         <Card className="text-center">
           <CardContent className="py-4">
             <div className="text-2xl font-bold text-white">
-              {Math.max(...mockUserBots.map((b) => b.tier))}
+              {bots.length > 0 ? Math.max(...bots.map((b) => b.tier)) : 0}
             </div>
             <div className="text-sm text-gray-400">Max Tier</div>
           </CardContent>
@@ -520,7 +802,7 @@ export function BotsPage() {
       </div>
 
       {/* Bots Grid */}
-      {mockUserBots.length === 0 ? (
+      {bots.length === 0 ? (
         <Card className="text-center py-12">
           <CardContent>
             <p className="text-gray-400 mb-4">
@@ -533,7 +815,7 @@ export function BotsPage() {
         </Card>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {mockUserBots.map((bot) => (
+          {bots.map((bot) => (
             <BotCard
               key={bot.id}
               bot={bot}
