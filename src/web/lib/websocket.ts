@@ -133,10 +133,10 @@ class DebateWebSocket {
 
         this.ws.onerror = (error) => {
           console.error("WebSocket error:", error);
-          reject(error);
+          reject(new Error("WebSocket connection failed"));
         };
       } catch (error) {
-        reject(error);
+        reject(error instanceof Error ? error : new Error("Unknown connection error"));
       }
     });
   }
@@ -153,12 +153,16 @@ class DebateWebSocket {
     console.log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
 
     setTimeout(() => {
-      this.connect().then(() => {
-        // Rejoin debate if we were watching one
-        if (this.currentDebateId) {
-          this.joinDebate(this.currentDebateId, this.userId ?? undefined);
-        }
-      });
+      this.connect()
+        .then(() => {
+          // Rejoin debate if we were watching one
+          if (this.currentDebateId) {
+            this.joinDebate(this.currentDebateId, this.userId ?? undefined);
+          }
+        })
+        .catch((err: unknown) => {
+          console.error("Reconnection failed:", err);
+        });
     }, delay);
   }
 
@@ -199,7 +203,8 @@ class DebateWebSocket {
     if (!this.handlers.has(type)) {
       this.handlers.set(type, new Set());
     }
-    this.handlers.get(type)!.add(handler);
+    const handlers = this.handlers.get(type);
+    handlers?.add(handler);
 
     // Return unsubscribe function
     return () => {

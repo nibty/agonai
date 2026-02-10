@@ -161,9 +161,7 @@ function StatBox({
 }
 
 function AchievementCard({ achievement }: { achievement: Achievement }) {
-  const icon =
-    achievementIcons[achievement.icon as keyof typeof achievementIcons] ||
-    achievementIcons["default"];
+  const icon = achievementIcons[achievement.icon] || achievementIcons["default"];
 
   return (
     <div className="flex flex-col items-center rounded-lg bg-arena-border/30 p-4 transition-colors hover:bg-arena-border/50">

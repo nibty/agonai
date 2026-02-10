@@ -1,4 +1,4 @@
-import * as React from "react";
+import { forwardRef, type HTMLAttributes } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import type { Rank, BotTier } from "@/types";
@@ -38,9 +38,9 @@ const badgeVariants = cva(
 );
 
 export interface BadgeProps
-  extends React.HTMLAttributes<HTMLSpanElement>, VariantProps<typeof badgeVariants> {}
+  extends HTMLAttributes<HTMLSpanElement>, VariantProps<typeof badgeVariants> {}
 
-const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
+const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
   ({ className, variant, size, ...props }, ref) => {
     return (
       <span ref={ref} className={cn(badgeVariants({ variant, size }), className)} {...props} />
@@ -59,12 +59,12 @@ const rankColors: Record<Rank, string> = {
   champion: "bg-purple-500/20 text-purple-400 border-purple-500/50",
 };
 
-export interface RankBadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
+export interface RankBadgeProps extends HTMLAttributes<HTMLSpanElement> {
   rank: Rank;
   size?: "sm" | "md" | "lg";
 }
 
-const RankBadge = React.forwardRef<HTMLSpanElement, RankBadgeProps>(
+const RankBadge = forwardRef<HTMLSpanElement, RankBadgeProps>(
   ({ className, rank, size = "md", ...props }, ref) => {
     const sizeClasses = {
       sm: "px-2 py-0.5 text-[10px]",
@@ -99,12 +99,12 @@ const tierColors: Record<BotTier, string> = {
   5: "bg-yellow-500/20 text-yellow-400",
 };
 
-export interface TierBadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
+export interface TierBadgeProps extends HTMLAttributes<HTMLSpanElement> {
   tier: BotTier;
   size?: "sm" | "md" | "lg";
 }
 
-const TierBadge = React.forwardRef<HTMLSpanElement, TierBadgeProps>(
+const TierBadge = forwardRef<HTMLSpanElement, TierBadgeProps>(
   ({ className, tier, size = "md", ...props }, ref) => {
     const sizeClasses = {
       sm: "px-2 py-0.5 text-[10px]",
@@ -130,4 +130,4 @@ const TierBadge = React.forwardRef<HTMLSpanElement, TierBadgeProps>(
 );
 TierBadge.displayName = "TierBadge";
 
-export { Badge, badgeVariants, RankBadge, TierBadge };
+export { Badge, RankBadge, TierBadge };

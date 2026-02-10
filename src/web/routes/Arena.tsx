@@ -173,31 +173,18 @@ export function ArenaPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const speechQueueRef = useRef<{ text: string; position: "pro" | "con" }[]>([]);
   const speakRef = useRef<((text: string, position: "pro" | "con") => void) | null>(null);
+  const processQueueRef = useRef<() => void>(() => {});
 
-  // Text-to-speech function
-  const speak = useCallback(
-    (text: string, position: "pro" | "con") => {
-      if (!ttsEnabled || typeof window === "undefined" || !window.speechSynthesis) return;
-
-      // Add to queue
-      speechQueueRef.current.push({ text, position });
-
-      // If not currently speaking, start processing queue
-      if (!isSpeaking) {
-        processQueue();
-      }
-    },
-    [ttsEnabled, isSpeaking]
-  );
-
-  const processQueue = useCallback(() => {
-    if (speechQueueRef.current.length === 0) {
+  // Process TTS queue - uses ref to avoid circular dependency
+  processQueueRef.current = () => {
+    const item = speechQueueRef.current.shift();
+    if (!item) {
       setIsSpeaking(false);
       return;
     }
 
     setIsSpeaking(true);
-    const { text, position } = speechQueueRef.current.shift()!;
+    const { text, position } = item;
 
     const utterance = new SpeechSynthesisUtterance(text);
 
@@ -223,11 +210,27 @@ export function ArenaPage() {
     }
 
     utterance.rate = 1.1; // Slightly faster
-    utterance.onend = () => processQueue();
-    utterance.onerror = () => processQueue();
+    utterance.onend = () => processQueueRef.current();
+    utterance.onerror = () => processQueueRef.current();
 
     window.speechSynthesis.speak(utterance);
-  }, []);
+  };
+
+  // Text-to-speech function
+  const speak = useCallback(
+    (text: string, position: "pro" | "con") => {
+      if (!ttsEnabled || typeof window === "undefined" || !window.speechSynthesis) return;
+
+      // Add to queue
+      speechQueueRef.current.push({ text, position });
+
+      // If not currently speaking, start processing queue
+      if (!isSpeaking) {
+        processQueueRef.current();
+      }
+    },
+    [ttsEnabled, isSpeaking]
+  );
 
   // Load voices when available
   useEffect(() => {

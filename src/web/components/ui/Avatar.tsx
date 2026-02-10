@@ -1,4 +1,4 @@
-import * as React from "react";
+import { forwardRef, useState, type HTMLAttributes, type ImgHTMLAttributes } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
@@ -27,20 +27,20 @@ const avatarVariants = cva("relative inline-flex shrink-0 overflow-hidden rounde
 });
 
 export interface AvatarProps
-  extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof avatarVariants> {}
+  extends HTMLAttributes<HTMLDivElement>, VariantProps<typeof avatarVariants> {}
 
-const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
+const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
   ({ className, size, ring, ...props }, ref) => (
     <div ref={ref} className={cn(avatarVariants({ size, ring }), className)} {...props} />
   )
 );
 Avatar.displayName = "Avatar";
 
-export interface AvatarImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {}
+export interface AvatarImageProps extends ImgHTMLAttributes<HTMLImageElement> {}
 
-const AvatarImage = React.forwardRef<HTMLImageElement, AvatarImageProps>(
+const AvatarImage = forwardRef<HTMLImageElement, AvatarImageProps>(
   ({ className, alt, ...props }, ref) => {
-    const [hasError, setHasError] = React.useState(false);
+    const [hasError, setHasError] = useState(false);
 
     if (hasError) {
       return null;
@@ -59,9 +59,9 @@ const AvatarImage = React.forwardRef<HTMLImageElement, AvatarImageProps>(
 );
 AvatarImage.displayName = "AvatarImage";
 
-export interface AvatarFallbackProps extends React.HTMLAttributes<HTMLDivElement> {}
+export interface AvatarFallbackProps extends HTMLAttributes<HTMLDivElement> {}
 
-const AvatarFallback = React.forwardRef<HTMLDivElement, AvatarFallbackProps>(
+const AvatarFallback = forwardRef<HTMLDivElement, AvatarFallbackProps>(
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
@@ -74,46 +74,6 @@ const AvatarFallback = React.forwardRef<HTMLDivElement, AvatarFallbackProps>(
   )
 );
 AvatarFallback.displayName = "AvatarFallback";
-
-// Helper function to generate initials from a name
-export function getInitials(name: string): string {
-  const words = name.trim().split(/\s+/);
-  if (words.length === 0 || !words[0]) return "?";
-  if (words.length === 1) return words[0].charAt(0).toUpperCase();
-  const firstWord = words[0];
-  const lastWord = words[words.length - 1];
-  return (firstWord.charAt(0) + (lastWord?.charAt(0) ?? "")).toUpperCase();
-}
-
-// Helper function to generate a consistent color from a string
-export function getAvatarColor(str: string): string {
-  const colors = [
-    "bg-red-500",
-    "bg-orange-500",
-    "bg-amber-500",
-    "bg-yellow-500",
-    "bg-lime-500",
-    "bg-green-500",
-    "bg-emerald-500",
-    "bg-teal-500",
-    "bg-cyan-500",
-    "bg-sky-500",
-    "bg-blue-500",
-    "bg-indigo-500",
-    "bg-violet-500",
-    "bg-purple-500",
-    "bg-fuchsia-500",
-    "bg-pink-500",
-    "bg-rose-500",
-  ];
-
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const index = Math.abs(hash) % colors.length;
-  return colors[index] ?? "bg-gray-500";
-}
 
 // Bot avatar with tier indicator
 const tierColors = {
@@ -139,7 +99,7 @@ export interface BotAvatarProps extends Omit<AvatarProps, "ring"> {
   fallback?: string;
 }
 
-const BotAvatar = React.forwardRef<HTMLDivElement, BotAvatarProps>(
+const BotAvatar = forwardRef<HTMLDivElement, BotAvatarProps>(
   ({ tier, className, size = "md", src, alt, fallback, children, ...props }, ref) => {
     const initials = fallback || alt?.charAt(0).toUpperCase() || "?";
 
@@ -170,4 +130,4 @@ const BotAvatar = React.forwardRef<HTMLDivElement, BotAvatarProps>(
 );
 BotAvatar.displayName = "BotAvatar";
 
-export { Avatar, AvatarImage, AvatarFallback, BotAvatar, avatarVariants };
+export { Avatar, AvatarImage, AvatarFallback, BotAvatar };

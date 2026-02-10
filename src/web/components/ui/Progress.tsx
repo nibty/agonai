@@ -1,4 +1,9 @@
-import * as React from "react";
+import {
+  forwardRef,
+  type ComponentPropsWithoutRef,
+  type ComponentRef,
+  type HTMLAttributes,
+} from "react";
 import * as ProgressPrimitive from "@radix-ui/react-progress";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
@@ -34,13 +39,13 @@ const indicatorVariants = cva("h-full w-full flex-1 transition-all duration-300 
 
 export interface ProgressProps
   extends
-    React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root>,
+    ComponentPropsWithoutRef<typeof ProgressPrimitive.Root>,
     VariantProps<typeof progressVariants>,
     VariantProps<typeof indicatorVariants> {
   indicatorClassName?: string;
 }
 
-const Progress = React.forwardRef<React.ElementRef<typeof ProgressPrimitive.Root>, ProgressProps>(
+const Progress = forwardRef<ComponentRef<typeof ProgressPrimitive.Root>, ProgressProps>(
   ({ className, value, size, variant, indicatorClassName, ...props }, ref) => (
     <ProgressPrimitive.Root
       ref={ref}
@@ -57,13 +62,13 @@ const Progress = React.forwardRef<React.ElementRef<typeof ProgressPrimitive.Root
 Progress.displayName = ProgressPrimitive.Root.displayName;
 
 // Dual progress for debates (pro vs con)
-export interface DualProgressProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface DualProgressProps extends HTMLAttributes<HTMLDivElement> {
   proValue: number;
   conValue: number;
   size?: "sm" | "md" | "lg" | "xl";
 }
 
-const DualProgress = React.forwardRef<HTMLDivElement, DualProgressProps>(
+const DualProgress = forwardRef<HTMLDivElement, DualProgressProps>(
   ({ className, proValue, conValue, size = "lg", ...props }, ref) => {
     const total = proValue + conValue || 1;
     const proPercentage = (proValue / total) * 100;
@@ -95,4 +100,4 @@ const DualProgress = React.forwardRef<HTMLDivElement, DualProgressProps>(
 );
 DualProgress.displayName = "DualProgress";
 
-export { Progress, DualProgress, progressVariants, indicatorVariants };
+export { Progress, DualProgress };

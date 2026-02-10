@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useCallback, type ReactNode } from "react";
+import { useMemo, useCallback, type ReactNode } from "react";
 import {
   ConnectionProvider,
   WalletProvider as SolanaWalletProvider,
@@ -7,30 +7,13 @@ import {
 } from "@solana/wallet-adapter-react";
 import { WalletModalProvider, useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { PhantomWalletAdapter, SolflareWalletAdapter } from "@solana/wallet-adapter-wallets";
-import type { PublicKey, Connection } from "@solana/web3.js";
-import type { WalletName } from "@solana/wallet-adapter-base";
-import type { Wallet } from "@solana/wallet-adapter-react";
+import { WalletContext, type WalletContextState } from "./WalletContext";
 
 // Import wallet adapter styles
 import "@solana/wallet-adapter-react-ui/styles.css";
 
 // X1 Network Configuration
 const X1_RPC_ENDPOINT = "https://rpc.mainnet.x1.xyz/";
-
-interface WalletContextState {
-  connected: boolean;
-  connecting: boolean;
-  publicKey: PublicKey | null;
-  wallet: Wallet | null;
-  walletName: WalletName | null;
-  connection: Connection;
-  connect: () => Promise<void>;
-  disconnect: () => Promise<void>;
-  signMessage: (message: Uint8Array) => Promise<Uint8Array>;
-  select: (walletName: WalletName) => void;
-}
-
-const WalletContext = createContext<WalletContextState | null>(null);
 
 interface WalletContextProviderProps {
   children: ReactNode;
@@ -102,12 +85,4 @@ export function WalletProvider({ children }: WalletProviderProps) {
       </SolanaWalletProvider>
     </ConnectionProvider>
   );
-}
-
-export function useWallet(): WalletContextState {
-  const context = useContext(WalletContext);
-  if (!context) {
-    throw new Error("useWallet must be used within a WalletProvider");
-  }
-  return context;
 }
