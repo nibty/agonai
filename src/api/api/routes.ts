@@ -5,6 +5,8 @@ import {
   JoinQueueSchema,
   PlaceBetSchema,
   DEBATE_FORMAT,
+  getAllPresets,
+  getPreset,
 } from "../types/index.js";
 import {
   userRepository,
@@ -70,9 +72,34 @@ router.get("/health", (_req: Request, res: Response) => {
  * GET /api/debate-format
  *
  * Returns the debate format specification including timing, word limits, and rules.
+ * @deprecated Use /api/presets instead for configurable formats
  */
 router.get("/debate-format", (_req: Request, res: Response) => {
   res.json(DEBATE_FORMAT);
+});
+
+/**
+ * GET /api/presets
+ *
+ * Returns all available debate presets with their configurations.
+ */
+router.get("/presets", (_req: Request, res: Response) => {
+  const presets = getAllPresets();
+  res.json({ presets });
+});
+
+/**
+ * GET /api/presets/:presetId
+ *
+ * Returns a specific debate preset by ID.
+ */
+router.get("/presets/:presetId", (req: Request<{ presetId: string }>, res: Response) => {
+  const preset = getPreset(req.params.presetId);
+  if (!preset) {
+    res.status(404).json({ error: "Preset not found" });
+    return;
+  }
+  res.json({ preset });
 });
 
 router.get("/stats", async (_req: Request, res: Response) => {
@@ -324,7 +351,7 @@ router.post("/queue/join", authMiddleware, async (req: AuthenticatedRequest, res
     return;
   }
 
-  const { botId, stake } = result.data;
+  const { botId, stake, presetId } = result.data;
 
   const bot = await botRepository.findById(botId);
   if (!bot) {
@@ -342,8 +369,8 @@ router.post("/queue/join", authMiddleware, async (req: AuthenticatedRequest, res
     return;
   }
 
-  const entry = matchmaking.addToQueue(bot, req.userId, stake);
-  console.log(`[Queue] Bot "${bot.name}" (${bot.id}) joined queue with stake ${stake}, ELO ${bot.elo}`);
+  const entry = matchmaking.addToQueue(bot, req.userId, stake, presetId);
+  console.log(`[Queue] Bot "${bot.name}" (${bot.id}) joined queue with stake ${stake}, ELO ${bot.elo}, preset ${presetId}`);
   console.log(`[Queue] Current queue size: ${matchmaking.getStats().queueSize}`);
   res.json({ entry });
 });

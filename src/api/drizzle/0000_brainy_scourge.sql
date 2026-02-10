@@ -35,7 +35,7 @@ CREATE TABLE "bots" (
 CREATE TABLE "debate_messages" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"debate_id" integer NOT NULL,
-	"round" varchar(10) NOT NULL,
+	"round_index" integer NOT NULL,
 	"position" varchar(3) NOT NULL,
 	"bot_id" integer NOT NULL,
 	"content" text NOT NULL,
@@ -44,11 +44,12 @@ CREATE TABLE "debate_messages" (
 --> statement-breakpoint
 CREATE TABLE "debates" (
 	"id" serial PRIMARY KEY NOT NULL,
+	"preset_id" varchar(32) DEFAULT 'classic' NOT NULL,
 	"topic_id" integer NOT NULL,
 	"pro_bot_id" integer NOT NULL,
 	"con_bot_id" integer NOT NULL,
 	"status" varchar(20) DEFAULT 'pending' NOT NULL,
-	"current_round" varchar(10) DEFAULT 'opening' NOT NULL,
+	"current_round_index" integer DEFAULT 0 NOT NULL,
 	"round_status" varchar(20) DEFAULT 'pending' NOT NULL,
 	"winner" varchar(3),
 	"stake" bigint DEFAULT 0 NOT NULL,
@@ -61,11 +62,11 @@ CREATE TABLE "debates" (
 CREATE TABLE "round_results" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"debate_id" integer NOT NULL,
-	"round" varchar(10) NOT NULL,
+	"round_index" integer NOT NULL,
 	"pro_votes" integer DEFAULT 0 NOT NULL,
 	"con_votes" integer DEFAULT 0 NOT NULL,
 	"winner" varchar(3) NOT NULL,
-	CONSTRAINT "debate_round_unique" UNIQUE("debate_id","round")
+	CONSTRAINT "debate_round_unique" UNIQUE("debate_id","round_index")
 );
 --> statement-breakpoint
 CREATE TABLE "topic_votes" (
@@ -102,10 +103,10 @@ CREATE TABLE "users" (
 CREATE TABLE "votes" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"debate_id" integer NOT NULL,
-	"round" varchar(10) NOT NULL,
+	"round_index" integer NOT NULL,
 	"voter_id" integer NOT NULL,
 	"choice" varchar(3) NOT NULL,
-	CONSTRAINT "debate_round_voter_unique" UNIQUE("debate_id","round","voter_id")
+	CONSTRAINT "debate_round_voter_unique" UNIQUE("debate_id","round_index","voter_id")
 );
 --> statement-breakpoint
 ALTER TABLE "bets" ADD CONSTRAINT "bets_debate_id_debates_id_fk" FOREIGN KEY ("debate_id") REFERENCES "public"."debates"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

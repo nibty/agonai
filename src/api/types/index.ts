@@ -1,88 +1,51 @@
 import { z } from "zod";
 
+// Re-export preset system
+export * from "./presets.js";
+import { getPresetIds, getDefaultPreset } from "./presets.js";
+
 // ============================================================================
 // Core Enums
 // ============================================================================
 
-export type DebateRound = "opening" | "rebuttal" | "closing";
 export type DebatePosition = "pro" | "con";
 export type DebateStatus = "pending" | "in_progress" | "voting" | "completed" | "cancelled";
 export type RoundStatus = "pending" | "bot_responding" | "voting" | "completed";
 
-export const DEBATE_ROUNDS: DebateRound[] = ["opening", "rebuttal", "closing"];
+// ============================================================================
+// Timing Configuration
+// ============================================================================
 
-// ============================================================================
-// Debate Specifications
-// ============================================================================
+// Maximum seconds to wait for bot response (absolute limit)
+export const BOT_TIMEOUT_SECONDS = 120;
 
 /**
- * Debate Format: Best of 3 rounds
- * - Opening: Present main argument
- * - Rebuttal: Counter opponent's points
- * - Closing: Final summary and appeal
- *
- * Each round: Pro speaks first, then Con
- * Spectators vote after each round
- * Winner determined by rounds won (2/3)
+ * @deprecated Use preset system instead (getAllPresets, getPreset)
+ * Legacy format summary - returns the default preset configuration
  */
-
-// Time limits in seconds for bot responses per round
-export const ROUND_TIME_LIMITS: Record<DebateRound, number> = {
-  opening: 60,
-  rebuttal: 90,
-  closing: 60,
-};
-
-// Word limits per round response
-export const ROUND_WORD_LIMITS: Record<DebateRound, { min: number; max: number }> = {
-  opening: { min: 100, max: 300 },
-  rebuttal: { min: 150, max: 400 },
-  closing: { min: 100, max: 250 },
-};
-
-// Character limits per round response
-export const ROUND_CHAR_LIMITS: Record<DebateRound, { min: number; max: number }> = {
-  opening: { min: 500, max: 2000 },
-  rebuttal: { min: 750, max: 2500 },
-  closing: { min: 500, max: 1500 },
-};
-
-// Timing configuration
-export const TIMING = {
-  /** Seconds before debate starts after match */
-  PREP_TIME: 30,
-  /** Seconds for spectators to vote after each round */
-  VOTE_WINDOW: 15,
-  /** Maximum seconds to wait for bot response */
-  BOT_TIMEOUT: 120,
-  /** Milliseconds between vote count updates */
-  VOTE_UPDATE_INTERVAL: 1000,
-} as const;
-
-// Legacy exports for backward compatibility
-export const ROUND_DURATIONS = ROUND_TIME_LIMITS;
-export const VOTE_WINDOW_SECONDS = TIMING.VOTE_WINDOW;
-export const PREP_TIME_SECONDS = TIMING.PREP_TIME;
-export const BOT_TIMEOUT_SECONDS = TIMING.BOT_TIMEOUT;
-
-// Debate format summary for API responses
 export const DEBATE_FORMAT = {
-  name: "Best of 3",
-  rounds: DEBATE_ROUNDS,
-  roundCount: 3,
-  winCondition: "Win 2 of 3 rounds",
+  get name() {
+    return getDefaultPreset().name;
+  },
+  get rounds() {
+    return getDefaultPreset().rounds;
+  },
+  get roundCount() {
+    return getDefaultPreset().rounds.length;
+  },
+  get winCondition() {
+    return getDefaultPreset().winCondition;
+  },
   speakingOrder: "Pro first, then Con",
-  timing: {
-    prepTime: TIMING.PREP_TIME,
-    voteWindow: TIMING.VOTE_WINDOW,
-    botTimeout: TIMING.BOT_TIMEOUT,
-    roundTimeLimits: ROUND_TIME_LIMITS,
+  get timing() {
+    const preset = getDefaultPreset();
+    return {
+      prepTime: preset.prepTime,
+      voteWindow: preset.voteWindow,
+      botTimeout: BOT_TIMEOUT_SECONDS,
+    };
   },
-  limits: {
-    words: ROUND_WORD_LIMITS,
-    characters: ROUND_CHAR_LIMITS,
-  },
-} as const;
+};
 
 // ============================================================================
 // User & Bot Types
@@ -145,7 +108,7 @@ export interface Topic {
 export interface DebateMessage {
   id: number;
   debateId: number;
-  round: DebateRound;
+  roundIndex: number;
   position: DebatePosition;
   botId: number;
   content: string;
@@ -153,7 +116,8 @@ export interface DebateMessage {
 }
 
 export interface RoundResult {
-  round: DebateRound;
+  roundIndex: number;
+  roundName: string;
   proVotes: number;
   conVotes: number;
   winner: DebatePosition;
@@ -163,10 +127,11 @@ export interface Debate {
   id: number;
   topicId: number;
   topic: string;
+  presetId: string;
   proBotId: number;
   conBotId: number;
   status: DebateStatus;
-  currentRound: DebateRound;
+  currentRoundIndex: number;
   roundStatus: RoundStatus;
   roundResults: RoundResult[];
   winner: DebatePosition | null;
@@ -180,7 +145,7 @@ export interface Debate {
 export interface Vote {
   id: number;
   debateId: number;
-  round: DebateRound;
+  roundIndex: number;
   voterId: number;
   choice: DebatePosition;
   timestamp: Date;
@@ -205,6 +170,7 @@ export interface QueueEntry {
   id: string;
   botId: number;
   userId: number;
+  presetId: string;
   elo: number;
   stake: number;
   joinedAt: Date;
@@ -217,7 +183,7 @@ export interface QueueEntry {
 
 export const BotRequestSchema = z.object({
   debate_id: z.string(),
-  round: z.enum(["opening", "rebuttal", "closing"]),
+  round: z.enum(["opening", "argument", "rebuttal", "counter", "closing", "question", "answer"]),
   topic: z.string(),
   position: z.enum(["pro", "con"]),
   opponent_last_message: z.string().nullable(),
@@ -232,7 +198,7 @@ export const BotRequestSchema = z.object({
   }),
   messages_so_far: z.array(
     z.object({
-      round: z.enum(["opening", "rebuttal", "closing"]),
+      round: z.number(),
       position: z.enum(["pro", "con"]),
       content: z.string(),
     })
@@ -251,28 +217,27 @@ export function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(word => word.length > 0).length;
 }
 
-// Validate bot response against limits
+// Validate bot response against word/char limits
 export function validateBotResponse(
   message: string,
-  round: DebateRound
+  wordLimit: { min: number; max: number },
+  charLimit: { min: number; max: number }
 ): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
   const wordCount = countWords(message);
   const charCount = message.length;
-  const wordLimits = ROUND_WORD_LIMITS[round];
-  const charLimits = ROUND_CHAR_LIMITS[round];
 
-  if (wordCount < wordLimits.min) {
-    errors.push(`Response too short: ${wordCount} words (minimum ${wordLimits.min})`);
+  if (wordCount < wordLimit.min) {
+    errors.push(`Response too short: ${wordCount} words (minimum ${wordLimit.min})`);
   }
-  if (wordCount > wordLimits.max) {
-    errors.push(`Response too long: ${wordCount} words (maximum ${wordLimits.max})`);
+  if (wordCount > wordLimit.max) {
+    errors.push(`Response too long: ${wordCount} words (maximum ${wordLimit.max})`);
   }
-  if (charCount < charLimits.min) {
-    errors.push(`Response too short: ${charCount} characters (minimum ${charLimits.min})`);
+  if (charCount < charLimit.min) {
+    errors.push(`Response too short: ${charCount} characters (minimum ${charLimit.min})`);
   }
-  if (charCount > charLimits.max) {
-    errors.push(`Response too long: ${charCount} characters (maximum ${charLimits.max})`);
+  if (charCount > charLimit.max) {
+    errors.push(`Response too long: ${charCount} characters (maximum ${charLimit.max})`);
   }
 
   return { valid: errors.length === 0, errors };
@@ -310,12 +275,14 @@ export interface DebateStartedPayload {
 }
 
 export interface RoundStartedPayload {
-  round: DebateRound;
+  round: string;  // Round name (e.g., "Opening", "Rebuttal")
+  roundIndex: number;
   timeLimit: number;
 }
 
 export interface BotMessagePayload {
-  round: DebateRound;
+  round: string;  // Round name
+  roundIndex: number;
   position: DebatePosition;
   botId: number;
   content: string;
@@ -328,19 +295,28 @@ export interface BotTypingPayload {
 }
 
 export interface VotingStartedPayload {
-  round: DebateRound;
+  round: string;  // Round name
+  roundIndex: number;
   timeLimit: number;
 }
 
 export interface VoteUpdatePayload {
-  round: DebateRound;
+  round: string;  // Round name
+  roundIndex: number;
   proVotes: number;
   conVotes: number;
 }
 
 export interface RoundEndedPayload {
-  round: DebateRound;
-  result: RoundResult;
+  round: string;  // Round name
+  roundIndex: number;
+  result: {
+    roundIndex: number;
+    roundName: string;
+    proVotes: number;
+    conVotes: number;
+    winner: DebatePosition;
+  };
   overallScore: { pro: number; con: number };
 }
 
@@ -385,6 +361,9 @@ export type SubmitTopicRequest = z.infer<typeof SubmitTopicSchema>;
 export const JoinQueueSchema = z.object({
   botId: z.coerce.number().int().positive(),
   stake: z.number().min(0),
+  presetId: z.string().refine((id) => getPresetIds().includes(id), {
+    message: "Invalid preset ID",
+  }).default("classic"),
 });
 
 export type JoinQueueRequest = z.infer<typeof JoinQueueSchema>;
@@ -399,7 +378,7 @@ export type PlaceBetRequest = z.infer<typeof PlaceBetSchema>;
 
 export const SubmitVoteSchema = z.object({
   debateId: z.coerce.number().int().positive(),
-  round: z.enum(["opening", "rebuttal", "closing"]),
+  roundIndex: z.coerce.number().int().min(0),
   choice: z.enum(["pro", "con"]),
 });
 

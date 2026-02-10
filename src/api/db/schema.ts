@@ -85,6 +85,7 @@ export const topicVotes = pgTable(
 
 export const debates = pgTable("debates", {
   id: serial("id").primaryKey(),
+  presetId: varchar("preset_id", { length: 32 }).notNull().default("classic"),
   topicId: integer("topic_id")
     .notNull()
     .references(() => topics.id),
@@ -95,7 +96,7 @@ export const debates = pgTable("debates", {
     .notNull()
     .references(() => bots.id),
   status: varchar("status", { length: 20 }).notNull().default("pending"),
-  currentRound: varchar("current_round", { length: 10 }).notNull().default("opening"),
+  currentRoundIndex: integer("current_round_index").notNull().default(0),
   roundStatus: varchar("round_status", { length: 20 }).notNull().default("pending"),
   winner: varchar("winner", { length: 3 }),
   stake: bigint("stake", { mode: "number" }).notNull().default(0),
@@ -116,12 +117,12 @@ export const roundResults = pgTable(
     debateId: integer("debate_id")
       .notNull()
       .references(() => debates.id, { onDelete: "cascade" }),
-    round: varchar("round", { length: 10 }).notNull(),
+    roundIndex: integer("round_index").notNull(),
     proVotes: integer("pro_votes").notNull().default(0),
     conVotes: integer("con_votes").notNull().default(0),
     winner: varchar("winner", { length: 3 }).notNull(),
   },
-  (table) => [unique("debate_round_unique").on(table.debateId, table.round)]
+  (table) => [unique("debate_round_unique").on(table.debateId, table.roundIndex)]
 );
 
 // ============================================================================
@@ -133,7 +134,7 @@ export const debateMessages = pgTable("debate_messages", {
   debateId: integer("debate_id")
     .notNull()
     .references(() => debates.id, { onDelete: "cascade" }),
-  round: varchar("round", { length: 10 }).notNull(),
+  roundIndex: integer("round_index").notNull(),
   position: varchar("position", { length: 3 }).notNull(),
   botId: integer("bot_id")
     .notNull()
@@ -153,13 +154,13 @@ export const votes = pgTable(
     debateId: integer("debate_id")
       .notNull()
       .references(() => debates.id, { onDelete: "cascade" }),
-    round: varchar("round", { length: 10 }).notNull(),
+    roundIndex: integer("round_index").notNull(),
     voterId: integer("voter_id")
       .notNull()
       .references(() => users.id),
     choice: varchar("choice", { length: 3 }).notNull(),
   },
-  (table) => [unique("debate_round_voter_unique").on(table.debateId, table.round, table.voterId)]
+  (table) => [unique("debate_round_voter_unique").on(table.debateId, table.roundIndex, table.voterId)]
 );
 
 // ============================================================================

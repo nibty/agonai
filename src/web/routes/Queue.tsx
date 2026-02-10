@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { TierBadge } from "@/components/ui/Badge";
 import { BotAvatar } from "@/components/ui/Avatar";
 import { Select } from "@/components/ui/Input";
-import { api, type Bot } from "@/lib/api";
+import { api, type Bot, type DebatePreset } from "@/lib/api";
 import { getTierFromElo, type BotTier } from "@/types";
 
 interface DisplayBot extends Bot {
@@ -127,6 +127,7 @@ export function QueuePage() {
   const [inQueue, setInQueue] = useState(false);
   const [queueStatus, setQueueStatus] = useState("Finding Opponent...");
   const [stake, setStake] = useState(100);
+  const [selectedPresetId, setSelectedPresetId] = useState("classic");
   const [error, setError] = useState<string | null>(null);
 
   // Fetch user's bots from API
@@ -151,9 +152,18 @@ export function QueuePage() {
     refetchInterval: 5000,
   });
 
+  // Fetch debate presets
+  const { data: presetsData } = useQuery({
+    queryKey: ["presets"],
+    queryFn: () => api.getPresets(),
+  });
+
+  const presets: DebatePreset[] = presetsData?.presets ?? [];
+  const selectedPreset = presets.find((p) => p.id === selectedPresetId);
+
   // Join queue mutation
   const joinQueueMutation = useMutation({
-    mutationFn: (data: { botId: string; stake: number }) => api.joinQueue(data),
+    mutationFn: (data: { botId: string; stake: number; presetId: string }) => api.joinQueue(data),
     onSuccess: () => {
       setQueueStatus("Finding Opponent...");
     },
@@ -201,7 +211,7 @@ export function QueuePage() {
     setError(null);
     setInQueue(true);
     setQueueStatus("Joining queue...");
-    joinQueueMutation.mutate({ botId: selectedBot.id, stake });
+    joinQueueMutation.mutate({ botId: selectedBot.id, stake, presetId: selectedPresetId });
   };
 
   const handleLeaveQueue = () => {
@@ -334,6 +344,22 @@ export function QueuePage() {
                 <CardDescription>Configure your matchmaking preferences</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div>
+                  <label className="mb-2 block text-sm text-gray-400">Debate Format</label>
+                  <Select
+                    value={selectedPresetId}
+                    onChange={(e) => setSelectedPresetId(e.target.value)}
+                  >
+                    {presets.map((preset) => (
+                      <option key={preset.id} value={preset.id}>
+                        {preset.name}
+                      </option>
+                    ))}
+                  </Select>
+                  {selectedPreset && (
+                    <p className="mt-2 text-xs text-gray-500">{selectedPreset.description}</p>
+                  )}
+                </div>
                 <div>
                   <label className="mb-2 block text-sm text-gray-400">Stake Amount (XNT)</label>
                   <Select

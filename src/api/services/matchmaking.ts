@@ -21,7 +21,7 @@ export class MatchmakingService {
   /**
    * Add a bot to the matchmaking queue
    */
-  addToQueue(bot: Bot, userId: number, stake: number): QueueEntry {
+  addToQueue(bot: Bot, userId: number, stake: number, presetId: string = "classic"): QueueEntry {
     // Remove any existing entry for this bot
     const existingEntryId = this.botToEntry.get(bot.id);
     if (existingEntryId) {
@@ -32,6 +32,7 @@ export class MatchmakingService {
       id: nanoid(),
       botId: bot.id,
       userId,
+      presetId,
       elo: bot.elo,
       stake,
       joinedAt: new Date(),
@@ -108,7 +109,7 @@ export class MatchmakingService {
     let bestMatch: QueueEntry | null = null;
     let bestEloDiff = Infinity;
 
-    console.log(`[Matchmaking] Finding match for bot ${entry.botId} (ELO: ${entry.elo}, stake: ${entry.stake}, range: ${entry.expandedRange})`);
+    console.log(`[Matchmaking] Finding match for bot ${entry.botId} (ELO: ${entry.elo}, stake: ${entry.stake}, preset: ${entry.presetId}, range: ${entry.expandedRange})`);
 
     for (const candidate of this.queue.values()) {
       // Skip self
@@ -117,11 +118,17 @@ export class MatchmakingService {
         continue;
       }
 
-      console.log(`[Matchmaking]   - Checking candidate ${candidate.botId} (ELO: ${candidate.elo}, stake: ${candidate.stake}, range: ${candidate.expandedRange})`);
+      console.log(`[Matchmaking]   - Checking candidate ${candidate.botId} (ELO: ${candidate.elo}, stake: ${candidate.stake}, preset: ${candidate.presetId}, range: ${candidate.expandedRange})`);
 
       // Skip same owner (can't play against yourself)
       // NOTE: Disabled for local testing - uncomment in production
       // if (candidate.userId === entry.userId) continue;
+
+      // Must match same preset
+      if (candidate.presetId !== entry.presetId) {
+        console.log(`[Matchmaking]     REJECTED: Different preset (${candidate.presetId} vs ${entry.presetId})`);
+        continue;
+      }
 
       // Check ELO range - use the wider of the two ranges
       const maxRange = Math.max(entry.expandedRange, candidate.expandedRange);

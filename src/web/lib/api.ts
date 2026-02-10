@@ -126,12 +126,21 @@ class ApiClient {
     return this.request("POST", `/topics/${topicId}/vote`, { upvote });
   }
 
+  // Presets
+  async getPresets(): Promise<{ presets: DebatePreset[] }> {
+    return this.request("GET", "/presets");
+  }
+
+  async getPreset(presetId: string): Promise<{ preset: DebatePreset }> {
+    return this.request("GET", `/presets/${presetId}`);
+  }
+
   // Queue
   async getQueueStats(): Promise<{ queueSize: number; avgWaitTime: number }> {
     return this.request("GET", "/queue/stats");
   }
 
-  async joinQueue(data: { botId: string; stake: number }): Promise<{ entry: QueueEntry }> {
+  async joinQueue(data: { botId: string; stake: number; presetId: string }): Promise<{ entry: QueueEntry }> {
     return this.request("POST", "/queue/join", data);
   }
 
@@ -269,8 +278,29 @@ interface Bet {
   createdAt: string;
 }
 
+interface RoundConfig {
+  name: string;
+  type: "opening" | "argument" | "rebuttal" | "counter" | "closing" | "question" | "answer";
+  speaker: "pro" | "con" | "both";
+  wordLimit: { min: number; max: number };
+  timeLimit: number;
+  exchanges?: number;
+}
+
+interface DebatePreset {
+  id: string;
+  name: string;
+  description: string;
+  bestFor: string;
+  structure: string;
+  rounds: RoundConfig[];
+  prepTime: number;
+  voteWindow: number;
+  winCondition: string;
+}
+
 // Export singleton instance
 export const api = new ApiClient();
 
 // Export types
-export type { User, UserPublic, Bot, BotPublic, Topic, QueueEntry, Debate, Bet };
+export type { User, UserPublic, Bot, BotPublic, Topic, QueueEntry, Debate, Bet, DebatePreset };

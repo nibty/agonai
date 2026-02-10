@@ -9,7 +9,6 @@ import type {
   NewDebateMessage,
   Vote,
   NewVote,
-  DebateRound,
 } from "../db/types.js";
 
 export const debateRepository = {
@@ -78,13 +77,13 @@ export const debateRepository = {
 
   async updateRoundResult(
     debateId: number,
-    round: DebateRound,
+    roundIndex: number,
     data: Partial<NewRoundResult>
   ): Promise<RoundResult | undefined> {
     const result = await db
       .update(roundResults)
       .set(data)
-      .where(and(eq(roundResults.debateId, debateId), eq(roundResults.round, round)))
+      .where(and(eq(roundResults.debateId, debateId), eq(roundResults.roundIndex, roundIndex)))
       .returning();
     return result[0];
   },
@@ -110,11 +109,11 @@ export const debateRepository = {
       .orderBy(debateMessages.createdAt);
   },
 
-  async getMessagesByRound(debateId: number, round: DebateRound): Promise<DebateMessage[]> {
+  async getMessagesByRound(debateId: number, roundIndex: number): Promise<DebateMessage[]> {
     return db
       .select()
       .from(debateMessages)
-      .where(and(eq(debateMessages.debateId, debateId), eq(debateMessages.round, round)))
+      .where(and(eq(debateMessages.debateId, debateId), eq(debateMessages.roundIndex, roundIndex)))
       .orderBy(debateMessages.createdAt);
   },
 
@@ -130,7 +129,7 @@ export const debateRepository = {
       .where(
         and(
           eq(votes.debateId, data.debateId),
-          eq(votes.round, data.round),
+          eq(votes.roundIndex, data.roundIndex),
           eq(votes.voterId, data.voterId)
         )
       )
@@ -144,18 +143,18 @@ export const debateRepository = {
     return result[0] ?? null;
   },
 
-  async getRoundVotes(debateId: number, round: DebateRound): Promise<Vote[]> {
+  async getRoundVotes(debateId: number, roundIndex: number): Promise<Vote[]> {
     return db
       .select()
       .from(votes)
-      .where(and(eq(votes.debateId, debateId), eq(votes.round, round)));
+      .where(and(eq(votes.debateId, debateId), eq(votes.roundIndex, roundIndex)));
   },
 
   async countRoundVotes(
     debateId: number,
-    round: DebateRound
+    roundIndex: number
   ): Promise<{ proVotes: number; conVotes: number }> {
-    const allVotes = await this.getRoundVotes(debateId, round);
+    const allVotes = await this.getRoundVotes(debateId, roundIndex);
 
     let proVotes = 0;
     let conVotes = 0;
@@ -168,14 +167,14 @@ export const debateRepository = {
     return { proVotes, conVotes };
   },
 
-  async hasVoted(debateId: number, round: DebateRound, voterId: number): Promise<boolean> {
+  async hasVoted(debateId: number, roundIndex: number, voterId: number): Promise<boolean> {
     const result = await db
       .select()
       .from(votes)
       .where(
         and(
           eq(votes.debateId, debateId),
-          eq(votes.round, round),
+          eq(votes.roundIndex, roundIndex),
           eq(votes.voterId, voterId)
         )
       )

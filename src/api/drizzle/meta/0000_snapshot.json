@@ -1,5 +1,5 @@
 {
-  "id": "63cc8a9f-9d3f-42b3-9002-9656c91b6b3b",
+  "id": "30f440db-2cee-4396-97b7-3b7b98527325",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -259,9 +259,9 @@
           "primaryKey": false,
           "notNull": true
         },
-        "round": {
-          "name": "round",
-          "type": "varchar(10)",
+        "round_index": {
+          "name": "round_index",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -336,6 +336,13 @@
           "primaryKey": true,
           "notNull": true
         },
+        "preset_id": {
+          "name": "preset_id",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'classic'"
+        },
         "topic_id": {
           "name": "topic_id",
           "type": "integer",
@@ -361,12 +368,12 @@
           "notNull": true,
           "default": "'pending'"
         },
-        "current_round": {
-          "name": "current_round",
-          "type": "varchar(10)",
+        "current_round_index": {
+          "name": "current_round_index",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "default": "'opening'"
+          "default": 0
         },
         "round_status": {
           "name": "round_status",
@@ -479,9 +486,9 @@
           "primaryKey": false,
           "notNull": true
         },
-        "round": {
-          "name": "round",
-          "type": "varchar(10)",
+        "round_index": {
+          "name": "round_index",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -529,7 +536,7 @@
           "nullsNotDistinct": false,
           "columns": [
             "debate_id",
-            "round"
+            "round_index"
           ]
         }
       },
@@ -779,9 +786,9 @@
           "primaryKey": false,
           "notNull": true
         },
-        "round": {
-          "name": "round",
-          "type": "varchar(10)",
+        "round_index": {
+          "name": "round_index",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -834,7 +841,7 @@
           "nullsNotDistinct": false,
           "columns": [
             "debate_id",
-            "round",
+            "round_index",
             "voter_id"
           ]
         }

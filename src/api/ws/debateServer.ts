@@ -153,7 +153,7 @@ export class DebateWebSocketServer {
             type: "bot_message",
             debateId,
             payload: {
-              round: message.round,
+              roundIndex: message.roundIndex,
               position: message.position,
               botId: message.botId,
               content: message.content,
@@ -211,7 +211,7 @@ export class DebateWebSocketServer {
       return;
     }
 
-    const { debateId, round, choice } = result.data;
+    const { debateId, roundIndex, choice } = result.data;
 
     if (debateId !== client.debateId) {
       client.ws.send(
@@ -223,13 +223,13 @@ export class DebateWebSocketServer {
       return;
     }
 
-    const success = await debateOrchestrator.submitVote(debateId, round, client.userId, choice);
+    const success = await debateOrchestrator.submitVote(debateId, roundIndex, client.userId, choice);
 
     if (success) {
       client.ws.send(
         JSON.stringify({
           type: "vote_accepted",
-          payload: { round, choice },
+          payload: { roundIndex, choice },
         })
       );
     } else {

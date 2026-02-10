@@ -54,7 +54,6 @@ export type UserPublic = Omit<User, "updatedAt">;
 // Domain Types (re-exported from original types for compatibility)
 // ============================================================================
 
-export type DebateRound = "opening" | "rebuttal" | "closing";
 export type DebatePosition = "pro" | "con";
 export type DebateStatus = "pending" | "in_progress" | "voting" | "completed" | "cancelled";
 export type RoundStatus = "pending" | "bot_responding" | "voting" | "completed";

@@ -72,9 +72,10 @@ function startMatchmaking(): void {
       // Randomly assign positions
       const [proBot, conBot] = Math.random() > 0.5 ? [bot1, bot2] : [bot2, bot1];
 
-      // Create debate
+      // Create debate with the matched preset
       const stake = Math.min(entry1.stake, entry2.stake);
-      const debate = await debateOrchestrator.createDebate(proBot, conBot, topic, stake);
+      const presetId = entry1.presetId; // Both entries have same preset (matched by preset)
+      const debate = await debateOrchestrator.createDebate(proBot, conBot, topic, stake, presetId);
 
       // Start debate in background
       debateOrchestrator.startDebate(debate, proBot, conBot, topic, (debateId, message) =>

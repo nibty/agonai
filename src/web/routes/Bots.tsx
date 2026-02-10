@@ -136,10 +136,12 @@ function RegisterBotForm({
         body: JSON.stringify({
           debate_id: "test",
           round: "opening",
-          topic: "This is a test",
+          topic: "This is a test topic to verify your bot is working correctly.",
           position: "pro",
           opponent_last_message: null,
           time_limit_seconds: 60,
+          word_limit: { min: 100, max: 300 },
+          char_limit: { min: 400, max: 2100 },
           messages_so_far: [],
         }),
       });

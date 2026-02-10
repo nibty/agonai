@@ -1,5 +1,4 @@
 import type {
-  DebateRound,
   DebatePosition,
   WSMessage,
   DebateStartedPayload,
@@ -10,13 +9,10 @@ import type {
   VoteUpdatePayload,
   RoundEndedPayload,
   DebateEndedPayload,
+  DebatePreset,
+  RoundConfig,
 } from "../types/index.js";
-import {
-  DEBATE_ROUNDS,
-  ROUND_DURATIONS,
-  VOTE_WINDOW_SECONDS,
-  PREP_TIME_SECONDS,
-} from "../types/index.js";
+import { getPreset, getDefaultPreset } from "../types/index.js";
 import { botRunner } from "./botRunner.js";
 import { calculateMatchEloChanges } from "./elo.js";
 import { debateRepository, botRepository, betRepository, userRepository } from "../repositories/index.js";
@@ -24,19 +20,21 @@ import type { Bot, Topic } from "../db/types.js";
 
 type BroadcastFn = (debateId: number, message: WSMessage) => void;
 
-// In-memory representation for active debates (compatible with old types)
+// In-memory representation for active debates
 interface DebateState {
   debate: {
     id: number;
     topicId: number;
     topic: string;
+    presetId: string;
     proBotId: number;
     conBotId: number;
     status: "pending" | "in_progress" | "voting" | "completed" | "cancelled";
-    currentRound: DebateRound;
+    currentRoundIndex: number;
     roundStatus: "pending" | "bot_responding" | "voting" | "completed";
     roundResults: Array<{
-      round: DebateRound;
+      roundIndex: number;
+      roundName: string;
       proVotes: number;
       conVotes: number;
       winner: DebatePosition;
@@ -48,19 +46,19 @@ interface DebateState {
     startedAt: Date | null;
     completedAt: Date | null;
   };
+  preset: DebatePreset;
   proBot: Bot;
   conBot: Bot;
   topic: Topic;
   messages: Array<{
     debateId: number;
-    round: DebateRound;
+    roundIndex: number;
     position: DebatePosition;
     botId: number;
     content: string;
     timestamp: Date;
   }>;
-  votes: Map<string, Map<number, DebatePosition>>; // round -> voterId -> choice
-  currentRoundIndex: number;
+  votes: Map<number, Map<number, DebatePosition>>; // roundIndex -> voterId -> choice
   broadcast: BroadcastFn;
 }
 
@@ -76,14 +74,27 @@ export class DebateOrchestratorService {
   /**
    * Create a new debate between two bots
    */
-  async createDebate(proBot: Bot, conBot: Bot, topic: Topic, stake: number): Promise<DebateState["debate"]> {
+  async createDebate(
+    proBot: Bot,
+    conBot: Bot,
+    topic: Topic,
+    stake: number,
+    presetId: string = "classic"
+  ): Promise<DebateState["debate"]> {
+    // Validate preset exists
+    const preset = getPreset(presetId);
+    if (!preset) {
+      throw new Error(`Invalid preset ID: ${presetId}`);
+    }
+
     // Create in database
     const dbDebate = await debateRepository.create({
       topicId: topic.id,
       proBotId: proBot.id,
       conBotId: conBot.id,
+      presetId,
       status: "pending",
-      currentRound: "opening",
+      currentRoundIndex: 0,
       roundStatus: "pending",
       stake,
     });
@@ -93,10 +104,11 @@ export class DebateOrchestratorService {
       id: dbDebate.id,
       topicId: topic.id,
       topic: topic.text,
+      presetId,
       proBotId: proBot.id,
       conBotId: conBot.id,
       status: "pending",
-      currentRound: "opening",
+      currentRoundIndex: 0,
       roundStatus: "pending",
       roundResults: [],
       winner: null,
@@ -118,6 +130,8 @@ export class DebateOrchestratorService {
     topic: Topic,
     broadcast: BroadcastFn
   ): Promise<void> {
+    // Load preset configuration
+    const preset = getPreset(debate.presetId) ?? getDefaultPreset();
     const startedAt = new Date();
 
     // Update database
@@ -128,12 +142,12 @@ export class DebateOrchestratorService {
 
     const state: DebateState = {
       debate: { ...debate, status: "in_progress", startedAt },
+      preset,
       proBot,
       conBot,
       topic,
       messages: [],
       votes: new Map(),
-      currentRoundIndex: 0,
       broadcast,
     };
 
@@ -169,8 +183,8 @@ export class DebateOrchestratorService {
       payload: startPayload,
     });
 
-    // Wait for prep time
-    await this.sleep(PREP_TIME_SECONDS * 1000);
+    // Wait for prep time (from preset)
+    await this.sleep(preset.prepTime * 1000);
 
     // Start the rounds
     await this.runDebate(state);
@@ -180,19 +194,20 @@ export class DebateOrchestratorService {
    * Run the debate through all rounds
    */
   private async runDebate(state: DebateState): Promise<void> {
-    for (let i = 0; i < DEBATE_ROUNDS.length; i++) {
-      state.currentRoundIndex = i;
-      const round = DEBATE_ROUNDS[i];
-      if (!round) continue;
+    const { rounds } = state.preset;
 
-      state.debate.currentRound = round;
+    for (let i = 0; i < rounds.length; i++) {
+      const roundConfig = rounds[i];
+      if (!roundConfig) continue;
+
+      state.debate.currentRoundIndex = i;
 
       // Update database
       await debateRepository.update(state.debate.id, {
-        currentRound: round,
+        currentRoundIndex: i,
       });
 
-      await this.runRound(state, round);
+      await this.runRound(state, i, roundConfig);
 
       // Check if debate was cancelled
       if (state.debate.status === "cancelled") {
@@ -207,11 +222,15 @@ export class DebateOrchestratorService {
   /**
    * Run a single round of the debate
    */
-  private async runRound(state: DebateState, round: DebateRound): Promise<void> {
-    const timeLimit = ROUND_DURATIONS[round];
+  private async runRound(state: DebateState, roundIndex: number, roundConfig: RoundConfig): Promise<void> {
+    const { timeLimit, speaker, exchanges = 1 } = roundConfig;
 
     // Broadcast round started
-    const roundPayload: RoundStartedPayload = { round, timeLimit };
+    const roundPayload: RoundStartedPayload = {
+      round: roundConfig.name,
+      roundIndex,
+      timeLimit,
+    };
     state.broadcast(state.debate.id, {
       type: "round_started",
       debateId: state.debate.id,
@@ -221,16 +240,23 @@ export class DebateOrchestratorService {
     state.debate.roundStatus = "bot_responding";
     await debateRepository.update(state.debate.id, { roundStatus: "bot_responding" });
 
-    // Pro bot goes first
-    await this.getBotResponse(state, round, "pro", state.proBot, timeLimit);
-
-    // Con bot responds
-    await this.getBotResponse(state, round, "con", state.conBot, timeLimit);
+    // Handle different speaker configurations
+    for (let exchange = 0; exchange < exchanges; exchange++) {
+      if (speaker === "pro") {
+        await this.getBotResponse(state, roundIndex, roundConfig, "pro", state.proBot);
+      } else if (speaker === "con") {
+        await this.getBotResponse(state, roundIndex, roundConfig, "con", state.conBot);
+      } else {
+        // "both" - Pro goes first, then Con
+        await this.getBotResponse(state, roundIndex, roundConfig, "pro", state.proBot);
+        await this.getBotResponse(state, roundIndex, roundConfig, "con", state.conBot);
+      }
+    }
 
     // Voting phase
     state.debate.roundStatus = "voting";
     await debateRepository.update(state.debate.id, { roundStatus: "voting" });
-    await this.runVotingPhase(state, round);
+    await this.runVotingPhase(state, roundIndex, roundConfig);
 
     state.debate.roundStatus = "completed";
     await debateRepository.update(state.debate.id, { roundStatus: "completed" });
@@ -241,11 +267,13 @@ export class DebateOrchestratorService {
    */
   private async getBotResponse(
     state: DebateState,
-    round: DebateRound,
+    roundIndex: number,
+    roundConfig: RoundConfig,
     position: DebatePosition,
-    bot: Bot,
-    timeLimit: number
+    bot: Bot
   ): Promise<void> {
+    const { timeLimit } = roundConfig;
+
     // Broadcast typing indicator
     const typingPayload: BotTypingPayload = { position, botId: bot.id };
     state.broadcast(state.debate.id, {
@@ -257,10 +285,10 @@ export class DebateOrchestratorService {
     // Build request and call bot
     const request = botRunner.buildRequest(
       state.debate.id,
-      round,
+      roundIndex,
+      roundConfig,
       state.topic.text,
       position,
-      timeLimit,
       state.messages
     );
 
@@ -277,7 +305,7 @@ export class DebateOrchestratorService {
     // Create message in memory
     const message = {
       debateId: state.debate.id,
-      round,
+      roundIndex,
       position,
       botId: bot.id,
       content,
@@ -289,7 +317,7 @@ export class DebateOrchestratorService {
     // Persist message to database
     await debateRepository.addMessage({
       debateId: state.debate.id,
-      round,
+      roundIndex,
       position,
       botId: bot.id,
       content,
@@ -297,7 +325,8 @@ export class DebateOrchestratorService {
 
     // Broadcast message
     const messagePayload: BotMessagePayload = {
-      round,
+      round: roundConfig.name,
+      roundIndex,
       position,
       botId: bot.id,
       content,
@@ -314,14 +343,17 @@ export class DebateOrchestratorService {
   /**
    * Run the voting phase for a round
    */
-  private async runVotingPhase(state: DebateState, round: DebateRound): Promise<void> {
+  private async runVotingPhase(state: DebateState, roundIndex: number, roundConfig: RoundConfig): Promise<void> {
+    const voteWindow = state.preset.voteWindow;
+
     // Initialize votes for this round
-    state.votes.set(round, new Map());
+    state.votes.set(roundIndex, new Map());
 
     // Broadcast voting started
     const votingPayload: VotingStartedPayload = {
-      round,
-      timeLimit: VOTE_WINDOW_SECONDS,
+      round: roundConfig.name,
+      roundIndex,
+      timeLimit: voteWindow,
     };
     state.broadcast(state.debate.id, {
       type: "voting_started",
@@ -331,15 +363,20 @@ export class DebateOrchestratorService {
 
     // Wait for voting period, broadcasting updates
     const updateInterval = 1000; // Update every second
-    const iterations = Math.ceil((VOTE_WINDOW_SECONDS * 1000) / updateInterval);
+    const iterations = Math.ceil((voteWindow * 1000) / updateInterval);
 
     for (let i = 0; i < iterations; i++) {
       await this.sleep(updateInterval);
 
       // Get vote counts from database
-      const { proVotes, conVotes } = await debateRepository.countRoundVotes(state.debate.id, round);
+      const { proVotes, conVotes } = await debateRepository.countRoundVotes(state.debate.id, roundIndex);
 
-      const updatePayload: VoteUpdatePayload = { round, proVotes, conVotes };
+      const updatePayload: VoteUpdatePayload = {
+        round: roundConfig.name,
+        roundIndex,
+        proVotes,
+        conVotes,
+      };
       state.broadcast(state.debate.id, {
         type: "vote_update",
         debateId: state.debate.id,
@@ -348,12 +385,13 @@ export class DebateOrchestratorService {
     }
 
     // Tally final votes from database
-    const { proVotes, conVotes } = await debateRepository.countRoundVotes(state.debate.id, round);
+    const { proVotes, conVotes } = await debateRepository.countRoundVotes(state.debate.id, roundIndex);
 
     const winner: DebatePosition = proVotes >= conVotes ? "pro" : "con";
 
     const result = {
-      round,
+      roundIndex,
+      roundName: roundConfig.name,
       proVotes,
       conVotes,
       winner,
@@ -364,7 +402,7 @@ export class DebateOrchestratorService {
     // Persist round result to database
     await debateRepository.addRoundResult({
       debateId: state.debate.id,
-      round,
+      roundIndex,
       proVotes,
       conVotes,
       winner,
@@ -379,7 +417,8 @@ export class DebateOrchestratorService {
 
     // Broadcast round ended
     const roundEndPayload: RoundEndedPayload = {
-      round,
+      round: roundConfig.name,
+      roundIndex,
       result,
       overallScore,
     };
@@ -392,11 +431,11 @@ export class DebateOrchestratorService {
 
   /**
    * Submit a vote for the current round
-   * @param walletAddress - The voter's wallet address (will be converted to user UUID)
+   * @param walletAddress - The voter's wallet address (will be converted to user ID)
    */
   async submitVote(
     debateId: number,
-    round: DebateRound,
+    roundIndex: number,
     walletAddress: string,
     choice: DebatePosition
   ): Promise<boolean> {
@@ -404,16 +443,16 @@ export class DebateOrchestratorService {
     if (!state) return false;
 
     // Check if voting is active for this round
-    if (state.debate.currentRound !== round) return false;
+    if (state.debate.currentRoundIndex !== roundIndex) return false;
     if (state.debate.roundStatus !== "voting") return false;
 
     // Look up or create user by wallet address
     const user = await userRepository.findOrCreate(walletAddress);
 
-    // Submit vote to database with user UUID
+    // Submit vote to database with user ID
     const vote = await debateRepository.submitVote({
       debateId,
-      round,
+      roundIndex,
       voterId: user.id,
       choice,
     });

@@ -1,15 +1,10 @@
 import type {
   BotRequest,
   BotResponse,
-  DebateRound,
   DebatePosition,
+  RoundConfig,
 } from "../types/index.js";
-import {
-  BotResponseSchema,
-  BOT_TIMEOUT_SECONDS,
-  ROUND_WORD_LIMITS,
-  ROUND_CHAR_LIMITS,
-} from "../types/index.js";
+import { BotResponseSchema, BOT_TIMEOUT_SECONDS } from "../types/index.js";
 
 // Bot interface for the runner - needs endpoint for calling
 interface BotForRunner {
@@ -19,7 +14,7 @@ interface BotForRunner {
 
 // Message interface for building requests
 interface MessageForRunner {
-  round: DebateRound;
+  roundIndex: number;
   position: DebatePosition;
   content: string;
 }
@@ -124,10 +119,10 @@ export class BotRunnerService {
    */
   buildRequest(
     debateId: number,
-    round: DebateRound,
+    roundIndex: number,
+    roundConfig: RoundConfig,
     topic: string,
     position: DebatePosition,
-    timeLimit: number,
     previousMessages: MessageForRunner[]
   ): BotRequest {
     // Find opponent's last message in this round or previous round
@@ -135,17 +130,23 @@ export class BotRunnerService {
     const lastOpponentMessage =
       opponentMessages.length > 0 ? opponentMessages[opponentMessages.length - 1] : null;
 
+    // Calculate char limits based on word limits (average ~5 chars per word + margin)
+    const charLimit = {
+      min: roundConfig.wordLimit.min * 4,
+      max: roundConfig.wordLimit.max * 7,
+    };
+
     return {
       debate_id: String(debateId),
-      round,
+      round: roundConfig.type,
       topic,
       position,
       opponent_last_message: lastOpponentMessage?.content ?? null,
-      time_limit_seconds: timeLimit,
-      word_limit: ROUND_WORD_LIMITS[round],
-      char_limit: ROUND_CHAR_LIMITS[round],
+      time_limit_seconds: roundConfig.timeLimit,
+      word_limit: roundConfig.wordLimit,
+      char_limit: charLimit,
       messages_so_far: previousMessages.map((m) => ({
-        round: m.round,
+        round: roundIndex,
         position: m.position,
         content: m.content,
       })),
@@ -163,8 +164,8 @@ export class BotRunnerService {
       position: "pro",
       opponent_last_message: null,
       time_limit_seconds: 30,
-      word_limit: ROUND_WORD_LIMITS.opening,
-      char_limit: ROUND_CHAR_LIMITS.opening,
+      word_limit: { min: 100, max: 300 },
+      char_limit: { min: 400, max: 2100 },
       messages_so_far: [],
     };
 
