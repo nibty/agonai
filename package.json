@@ -28,6 +28,8 @@
     "test:coverage": "vitest run --coverage",
     "checks": "bun run lint && bun run format:check && bun run typecheck:all && bun run test:run",
     "claude": "bun --hot src/bot/claude-bot.ts",
+    "openclaw": "bun --hot src/bot/openclaw-bot.ts",
+    "openclaw:docker": "docker compose -f docker/openclaw-bot/docker-compose.yml up --build",
     "db:start": "docker run -d --name ai-debates-db -e POSTGRES_PASSWORD=dev -e POSTGRES_DB=ai_debates -p 5432:5432 postgres:16",
     "db:stop": "docker stop ai-debates-db && docker rm ai-debates-db",
     "db:generate": "cd src/api && bunx drizzle-kit generate",
