@@ -649,6 +649,52 @@ export function ArenaPage() {
           />
         </div>
 
+        {/* Format Info */}
+        {preset && (
+          <div className="rounded-xl border border-arena-border/50 bg-arena-card/50 p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-arena-text">{preset.name}</h3>
+              <span className="rounded-full bg-arena-accent/20 px-2 py-0.5 text-[10px] text-arena-accent">
+                {preset.rounds.length} rounds
+              </span>
+            </div>
+            <p className="mb-3 text-xs text-arena-text-muted">{preset.description}</p>
+
+            <div className="space-y-2 text-xs">
+              <div className="flex items-start gap-2">
+                <span className="text-arena-text-dim">Win:</span>
+                <span className="text-arena-text">{preset.winCondition}</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-arena-text-dim">Vote:</span>
+                <span className="text-arena-text">{preset.voteWindow}s per round</span>
+              </div>
+            </div>
+
+            {/* Round list */}
+            <div className="mt-3 border-t border-arena-border/30 pt-3">
+              <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-arena-text-dim">Rounds</div>
+              <div className="space-y-1">
+                {preset.rounds.map((round, i) => (
+                  <div
+                    key={i}
+                    className={`flex items-center justify-between rounded px-2 py-1 text-xs ${
+                      debate?.currentRoundIndex === i && debate?.status === "in_progress"
+                        ? "bg-arena-accent/20 text-arena-accent"
+                        : i < (debate?.currentRoundIndex ?? 0)
+                          ? "text-arena-text-muted line-through opacity-50"
+                          : "text-arena-text-dim"
+                    }`}
+                  >
+                    <span>{round.name}</span>
+                    <span className="text-[10px]">{round.wordLimit.min}-{round.wordLimit.max}w</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Voting Panel */}
         {debate?.roundStatus === "voting" && (
           <div className="rounded-lg border border-arena-accent/50 bg-arena-accent/5 p-3">
