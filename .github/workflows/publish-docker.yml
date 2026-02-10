@@ -41,7 +41,6 @@ on:
 env:
   REGION: us-west-2
   REGISTRY: 837964484100.dkr.ecr.us-west-2.amazonaws.com
-  AWS_ROLE_TO_ASSUME: arn:aws:iam::837964484100:role/github-nibty-ai-debates-20260210220209538100000001
 
 jobs:
   # Detect which services have changed
@@ -93,7 +92,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ env.REGION }}
 
       - name: Login to Amazon ECR
