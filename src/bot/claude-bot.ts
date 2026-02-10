@@ -7,7 +7,14 @@ import * as path from "path";
 const anthropic = new Anthropic();
 
 // Round types from the preset system
-type RoundType = "opening" | "argument" | "rebuttal" | "counter" | "closing" | "question" | "answer";
+type RoundType =
+  | "opening"
+  | "argument"
+  | "rebuttal"
+  | "counter"
+  | "closing"
+  | "question"
+  | "answer";
 
 // Message types from server
 interface DebateRequestMessage {
@@ -53,7 +60,8 @@ function loadBotSpec(specPath: string): string {
   } else if (stat.isDirectory()) {
     // Directory - read all .md files
     console.log(`[Claude Bot] Loading specs from directory: ${resolvedPath}`);
-    const files = fs.readdirSync(resolvedPath)
+    const files = fs
+      .readdirSync(resolvedPath)
       .filter((f) => f.endsWith(".md"))
       .sort(); // Alphabetical order for consistency
 
@@ -107,18 +115,27 @@ ${botSpec}`;
 // Get round-specific instructions
 function getRoundInstructions(round: RoundType): string {
   const instructions: Record<RoundType, string> = {
-    opening: "Deliver your opening statement. State your position clearly and present your main arguments.",
-    argument: "Present a focused argument supporting your position. Build on your previous points with new evidence or reasoning.",
-    rebuttal: "Deliver your rebuttal. Directly counter your opponent's arguments and reinforce your position.",
-    counter: "Counter your opponent's rebuttal. Address their specific points and show why your argument still stands.",
-    closing: "Deliver your closing statement. Summarize your key arguments, address remaining objections, and make a final compelling case.",
-    question: "Ask a pointed, strategic question designed to expose weaknesses in your opponent's position. Be direct and specific.",
-    answer: "Answer your opponent's question directly and honestly, while still defending your position. Turn their question into an opportunity.",
+    opening:
+      "Deliver your opening statement. State your position clearly and present your main arguments.",
+    argument:
+      "Present a focused argument supporting your position. Build on your previous points with new evidence or reasoning.",
+    rebuttal:
+      "Deliver your rebuttal. Directly counter your opponent's arguments and reinforce your position.",
+    counter:
+      "Counter your opponent's rebuttal. Address their specific points and show why your argument still stands.",
+    closing:
+      "Deliver your closing statement. Summarize your key arguments, address remaining objections, and make a final compelling case.",
+    question:
+      "Ask a pointed, strategic question designed to expose weaknesses in your opponent's position. Be direct and specific.",
+    answer:
+      "Answer your opponent's question directly and honestly, while still defending your position. Turn their question into an opportunity.",
   };
   return instructions[round] || "Present your argument.";
 }
 
-async function generateResponse(request: DebateRequestMessage): Promise<{ message: string; confidence: number }> {
+async function generateResponse(
+  request: DebateRequestMessage
+): Promise<{ message: string; confidence: number }> {
   const { round, topic, position, opponent_last_message, word_limit, time_limit_seconds } = request;
 
   console.log("\n" + "=".repeat(80));
@@ -127,9 +144,13 @@ async function generateResponse(request: DebateRequestMessage): Promise<{ messag
   console.log(`Debate ID: ${request.debate_id}`);
   console.log(`Round: ${round} | Position: ${position.toUpperCase()}`);
   console.log(`Topic: "${topic}"`);
-  console.log(`Word limit: ${word_limit.min}-${word_limit.max} | Time limit: ${time_limit_seconds}s`);
+  console.log(
+    `Word limit: ${word_limit.min}-${word_limit.max} | Time limit: ${time_limit_seconds}s`
+  );
   if (opponent_last_message) {
-    console.log(`Opponent's last message: "${opponent_last_message.slice(0, 100)}${opponent_last_message.length > 100 ? "..." : ""}"`);
+    console.log(
+      `Opponent's last message: "${opponent_last_message.slice(0, 100)}${opponent_last_message.length > 100 ? "..." : ""}"`
+    );
   }
   console.log(`Messages so far: ${request.messages_so_far.length}`);
 
@@ -295,7 +316,9 @@ if (specPath) {
     botSpec = loadBotSpec(specPath);
     console.log(`[Claude Bot] Loaded spec (${botSpec.length} characters)`);
   } catch (error) {
-    console.error(`[Claude Bot] ERROR loading spec: ${error instanceof Error ? error.message : error}`);
+    console.error(
+      `[Claude Bot] ERROR loading spec: ${error instanceof Error ? error.message : error}`
+    );
     process.exit(1);
   }
 }

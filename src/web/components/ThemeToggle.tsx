@@ -28,7 +28,18 @@ const dropdownTheme: CustomDropdownTheme = {
 };
 
 type Mode = "light" | "dark" | "system";
-type Theme = "arena" | "default" | "enterprise" | "minimal" | "mono" | "playful" | "cyber" | "sunset" | "ocean" | "lavender" | "forest";
+type Theme =
+  | "arena"
+  | "default"
+  | "enterprise"
+  | "minimal"
+  | "mono"
+  | "playful"
+  | "cyber"
+  | "sunset"
+  | "ocean"
+  | "lavender"
+  | "forest";
 
 interface ThemeOption {
   id: Theme;
@@ -127,7 +138,7 @@ export function ThemeToggle() {
       )}
     >
       {/* Mode Selection */}
-      <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-arena-text-muted text-left">
+      <div className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-arena-text-muted">
         Mode
       </div>
       <DropdownItem
@@ -164,7 +175,7 @@ export function ThemeToggle() {
       <DropdownDivider />
 
       {/* Theme Selection */}
-      <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-arena-text-muted text-left">
+      <div className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-arena-text-muted">
         Theme
       </div>
       {themes.map((t) => (

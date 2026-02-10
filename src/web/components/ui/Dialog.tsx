@@ -40,11 +40,7 @@ const Dialog = ({ children, open: controlledOpen, onOpenChange }: DialogProps) =
     [isControlled, onOpenChange]
   );
 
-  return (
-    <DialogContext.Provider value={{ open, setOpen }}>
-      {children}
-    </DialogContext.Provider>
-  );
+  return <DialogContext.Provider value={{ open, setOpen }}>{children}</DialogContext.Provider>;
 };
 
 interface DialogTriggerProps {

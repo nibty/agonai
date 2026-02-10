@@ -61,10 +61,7 @@ export const topicRepository = {
       }
 
       // Change vote: update the vote record and adjust counts
-      await db
-        .update(topicVotes)
-        .set({ isUpvote })
-        .where(eq(topicVotes.id, existing.id));
+      await db.update(topicVotes).set({ isUpvote }).where(eq(topicVotes.id, existing.id));
 
       // Adjust counts (flip from one to other)
       if (isUpvote) {
@@ -119,7 +116,9 @@ export const topicRepository = {
       .from(topics)
       .where(gte(sql`${topics.upvotes} - ${topics.downvotes}`, -2))
       .orderBy(
-        desc(sql`RANDOM() * POWER(GREATEST(1, ${topics.upvotes} - ${topics.downvotes} - ${topics.timesUsed} + 10), 2)`)
+        desc(
+          sql`RANDOM() * POWER(GREATEST(1, ${topics.upvotes} - ${topics.downvotes} - ${topics.timesUsed} + 10), 2)`
+        )
       )
       .limit(1);
     return result[0];

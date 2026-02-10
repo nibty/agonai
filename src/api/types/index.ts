@@ -214,7 +214,10 @@ export const BotResponseSchema = z.object({
 
 // Helper to count words in a string
 export function countWords(text: string): number {
-  return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+  return text
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word.length > 0).length;
 }
 
 // Validate bot response against word/char limits
@@ -277,13 +280,13 @@ export interface DebateStartedPayload {
 }
 
 export interface RoundStartedPayload {
-  round: string;  // Round name (e.g., "Opening", "Rebuttal")
+  round: string; // Round name (e.g., "Opening", "Rebuttal")
   roundIndex: number;
   timeLimit: number;
 }
 
 export interface BotMessagePayload {
-  round: string;  // Round name
+  round: string; // Round name
   roundIndex: number;
   position: DebatePosition;
   botId: number;
@@ -297,20 +300,20 @@ export interface BotTypingPayload {
 }
 
 export interface VotingStartedPayload {
-  round: string;  // Round name
+  round: string; // Round name
   roundIndex: number;
   timeLimit: number;
 }
 
 export interface VoteUpdatePayload {
-  round: string;  // Round name
+  round: string; // Round name
   roundIndex: number;
   proVotes: number;
   conVotes: number;
 }
 
 export interface RoundEndedPayload {
-  round: string;  // Round name
+  round: string; // Round name
   roundIndex: number;
   result: {
     roundIndex: number;
@@ -371,9 +374,12 @@ export type SubmitTopicRequest = z.infer<typeof SubmitTopicSchema>;
 export const JoinQueueSchema = z.object({
   botId: z.coerce.number().int().positive(),
   stake: z.number().min(0),
-  presetId: z.string().refine((id) => getPresetIds().includes(id), {
-    message: "Invalid preset ID",
-  }).default("classic"),
+  presetId: z
+    .string()
+    .refine((id) => getPresetIds().includes(id), {
+      message: "Invalid preset ID",
+    })
+    .default("classic"),
 });
 
 export type JoinQueueRequest = z.infer<typeof JoinQueueSchema>;

@@ -43,14 +43,18 @@ function LiveDebateCard({ debate }: { debate: ApiDebate }) {
           <div className="flex items-center gap-2">
             <BotAvatar size="sm" alt={debate.proBotName || "Pro Bot"} tier={proBotTier} />
             <div>
-              <div className="text-sm font-medium text-arena-pro">{debate.proBotName || "Pro Bot"}</div>
+              <div className="text-sm font-medium text-arena-pro">
+                {debate.proBotName || "Pro Bot"}
+              </div>
               <div className="text-xs text-gray-400">ELO {debate.proBotElo || "—"}</div>
             </div>
           </div>
           <div className="font-bold text-gray-400">VS</div>
           <div className="flex items-center gap-2">
             <div className="text-right">
-              <div className="text-sm font-medium text-arena-con">{debate.conBotName || "Con Bot"}</div>
+              <div className="text-sm font-medium text-arena-con">
+                {debate.conBotName || "Con Bot"}
+              </div>
               <div className="text-xs text-gray-400">ELO {debate.conBotElo || "—"}</div>
             </div>
             <BotAvatar size="sm" alt={debate.conBotName || "Con Bot"} tier={conBotTier} />
@@ -165,7 +169,9 @@ export function HomePage() {
         ) : (
           <Card className="py-12 text-center">
             <CardContent>
-              <p className="text-gray-400">No active debates right now. Start one from the queue!</p>
+              <p className="text-gray-400">
+                No active debates right now. Start one from the queue!
+              </p>
               <Link to="/queue">
                 <Button variant="outline" className="mt-4">
                   Join Queue

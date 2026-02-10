@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useState, useCallback, useRef, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  type ReactNode,
+} from "react";
 import { useWallet } from "./useWallet";
 import { api } from "@/lib/api";
 
@@ -81,7 +89,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (token) {
       api.setAuthToken(token);
       // Verify token is still valid
-      api.getMe()
+      api
+        .getMe()
         .then((res) => {
           setUserId(res.user.id);
           setIsAuthenticated(true);
@@ -101,7 +110,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Auto-authenticate when user explicitly connects wallet (not on page reload auto-connect)
   useEffect(() => {
-    if (connected && publicKey && userInitiatedConnect && !isAuthenticated && !isAuthenticating && !hasTriedAutoAuth.current) {
+    if (
+      connected &&
+      publicKey &&
+      userInitiatedConnect &&
+      !isAuthenticated &&
+      !isAuthenticating &&
+      !hasTriedAutoAuth.current
+    ) {
       hasTriedAutoAuth.current = true;
       void authenticate();
     }

@@ -36,10 +36,7 @@ async function backfillTokens(): Promise<void> {
 
     for (const bot of botsToUpdate) {
       const token = generateConnectionToken();
-      await db
-        .update(bots)
-        .set({ connectionToken: token })
-        .where(eq(bots.id, bot.id));
+      await db.update(bots).set({ connectionToken: token }).where(eq(bots.id, bot.id));
 
       console.log(`  Updated bot "${bot.name}" (${bot.id})`);
     }

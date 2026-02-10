@@ -133,11 +133,7 @@ export function WalletButton({ className }: WalletButtonProps) {
       <DropdownDivider />
 
       <DropdownItem onClick={() => void handleCopyAddress()} className="flex items-center gap-2">
-        {copied ? (
-          <Check className="h-4 w-4 text-arena-pro" />
-        ) : (
-          <Copy className="h-4 w-4" />
-        )}
+        {copied ? <Check className="h-4 w-4 text-arena-pro" /> : <Copy className="h-4 w-4" />}
         <span>{copied ? "Copied!" : "Copy Address"}</span>
       </DropdownItem>
 

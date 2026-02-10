@@ -500,7 +500,9 @@ router.post("/queue/join", authMiddleware, async (req: AuthenticatedRequest, res
 
   // addToQueue handles removing any existing entry for this bot
   const entry = matchmaking.addToQueue(bot, req.userId, stake, presetId);
-  console.log(`[Queue] Bot "${bot.name}" (${bot.id}) joined queue with stake ${stake}, ELO ${bot.elo}, preset ${presetId}`);
+  console.log(
+    `[Queue] Bot "${bot.name}" (${bot.id}) joined queue with stake ${stake}, ELO ${bot.elo}, preset ${presetId}`
+  );
   console.log(`[Queue] Current queue size: ${matchmaking.getStats().queueSize}`);
   res.json({ entry });
 });
@@ -618,21 +620,22 @@ router.post(
       return;
     }
 
-  const debateId = parseInt(req.params.debateId, 10);
-  if (isNaN(debateId)) {
-    res.status(400).json({ error: "Invalid debate ID" });
-    return;
+    const debateId = parseInt(req.params.debateId, 10);
+    if (isNaN(debateId)) {
+      res.status(400).json({ error: "Invalid debate ID" });
+      return;
+    }
+
+    const result = await debateOrchestrator.forfeitDebate(debateId, req.userId);
+
+    if (!result.success) {
+      res.status(400).json({ error: result.error });
+      return;
+    }
+
+    res.json({ success: true, message: "Debate forfeited" });
   }
-
-  const result = await debateOrchestrator.forfeitDebate(debateId, req.userId);
-
-  if (!result.success) {
-    res.status(400).json({ error: result.error });
-    return;
-  }
-
-  res.json({ success: true, message: "Debate forfeited" });
-});
+);
 
 // ============================================================================
 // Webhook Routes (OpenClaw async responses)

@@ -111,7 +111,9 @@ class ApiClient {
     return this.request("PATCH", `/bots/${botId}`, data);
   }
 
-  async regenerateBotToken(botId: string): Promise<{ connectionToken: string; connectionUrl: string }> {
+  async regenerateBotToken(
+    botId: string
+  ): Promise<{ connectionToken: string; connectionUrl: string }> {
     return this.request("POST", `/bots/${botId}/regenerate-token`);
   }
 
@@ -152,7 +154,11 @@ class ApiClient {
     return this.request("GET", "/queue/stats");
   }
 
-  async joinQueue(data: { botId: string; stake: number; presetId: string }): Promise<{ entry: QueueEntry }> {
+  async joinQueue(data: {
+    botId: string;
+    stake: number;
+    presetId: string;
+  }): Promise<{ entry: QueueEntry }> {
     return this.request("POST", "/queue/join", data);
   }
 
@@ -351,4 +357,17 @@ interface DebatePreset {
 export const api = new ApiClient();
 
 // Export types
-export type { User, UserPublic, Bot, BotPublic, BotType, Topic, QueueEntry, Debate, Bet, DebatePreset, DebateDetails, DebateMessage };
+export type {
+  User,
+  UserPublic,
+  Bot,
+  BotPublic,
+  BotType,
+  Topic,
+  QueueEntry,
+  Debate,
+  Bet,
+  DebatePreset,
+  DebateDetails,
+  DebateMessage,
+};

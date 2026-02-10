@@ -9,7 +9,11 @@ export const userRepository = {
   },
 
   async findByWallet(walletAddress: string): Promise<User | undefined> {
-    const result = await db.select().from(users).where(eq(users.walletAddress, walletAddress)).limit(1);
+    const result = await db
+      .select()
+      .from(users)
+      .where(eq(users.walletAddress, walletAddress))
+      .limit(1);
     return result[0];
   },
 

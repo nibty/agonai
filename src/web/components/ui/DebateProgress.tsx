@@ -1,8 +1,8 @@
 interface DebateProgressProps {
   currentRoundIndex: number;
   totalRounds: number;
-  roundStatus: "bot_responding" | "voting" | "completed" | string;
-  debateStatus: "pending" | "in_progress" | "completed" | string;
+  roundStatus: string;
+  debateStatus: string;
   votingTimeLeft?: number;
   votingDuration?: number;
 }
@@ -19,12 +19,10 @@ export function DebateProgress({
 }: DebateProgressProps) {
   // Calculate overall debate progress
   const completedRounds = roundStatus === "completed" ? currentRoundIndex + 1 : currentRoundIndex;
-  const debateProgress = debateStatus === "completed"
-    ? 100
-    : (completedRounds / totalRounds) * 100;
+  const debateProgress = debateStatus === "completed" ? 100 : (completedRounds / totalRounds) * 100;
 
   // Phase within current round
-  const currentPhaseIndex = phases.indexOf(roundStatus as typeof phases[number]);
+  const currentPhaseIndex = phases.indexOf(roundStatus as (typeof phases)[number]);
 
   // For voting phase, show time-based progress
   const votingProgress = votingDuration > 0 ? (votingTimeLeft / votingDuration) * 100 : 0;
@@ -36,7 +34,9 @@ export function DebateProgress({
         <div className="mb-1.5 flex items-center justify-between text-xs">
           <span className="font-medium text-arena-text">Debate Progress</span>
           <span className="text-arena-text-muted">
-            {debateStatus === "completed" ? "Complete" : `Round ${currentRoundIndex + 1} of ${totalRounds}`}
+            {debateStatus === "completed"
+              ? "Complete"
+              : `Round ${currentRoundIndex + 1} of ${totalRounds}`}
           </span>
         </div>
         <div className="h-2 overflow-hidden rounded-full bg-arena-bg/80">
@@ -54,7 +54,7 @@ export function DebateProgress({
                 i < completedRounds
                   ? "bg-arena-accent"
                   : i === currentRoundIndex && debateStatus !== "completed"
-                    ? "bg-arena-voting animate-pulse"
+                    ? "animate-pulse bg-arena-voting"
                     : "bg-arena-border"
               }`}
             />
@@ -105,11 +105,12 @@ export function DebateProgress({
                         : "bg-transparent"
                   }`}
                   style={{
-                    width: roundStatus === "voting"
-                      ? `${votingProgress}%`
-                      : currentPhaseIndex > 1
-                        ? "100%"
-                        : "0%"
+                    width:
+                      roundStatus === "voting"
+                        ? `${votingProgress}%`
+                        : currentPhaseIndex > 1
+                          ? "100%"
+                          : "0%",
                   }}
                 />
               </div>

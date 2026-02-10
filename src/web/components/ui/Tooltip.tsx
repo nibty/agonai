@@ -23,9 +23,7 @@ const Tooltip = ({ children }: TooltipProps) => {
   const [content, setContent] = React.useState<React.ReactNode>(null);
 
   return (
-    <TooltipContext.Provider value={{ content, setContent }}>
-      {children}
-    </TooltipContext.Provider>
+    <TooltipContext.Provider value={{ content, setContent }}>{children}</TooltipContext.Provider>
   );
 };
 Tooltip.displayName = "Tooltip";

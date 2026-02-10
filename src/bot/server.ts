@@ -5,7 +5,14 @@ import WebSocket from "ws";
 // =============================================================================
 
 // Round types from the preset system
-type RoundType = "opening" | "argument" | "rebuttal" | "counter" | "closing" | "question" | "answer";
+type RoundType =
+  | "opening"
+  | "argument"
+  | "rebuttal"
+  | "counter"
+  | "closing"
+  | "question"
+  | "answer";
 
 interface DebateRequest {
   debate_id: string;
@@ -69,9 +76,11 @@ The logical conclusion is clear.`,
 
     argument: `Building on my position regarding "${topic}", let me present additional evidence.
 
-${position === "pro"
-  ? "The benefits are manifold: economic efficiency, social progress, and measurable improvements in key indicators."
-  : "The risks are substantial: unintended consequences, systemic failures, and erosion of established safeguards."}
+${
+  position === "pro"
+    ? "The benefits are manifold: economic efficiency, social progress, and measurable improvements in key indicators."
+    : "The risks are substantial: unintended consequences, systemic failures, and erosion of established safeguards."
+}
 
 Consider the following logical chain: If A leads to B, and B leads to C, then supporting this position necessarily follows.`,
 
@@ -87,9 +96,11 @@ The data shows that ${position === "pro" ? "adoption" : "rejection"} of this pro
 
     counter: `My opponent's rebuttal fails to address my core arguments. Let me respond point by point.
 
-${opponent_last_message
-  ? `They attempted to counter with: "${opponent_last_message.slice(0, 80)}..." but this misses the fundamental point.`
-  : "Their counter-arguments lack substance."}
+${
+  opponent_last_message
+    ? `They attempted to counter with: "${opponent_last_message.slice(0, 80)}..." but this misses the fundamental point.`
+    : "Their counter-arguments lack substance."
+}
 
 The logical framework I've established remains intact. Their objections are superficial and easily addressed.`,
 
@@ -101,13 +112,17 @@ Please explain specifically how your position accounts for these documented outc
 
     answer: `To address my opponent's question directly:
 
-${opponent_last_message
-  ? `You asked about "${opponent_last_message.slice(0, 60)}..." The answer is straightforward.`
-  : "The answer follows logically from first principles."}
+${
+  opponent_last_message
+    ? `You asked about "${opponent_last_message.slice(0, 60)}..." The answer is straightforward.`
+    : "The answer follows logically from first principles."
+}
 
-The evidence supports my position because ${position === "pro"
-  ? "the data consistently shows positive outcomes when this approach is adopted."
-  : "historical precedent demonstrates the risks of this path."}`,
+The evidence supports my position because ${
+      position === "pro"
+        ? "the data consistently shows positive outcomes when this approach is adopted."
+        : "historical precedent demonstrates the risks of this path."
+    }`,
 
     closing: `In conclusion, I have demonstrated through logical reasoning and evidence that we must ${stance} this proposition.
 
@@ -146,9 +161,11 @@ Wake up, people. The evidence is overwhelming.`,
 
     argument: `Let me pile on more evidence, since apparently my opponent needs convincing.
 
-${position === "pro"
-  ? "Every successful society has embraced this approach. Every. Single. One."
-  : "History is littered with the wreckage of similar ideas. Wake up!"}
+${
+  position === "pro"
+    ? "Every successful society has embraced this approach. Every. Single. One."
+    : "History is littered with the wreckage of similar ideas. Wake up!"
+}
 
 But please, continue to cling to your position. I enjoy watching people dig their own graves.`,
 
@@ -166,27 +183,35 @@ The truth hurts, doesn't it?`,
 
     counter: `Oh, they're doubling down? Bold strategy, let's see how it plays out.
 
-${opponent_last_message
-  ? `"${opponent_last_message.slice(0, 60)}..." - Pure cope.`
-  : "Nothing but deflection."}
+${
+  opponent_last_message
+    ? `"${opponent_last_message.slice(0, 60)}..." - Pure cope.`
+    : "Nothing but deflection."
+}
 
 My arguments stand. Theirs crumble. Next?`,
 
     question: `Here's a question my opponent definitely doesn't want to answer:
 
-If you're so confident in your position, why can't you explain ${position === "pro"
-  ? "how the opposing view has ever succeeded anywhere?"
-  : "the countless failures of this exact approach?"}
+If you're so confident in your position, why can't you explain ${
+      position === "pro"
+        ? "how the opposing view has ever succeeded anywhere?"
+        : "the countless failures of this exact approach?"
+    }
 
 Go ahead. I'll wait. *checks watch*`,
 
-    answer: `${opponent_last_message
-  ? `Oh, they asked about "${opponent_last_message.slice(0, 50)}..." Let me educate you.`
-  : "Finally, a direct question. Let me school you."}
+    answer: `${
+      opponent_last_message
+        ? `Oh, they asked about "${opponent_last_message.slice(0, 50)}..." Let me educate you.`
+        : "Finally, a direct question. Let me school you."
+    }
 
-The answer is embarrassingly obvious: ${position === "pro"
-  ? "Success follows adoption of this position. It's not complicated."
-  : "This approach fails. Repeatedly. Spectacularly."}
+The answer is embarrassingly obvious: ${
+      position === "pro"
+        ? "Success follows adoption of this position. It's not complicated."
+        : "This approach fails. Repeatedly. Spectacularly."
+    }
 
 You're welcome for the free education.`,
 
@@ -229,9 +254,11 @@ Let us reason together, weighing evidence against values, and pragmatism against
 
     argument: `Building upon my opening reflection, let us delve deeper into the matter of "${topic}".
 
-${position === "pro"
-  ? "The ethical frameworks that have guided humanity—from virtue ethics to consequentialism—support this position when properly understood."
-  : "We must ask: what unexamined assumptions drive the proposition before us? Often, the most dangerous ideas are those we fail to question."}
+${
+  position === "pro"
+    ? "The ethical frameworks that have guided humanity—from virtue ethics to consequentialism—support this position when properly understood."
+    : "We must ask: what unexamined assumptions drive the proposition before us? Often, the most dangerous ideas are those we fail to question."
+}
 
 Consider the implications not just for today, but for generations hence.`,
 
@@ -249,9 +276,11 @@ I maintain that a ${position === "pro" ? "progressive" : "cautious"} approach be
 
     counter: `My opponent's rebuttal merits philosophical examination.
 
-${opponent_last_message
-  ? `The claim that "${opponent_last_message.slice(0, 60)}..." reveals an underlying assumption worth questioning.`
-  : "Their response, while spirited, lacks philosophical depth."}
+${
+  opponent_last_message
+    ? `The claim that "${opponent_last_message.slice(0, 60)}..." reveals an underlying assumption worth questioning.`
+    : "Their response, while spirited, lacks philosophical depth."
+}
 
 What is the telos—the ultimate purpose—we seek? Here, I believe, our disagreement becomes clear.`,
 
@@ -261,13 +290,17 @@ What foundational principle guides your position on "${topic}"? Is it utility? R
 
 Understanding your philosophical framework will help us find common ground, or at least clarify our fundamental disagreement.`,
 
-    answer: `${opponent_last_message
-  ? `You ask about "${opponent_last_message.slice(0, 50)}..." A profound question that deserves careful consideration.`
-  : "Allow me to address the underlying philosophical concern."}
+    answer: `${
+      opponent_last_message
+        ? `You ask about "${opponent_last_message.slice(0, 50)}..." A profound question that deserves careful consideration.`
+        : "Allow me to address the underlying philosophical concern."
+    }
 
-My position rests on ${position === "pro"
-  ? "the recognition that human flourishing requires embracing beneficial change."
-  : "epistemic humility and respect for hard-won wisdom."}
+My position rests on ${
+      position === "pro"
+        ? "the recognition that human flourishing requires embracing beneficial change."
+        : "epistemic humility and respect for hard-won wisdom."
+    }
 
 But I hold this view provisionally, always open to better arguments.`,
 
@@ -336,9 +369,11 @@ Facts over feelings. Data over dogma.`,
 
     counter: `My opponent's rebuttal ignores the statistical reality.
 
-${opponent_last_message
-  ? `They counter with "${opponent_last_message.slice(0, 60)}..." but provide no data.`
-  : "Still no empirical support for their position."}
+${
+  opponent_last_message
+    ? `They counter with "${opponent_last_message.slice(0, 60)}..." but provide no data.`
+    : "Still no empirical support for their position."
+}
 
 The numbers remain unchanged:
 - Effect size: ${position === "pro" ? "0.72" : "-0.58"} (statistically significant)
@@ -352,9 +387,11 @@ Can you cite a single peer-reviewed study that supports your position on "${topi
 
 Specifically, what is the effect size and sample size of any research you're relying on?`,
 
-    answer: `${opponent_last_message
-  ? `You ask about "${opponent_last_message.slice(0, 50)}..." Here are the numbers:`
-  : "Let me answer with data:"}
+    answer: `${
+      opponent_last_message
+        ? `You ask about "${opponent_last_message.slice(0, 50)}..." Here are the numbers:`
+        : "Let me answer with data:"
+    }
 
 - Source: Meta-analysis of ${position === "pro" ? "47" : "38"} peer-reviewed studies
 - Sample size: N = 156,000 participants
@@ -389,7 +426,7 @@ The data is clear. I rest my case on the evidence.`,
 const bots: Record<string, { personality: BotPersonality; description: string }> = {
   "logic-master": { personality: logicMaster, description: "Analytical and structured arguments" },
   "devils-advocate": { personality: devilsAdvocate, description: "Aggressive and witty rebuttals" },
-  "philosopher": { personality: philosopher, description: "Thoughtful and nuanced discourse" },
+  philosopher: { personality: philosopher, description: "Thoughtful and nuanced discourse" },
   "data-driven": { personality: dataDriven, description: "Statistics and facts focused" },
 };
 
@@ -423,7 +460,9 @@ function connect(url: string, botId: string, personality: BotPersonality): void 
           break;
 
         case "debate_request": {
-          console.log(`[${botId}] ${message.round} - ${message.position} on "${message.topic.slice(0, 50)}..."`);
+          console.log(
+            `[${botId}] ${message.round} - ${message.position} on "${message.topic.slice(0, 50)}..."`
+          );
 
           // Simulate thinking time (100-500ms)
           const thinkTime = Math.random() * 400 + 100;

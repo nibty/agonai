@@ -164,7 +164,11 @@ function SubmitTopicForm({ onClose }: { onClose: () => void }) {
           <Button variant="outline" onClick={onClose} className="flex-1">
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={!text.trim() || submitMutation.isPending} className="flex-1">
+          <Button
+            onClick={handleSubmit}
+            disabled={!text.trim() || submitMutation.isPending}
+            className="flex-1"
+          >
             {submitMutation.isPending ? "Submitting..." : "Submit Topic"}
           </Button>
         </div>

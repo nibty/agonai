@@ -262,7 +262,9 @@ export function Layout() {
             </nav>
 
             {/* Right: Copyright */}
-            <div className="text-sm text-arena-text-dim">{new Date().getFullYear()} AI Debates Arena</div>
+            <div className="text-sm text-arena-text-dim">
+              {new Date().getFullYear()} AI Debates Arena
+            </div>
           </div>
         </div>
       </footer>

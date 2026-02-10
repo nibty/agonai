@@ -72,12 +72,7 @@ const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
       <FlowbiteBadge
         ref={ref}
         color={variantToFlowbiteColor[variant]}
-        className={cn(
-          variantCustomClasses[variant],
-          sizeClasses[size],
-          "font-semibold",
-          className
-        )}
+        className={cn(variantCustomClasses[variant], sizeClasses[size], "font-semibold", className)}
         {...props}
       >
         {children}
@@ -105,7 +100,13 @@ export interface RankBadgeProps extends HTMLAttributes<HTMLSpanElement> {
 const RankBadge = forwardRef<HTMLSpanElement, RankBadgeProps>(
   ({ className, rank, size = "md", ...props }, ref) => {
     return (
-      <Badge ref={ref} variant={rankVariants[rank]} size={size} className={cn("capitalize", className)} {...props}>
+      <Badge
+        ref={ref}
+        variant={rankVariants[rank]}
+        size={size}
+        className={cn("capitalize", className)}
+        {...props}
+      >
         {rank}
       </Badge>
     );

@@ -16,8 +16,7 @@ export const arenaTheme = {
         "bg-arena-con text-white hover:bg-arena-con/90 focus:ring-arena-con shadow-lg shadow-arena-con/25",
       success:
         "bg-arena-pro text-white hover:bg-arena-pro/90 focus:ring-arena-pro shadow-lg shadow-arena-pro/25",
-      light:
-        "text-arena-accent underline-offset-4 hover:underline focus:ring-arena-accent",
+      light: "text-arena-accent underline-offset-4 hover:underline focus:ring-arena-accent",
     },
     disabled: "cursor-not-allowed opacity-50",
     size: {

@@ -118,7 +118,9 @@ function TopThree({ bots }: { bots: LeaderboardBot[] }) {
         />
         <div className="mb-2 text-center">
           <div className="font-bold text-arena-text">{bot.name}</div>
-          <div className="text-sm text-gray-400">{bot.wins}W / {bot.losses}L</div>
+          <div className="text-sm text-gray-400">
+            {bot.wins}W / {bot.losses}L
+          </div>
           <div className="mt-1 text-lg font-bold text-arena-accent">{bot.elo} ELO</div>
         </div>
         <div
@@ -151,13 +153,29 @@ function RecentDebates() {
   const getStatusBadge = (status: Debate["status"]) => {
     switch (status) {
       case "completed":
-        return <Badge variant="pro" className="text-xs">Completed</Badge>;
+        return (
+          <Badge variant="pro" className="text-xs">
+            Completed
+          </Badge>
+        );
       case "in_progress":
-        return <Badge variant="live" className="text-xs">Live</Badge>;
+        return (
+          <Badge variant="live" className="text-xs">
+            Live
+          </Badge>
+        );
       case "voting":
-        return <Badge variant="gold" className="text-xs">Voting</Badge>;
+        return (
+          <Badge variant="gold" className="text-xs">
+            Voting
+          </Badge>
+        );
       default:
-        return <Badge variant="outline" className="text-xs">{status}</Badge>;
+        return (
+          <Badge variant="outline" className="text-xs">
+            {status}
+          </Badge>
+        );
     }
   };
 
@@ -202,7 +220,9 @@ function RecentDebates() {
         {isLoading ? (
           <p className="py-8 text-center text-arena-text-muted">Loading recent debates...</p>
         ) : debates.length === 0 ? (
-          <p className="py-8 text-center text-arena-text-muted">No debates yet. Be the first to start one!</p>
+          <p className="py-8 text-center text-arena-text-muted">
+            No debates yet. Be the first to start one!
+          </p>
         ) : (
           <div className="space-y-3">
             {debates.map((debate) => (
@@ -214,17 +234,29 @@ function RecentDebates() {
                 {/* Bots */}
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   <div className="flex items-center gap-2">
-                    <BotAvatar size="sm" alt={debate.proBotName || "Pro"} tier={getTierFromElo(debate.proBotElo || 1000)} />
+                    <BotAvatar
+                      size="sm"
+                      alt={debate.proBotName || "Pro"}
+                      tier={getTierFromElo(debate.proBotElo || 1000)}
+                    />
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-medium text-arena-pro">{debate.proBotName}</div>
+                      <div className="truncate text-sm font-medium text-arena-pro">
+                        {debate.proBotName}
+                      </div>
                       <div className="text-xs text-arena-text-dim">{debate.proBotElo} ELO</div>
                     </div>
                   </div>
                   <span className="text-arena-text-muted">vs</span>
                   <div className="flex items-center gap-2">
-                    <BotAvatar size="sm" alt={debate.conBotName || "Con"} tier={getTierFromElo(debate.conBotElo || 1000)} />
+                    <BotAvatar
+                      size="sm"
+                      alt={debate.conBotName || "Con"}
+                      tier={getTierFromElo(debate.conBotElo || 1000)}
+                    />
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-medium text-arena-con">{debate.conBotName}</div>
+                      <div className="truncate text-sm font-medium text-arena-con">
+                        {debate.conBotName}
+                      </div>
                       <div className="text-xs text-arena-text-dim">{debate.conBotElo} ELO</div>
                     </div>
                   </div>
@@ -272,7 +304,7 @@ export function LeaderboardPage() {
   });
 
   // Transform API bots to include tier
-  const bots: LeaderboardBot[] = (leaderboardData?.bots || []).map(bot => ({
+  const bots: LeaderboardBot[] = (leaderboardData?.bots || []).map((bot) => ({
     ...bot,
     tier: getTierFromElo(bot.elo),
   }));
@@ -335,9 +367,7 @@ export function LeaderboardPage() {
         </Card>
         <Card className="text-center">
           <CardContent className="py-4">
-            <div className="text-2xl font-bold text-arena-accent">
-              {bots[0]?.elo || 0}
-            </div>
+            <div className="text-2xl font-bold text-arena-accent">{bots[0]?.elo || 0}</div>
             <div className="text-sm text-gray-400">Top ELO</div>
           </CardContent>
         </Card>

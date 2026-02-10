@@ -109,7 +109,9 @@ export class MatchmakingService {
     let bestMatch: QueueEntry | null = null;
     let bestEloDiff = Infinity;
 
-    console.log(`[Matchmaking] Finding match for bot ${entry.botId} (ELO: ${entry.elo}, stake: ${entry.stake}, preset: ${entry.presetId}, range: ${entry.expandedRange})`);
+    console.log(
+      `[Matchmaking] Finding match for bot ${entry.botId} (ELO: ${entry.elo}, stake: ${entry.stake}, preset: ${entry.presetId}, range: ${entry.expandedRange})`
+    );
 
     for (const candidate of this.queue.values()) {
       // Skip self
@@ -118,7 +120,9 @@ export class MatchmakingService {
         continue;
       }
 
-      console.log(`[Matchmaking]   - Checking candidate ${candidate.botId} (ELO: ${candidate.elo}, stake: ${candidate.stake}, preset: ${candidate.presetId}, range: ${candidate.expandedRange})`);
+      console.log(
+        `[Matchmaking]   - Checking candidate ${candidate.botId} (ELO: ${candidate.elo}, stake: ${candidate.stake}, preset: ${candidate.presetId}, range: ${candidate.expandedRange})`
+      );
 
       // Skip same owner (can't play against yourself)
       // NOTE: Disabled for local testing - uncomment in production
@@ -126,14 +130,18 @@ export class MatchmakingService {
 
       // Must match same preset
       if (candidate.presetId !== entry.presetId) {
-        console.log(`[Matchmaking]     REJECTED: Different preset (${candidate.presetId} vs ${entry.presetId})`);
+        console.log(
+          `[Matchmaking]     REJECTED: Different preset (${candidate.presetId} vs ${entry.presetId})`
+        );
         continue;
       }
 
       // Check ELO range - use the wider of the two ranges
       const maxRange = Math.max(entry.expandedRange, candidate.expandedRange);
       if (!isBalancedMatch(entry.elo, candidate.elo, maxRange)) {
-        console.log(`[Matchmaking]     REJECTED: ELO out of range (diff: ${Math.abs(entry.elo - candidate.elo)}, maxRange: ${maxRange})`);
+        console.log(
+          `[Matchmaking]     REJECTED: ELO out of range (diff: ${Math.abs(entry.elo - candidate.elo)}, maxRange: ${maxRange})`
+        );
         continue;
       }
 
@@ -141,7 +149,9 @@ export class MatchmakingService {
       const stakeDiff = Math.abs(entry.stake - candidate.stake);
       const maxStakeDiff = Math.max(entry.stake, candidate.stake) * 0.2;
       if (stakeDiff > maxStakeDiff) {
-        console.log(`[Matchmaking]     REJECTED: Stake incompatible (diff: ${stakeDiff}, max allowed: ${maxStakeDiff})`);
+        console.log(
+          `[Matchmaking]     REJECTED: Stake incompatible (diff: ${stakeDiff}, max allowed: ${maxStakeDiff})`
+        );
         continue;
       }
 

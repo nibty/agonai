@@ -144,11 +144,13 @@ export class BotConnectionServer {
     });
 
     // Send welcome message
-    ws.send(JSON.stringify({
-      type: "connected",
-      botId: bot.id,
-      botName: bot.name,
-    }));
+    ws.send(
+      JSON.stringify({
+        type: "connected",
+        botId: bot.id,
+        botName: bot.name,
+      })
+    );
   }
 
   private handleMessage(bot: ConnectedBot, data: string): void {
@@ -169,7 +171,10 @@ export class BotConnectionServer {
           break;
 
         default:
-          console.warn(`[BotWS] Unknown message type from bot ${bot.botId}:`, (message as { type: string }).type);
+          console.warn(
+            `[BotWS] Unknown message type from bot ${bot.botId}:`,
+            (message as { type: string }).type
+          );
       }
     } catch (error) {
       console.error(`[BotWS] Error parsing message from bot ${bot.botId}:`, error);
@@ -179,7 +184,9 @@ export class BotConnectionServer {
   private handleDebateResponse(bot: ConnectedBot, message: DebateResponseMessage): void {
     const pending = this.pendingRequests.get(message.requestId);
     if (!pending) {
-      console.warn(`[BotWS] Received response for unknown request ${message.requestId} from bot ${bot.botId}`);
+      console.warn(
+        `[BotWS] Received response for unknown request ${message.requestId} from bot ${bot.botId}`
+      );
       return;
     }
 

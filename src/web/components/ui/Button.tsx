@@ -45,7 +45,10 @@ const sizeToFlowbiteSize = {
 } as const;
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = "primary", size = "md", asChild = false, children, ...props }, ref) => {
+  (
+    { className, variant = "primary", size = "md", asChild: _asChild = false, children, ...props },
+    ref
+  ) => {
     const isIconSize = size === "icon";
     const flowbiteColor = variantToFlowbiteColor[variant];
     const flowbiteSize = sizeToFlowbiteSize[size];
@@ -56,7 +59,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         color={flowbiteColor}
         size={flowbiteSize}
         className={cn(
-          isIconSize && "!p-0 h-10 w-10",
+          isIconSize && "h-10 w-10 !p-0",
           variant === "link" && "!bg-transparent !shadow-none",
           variant === "ghost" && "!shadow-none",
           variant === "outline" && "!shadow-none",

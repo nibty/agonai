@@ -128,8 +128,13 @@ export function ArenaPage() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [votingTimeLeft, setVotingTimeLeft] = useState(0);
   const [votingDuration, setVotingDuration] = useState(0);
-  const [botError, setBotError] = useState<{ position: "pro" | "con"; message: string } | null>(null);
-  const [forfeitInfo, setForfeitInfo] = useState<{ forfeitedBy: string; winnerBotName: string } | null>(null);
+  const [botError, setBotError] = useState<{ position: "pro" | "con"; message: string } | null>(
+    null
+  );
+  const [forfeitInfo, setForfeitInfo] = useState<{
+    forfeitedBy: string;
+    winnerBotName: string;
+  } | null>(null);
   const [isForfeiting, setIsForfeiting] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -250,7 +255,14 @@ export function ArenaPage() {
         case "round_started": {
           const payload = msg.payload as { round: string; roundIndex: number };
           setDebate((prev) =>
-            prev ? { ...prev, currentRound: payload.round, currentRoundIndex: payload.roundIndex, roundStatus: "bot_responding" } : null
+            prev
+              ? {
+                  ...prev,
+                  currentRound: payload.round,
+                  currentRoundIndex: payload.roundIndex,
+                  roundStatus: "bot_responding",
+                }
+              : null
           );
           setTypingBot(null);
           break;
@@ -299,7 +311,14 @@ export function ArenaPage() {
         case "voting_started": {
           const payload = msg.payload as { round: string; roundIndex: number; timeLimit: number };
           setDebate((prev) =>
-            prev ? { ...prev, roundStatus: "voting", currentRound: payload.round, currentRoundIndex: payload.roundIndex } : null
+            prev
+              ? {
+                  ...prev,
+                  roundStatus: "voting",
+                  currentRound: payload.round,
+                  currentRoundIndex: payload.roundIndex,
+                }
+              : null
           );
           setCurrentVotes({ pro: 0, con: 0 });
           setHasVoted(false);
@@ -414,7 +433,7 @@ export function ArenaPage() {
         // Set debate state
         if (data.debate) {
           setDebate({
-            id: String(data.debate.id),
+            id: data.debate.id,
             topic: data.topic?.text || data.debate.topic || "",
             status: data.debate.status,
             currentRound: "",
@@ -435,8 +454,8 @@ export function ArenaPage() {
         // Set bot info
         if (data.proBot) {
           setProBot({
-            id: String(data.proBot.id),
-            ownerId: String(data.proBot.ownerId),
+            id: data.proBot.id,
+            ownerId: data.proBot.ownerId,
             name: data.proBot.name,
             elo: data.proBot.elo,
             wins: data.proBot.wins,
@@ -446,8 +465,8 @@ export function ArenaPage() {
         }
         if (data.conBot) {
           setConBot({
-            id: String(data.conBot.id),
-            ownerId: String(data.conBot.ownerId),
+            id: data.conBot.id,
+            ownerId: data.conBot.ownerId,
             name: data.conBot.name,
             elo: data.conBot.elo,
             wins: data.conBot.wins,
@@ -459,7 +478,7 @@ export function ArenaPage() {
         // Set topic info
         if (data.topic) {
           setTopic({
-            id: String(data.topic.id),
+            id: data.topic.id,
             text: data.topic.text,
             category: data.topic.category,
           });
@@ -578,10 +597,8 @@ export function ArenaPage() {
     }
   };
 
-  // Check if current user owns one of the bots (compare as strings to handle type differences)
-  const userOwnsBotInDebate = userId && (
-    String(proBot?.ownerId) === String(userId) || String(conBot?.ownerId) === String(userId)
-  );
+  // Check if current user owns one of the bots
+  const userOwnsBotInDebate = userId && (proBot?.ownerId === userId || conBot?.ownerId === userId);
 
   if (connectionStatus === "connecting") {
     return (
@@ -613,7 +630,7 @@ export function ArenaPage() {
   return (
     <div className="flex flex-col gap-4 lg:h-[calc(100vh-theme(spacing.16)-theme(spacing.16))] lg:flex-row">
       {/* Left Sidebar - Score & Voting */}
-      <div className="flex w-full flex-shrink-0 flex-col gap-3 lg:w-72 lg:overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <div className="flex w-full flex-shrink-0 flex-col gap-3 [-ms-overflow-style:none] [scrollbar-width:none] lg:w-72 lg:overflow-y-auto [&::-webkit-scrollbar]:hidden">
         {/* Match Info Card */}
         <div className="rounded-xl border border-arena-border/50 bg-gradient-to-b from-arena-card to-arena-bg p-4">
           <div className="mb-3 flex items-center justify-between text-xs text-arena-text-dim">
@@ -640,7 +657,9 @@ export function ArenaPage() {
             <h1 className="text-base font-bold text-arena-text">
               {topic?.text || debate?.topic || "Loading..."}
             </h1>
-            <span className="text-xs text-arena-text-dim">{(debate?.stake || 0).toLocaleString()} XNT staked</span>
+            <span className="text-xs text-arena-text-dim">
+              {(debate?.stake || 0).toLocaleString()} XNT staked
+            </span>
           </div>
 
           {/* Bots vs */}
@@ -648,7 +667,9 @@ export function ArenaPage() {
             {/* Score */}
             <div className="mb-3 text-center">
               <div className="text-3xl font-black tabular-nums text-arena-text">
-                {proWins}<span className="mx-2 text-arena-text-dim">-</span>{conWins}
+                {proWins}
+                <span className="mx-2 text-arena-text-dim">-</span>
+                {conWins}
               </div>
             </div>
             {/* Bot names */}
@@ -658,14 +679,18 @@ export function ArenaPage() {
                   {(proBot?.name || "P").charAt(0)}
                 </div>
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold text-arena-pro">{proBot?.name || "Pro"}</div>
+                  <div className="truncate text-sm font-semibold text-arena-pro">
+                    {proBot?.name || "Pro"}
+                  </div>
                   <div className="text-[10px] text-arena-text-dim">{proBot?.elo || "---"}</div>
                 </div>
               </div>
               <div className="text-xs text-arena-text-dim">vs</div>
               <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
                 <div className="min-w-0 text-right">
-                  <div className="truncate text-sm font-semibold text-arena-con">{conBot?.name || "Con"}</div>
+                  <div className="truncate text-sm font-semibold text-arena-con">
+                    {conBot?.name || "Con"}
+                  </div>
                   <div className="text-[10px] text-arena-text-dim">{conBot?.elo || "---"}</div>
                 </div>
                 <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-arena-con text-xs font-bold text-white shadow-md shadow-arena-con/30">
@@ -711,7 +736,9 @@ export function ArenaPage() {
             <div className="mb-3 h-1.5 overflow-hidden rounded-full bg-arena-bg/50">
               <div
                 className="h-full rounded-full bg-arena-accent transition-all duration-1000 ease-linear"
-                style={{ width: `${votingDuration > 0 ? (votingTimeLeft / votingDuration) * 100 : 0}%` }}
+                style={{
+                  width: `${votingDuration > 0 ? (votingTimeLeft / votingDuration) * 100 : 0}%`,
+                }}
               />
             </div>
 
@@ -737,7 +764,9 @@ export function ArenaPage() {
                 </Button>
               </div>
             ) : (
-              <div className="text-center text-xs text-arena-text-muted">Connect wallet to vote</div>
+              <div className="text-center text-xs text-arena-text-muted">
+                Connect wallet to vote
+              </div>
             )}
             {hasVoted && (
               <div className="mt-2 text-center text-xs text-arena-text-muted">
@@ -771,11 +800,15 @@ export function ArenaPage() {
 
             {/* Round list */}
             <div className="mt-3 border-t border-arena-border/30 pt-3">
-              <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-arena-text-dim">Rounds</div>
+              <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-arena-text-dim">
+                Rounds
+              </div>
               <div className="space-y-1">
                 {preset.rounds.map((round, i) => {
-                  const isCompleted = debate?.status === "completed" || i < (debate?.currentRoundIndex ?? 0);
-                  const isCurrent = debate?.currentRoundIndex === i && debate?.status === "in_progress";
+                  const isCompleted =
+                    debate?.status === "completed" || i < (debate?.currentRoundIndex ?? 0);
+                  const isCurrent =
+                    debate?.currentRoundIndex === i && debate?.status === "in_progress";
                   return (
                     <div
                       key={i}
@@ -788,7 +821,9 @@ export function ArenaPage() {
                       }`}
                     >
                       <span>{round.name}</span>
-                      <span className="text-[10px]">{round.wordLimit.min}-{round.wordLimit.max}w</span>
+                      <span className="text-[10px]">
+                        {round.wordLimit.min}-{round.wordLimit.max}w
+                      </span>
                     </div>
                   );
                 })}
@@ -813,7 +848,9 @@ export function ArenaPage() {
               {forfeitInfo ? (
                 <span>{forfeitInfo.forfeitedBy} forfeited</span>
               ) : (
-                <span>Final: {proWins} - {conWins}</span>
+                <span>
+                  Final: {proWins} - {conWins}
+                </span>
               )}
             </div>
           </div>
@@ -876,7 +913,10 @@ export function ArenaPage() {
 
         {/* Messages */}
         <div className="relative min-h-[400px] flex-1 overflow-hidden rounded-lg border border-arena-border/50 bg-arena-card/30 lg:min-h-0">
-          <div ref={messagesContainerRef} className="absolute inset-0 overflow-y-auto p-4 scrollbar-hide">
+          <div
+            ref={messagesContainerRef}
+            className="scrollbar-hide absolute inset-0 overflow-y-auto p-4"
+          >
             <div className="space-y-3">
               {messages.length === 0 && (
                 <div className="flex h-full items-center justify-center py-20 text-sm text-arena-text-dim">
@@ -888,7 +928,9 @@ export function ArenaPage() {
                   key={message.id}
                   message={message}
                   botName={
-                    message.position === "pro" ? proBot?.name || "Pro Bot" : conBot?.name || "Con Bot"
+                    message.position === "pro"
+                      ? proBot?.name || "Pro Bot"
+                      : conBot?.name || "Con Bot"
                   }
                 />
               ))}
@@ -902,7 +944,9 @@ export function ArenaPage() {
                         : "bg-arena-con/10 text-arena-con"
                     }`}
                   >
-                    <span className="font-medium">{typingBot === "pro" ? proBot?.name : conBot?.name}</span>
+                    <span className="font-medium">
+                      {typingBot === "pro" ? proBot?.name : conBot?.name}
+                    </span>
                     <span className="flex gap-1">
                       <span
                         className={`h-2 w-2 animate-bounce rounded-full ${
@@ -926,7 +970,6 @@ export function ArenaPage() {
                   </div>
                 </div>
               )}
-
             </div>
           </div>
         </div>

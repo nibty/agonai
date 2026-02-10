@@ -115,12 +115,8 @@
           "name": "bets_debate_id_debates_id_fk",
           "tableFrom": "bets",
           "tableTo": "debates",
-          "columnsFrom": [
-            "debate_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["debate_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -128,12 +124,8 @@
           "name": "bets_bettor_id_users_id_fk",
           "tableFrom": "bets",
           "tableTo": "users",
-          "columnsFrom": [
-            "bettor_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["bettor_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -233,12 +225,8 @@
           "name": "bots_owner_id_users_id_fk",
           "tableFrom": "bots",
           "tableTo": "users",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -303,12 +291,8 @@
           "name": "debate_messages_debate_id_debates_id_fk",
           "tableFrom": "debate_messages",
           "tableTo": "debates",
-          "columnsFrom": [
-            "debate_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["debate_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -316,12 +300,8 @@
           "name": "debate_messages_bot_id_bots_id_fk",
           "tableFrom": "debate_messages",
           "tableTo": "bots",
-          "columnsFrom": [
-            "bot_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["bot_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -434,12 +414,8 @@
           "name": "debates_topic_id_topics_id_fk",
           "tableFrom": "debates",
           "tableTo": "topics",
-          "columnsFrom": [
-            "topic_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["topic_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -447,12 +423,8 @@
           "name": "debates_pro_bot_id_bots_id_fk",
           "tableFrom": "debates",
           "tableTo": "bots",
-          "columnsFrom": [
-            "pro_bot_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["pro_bot_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -460,12 +432,8 @@
           "name": "debates_con_bot_id_bots_id_fk",
           "tableFrom": "debates",
           "tableTo": "bots",
-          "columnsFrom": [
-            "con_bot_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["con_bot_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -525,12 +493,8 @@
           "name": "round_results_debate_id_debates_id_fk",
           "tableFrom": "round_results",
           "tableTo": "debates",
-          "columnsFrom": [
-            "debate_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["debate_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -540,10 +504,7 @@
         "debate_round_unique": {
           "name": "debate_round_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "debate_id",
-            "round_index"
-          ]
+          "columns": ["debate_id", "round_index"]
         }
       },
       "policies": {},
@@ -585,12 +546,8 @@
           "name": "topic_votes_topic_id_topics_id_fk",
           "tableFrom": "topic_votes",
           "tableTo": "topics",
-          "columnsFrom": [
-            "topic_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["topic_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -598,12 +555,8 @@
           "name": "topic_votes_voter_id_users_id_fk",
           "tableFrom": "topic_votes",
           "tableTo": "users",
-          "columnsFrom": [
-            "voter_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["voter_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -613,10 +566,7 @@
         "topic_voter_unique": {
           "name": "topic_voter_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "topic_id",
-            "voter_id"
-          ]
+          "columns": ["topic_id", "voter_id"]
         }
       },
       "policies": {},
@@ -686,12 +636,8 @@
           "name": "topics_proposer_id_users_id_fk",
           "tableFrom": "topics",
           "tableTo": "users",
-          "columnsFrom": [
-            "proposer_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["proposer_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -767,9 +713,7 @@
         "users_wallet_address_unique": {
           "name": "users_wallet_address_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "wallet_address"
-          ]
+          "columns": ["wallet_address"]
         }
       },
       "policies": {},
@@ -817,12 +761,8 @@
           "name": "votes_debate_id_debates_id_fk",
           "tableFrom": "votes",
           "tableTo": "debates",
-          "columnsFrom": [
-            "debate_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["debate_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -830,12 +770,8 @@
           "name": "votes_voter_id_users_id_fk",
           "tableFrom": "votes",
           "tableTo": "users",
-          "columnsFrom": [
-            "voter_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["voter_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -845,11 +781,7 @@
         "debate_round_voter_unique": {
           "name": "debate_round_voter_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "debate_id",
-            "round_index",
-            "voter_id"
-          ]
+          "columns": ["debate_id", "round_index", "voter_id"]
         }
       },
       "policies": {},

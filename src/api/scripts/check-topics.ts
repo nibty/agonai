@@ -32,7 +32,9 @@ console.log("\nTop 15 topics by weight:");
 for (const t of result) {
   const score = t.upvotes - t.downvotes;
   const weight = (score + 5) / (t.timesUsed + 1);
-  console.log(`  [wt=${weight.toFixed(2)}] score=${score}, used=${t.timesUsed}: "${t.text.substring(0, 45)}"`);
+  console.log(
+    `  [wt=${weight.toFixed(2)}] score=${score}, used=${t.timesUsed}: "${t.text.substring(0, 45)}"`
+  );
 }
 
 await client.end();

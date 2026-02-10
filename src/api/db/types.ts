@@ -49,7 +49,10 @@ export type NewPendingBotResponse = InferInsertModel<typeof pendingBotResponses>
 // Public Types (for API responses - excludes sensitive fields)
 // ============================================================================
 
-export type BotPublic = Omit<Bot, "authTokenHash" | "authTokenEncrypted" | "endpoint" | "connectionToken"> & {
+export type BotPublic = Omit<
+  Bot,
+  "authTokenHash" | "authTokenEncrypted" | "endpoint" | "connectionToken"
+> & {
   type: "websocket";
 };
 

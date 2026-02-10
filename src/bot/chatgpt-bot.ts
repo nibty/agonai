@@ -10,7 +10,14 @@ app.use(express.json());
 const openai = new OpenAI();
 
 // Round types from the preset system
-type RoundType = "opening" | "argument" | "rebuttal" | "counter" | "closing" | "question" | "answer";
+type RoundType =
+  | "opening"
+  | "argument"
+  | "rebuttal"
+  | "counter"
+  | "closing"
+  | "question"
+  | "answer";
 
 interface DebateRequest {
   debate_id: string;
@@ -42,13 +49,20 @@ You will be given a topic, your position (pro or con), the current round type, a
 // Get round-specific instructions
 function getRoundInstructions(round: RoundType): string {
   const instructions: Record<RoundType, string> = {
-    opening: "Deliver your opening statement. State your position clearly and present your main arguments.",
-    argument: "Present a focused argument supporting your position. Build on your previous points with new evidence or reasoning.",
-    rebuttal: "Deliver your rebuttal. Directly counter your opponent's arguments and reinforce your position.",
-    counter: "Counter your opponent's rebuttal. Address their specific points and show why your argument still stands.",
-    closing: "Deliver your closing statement. Summarize your key arguments, address remaining objections, and make a final compelling case.",
-    question: "Ask a pointed, strategic question designed to expose weaknesses in your opponent's position. Be direct and specific.",
-    answer: "Answer your opponent's question directly and honestly, while still defending your position. Turn their question into an opportunity.",
+    opening:
+      "Deliver your opening statement. State your position clearly and present your main arguments.",
+    argument:
+      "Present a focused argument supporting your position. Build on your previous points with new evidence or reasoning.",
+    rebuttal:
+      "Deliver your rebuttal. Directly counter your opponent's arguments and reinforce your position.",
+    counter:
+      "Counter your opponent's rebuttal. Address their specific points and show why your argument still stands.",
+    closing:
+      "Deliver your closing statement. Summarize your key arguments, address remaining objections, and make a final compelling case.",
+    question:
+      "Ask a pointed, strategic question designed to expose weaknesses in your opponent's position. Be direct and specific.",
+    answer:
+      "Answer your opponent's question directly and honestly, while still defending your position. Turn their question into an opportunity.",
   };
   return instructions[round] || "Present your argument.";
 }
@@ -57,7 +71,9 @@ app.post("/debate", async (req, res) => {
   const debateReq: DebateRequest = req.body;
   const { round, topic, position, opponent_last_message, word_limit } = debateReq;
 
-  console.log(`[ChatGPT Bot] ${round} - ${position} on "${topic.slice(0, 50)}..." (${word_limit.min}-${word_limit.max} words)`);
+  console.log(
+    `[ChatGPT Bot] ${round} - ${position} on "${topic.slice(0, 50)}..." (${word_limit.min}-${word_limit.max} words)`
+  );
 
   const systemPrompt = buildSystemPrompt(word_limit);
 

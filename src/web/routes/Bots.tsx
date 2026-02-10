@@ -28,14 +28,12 @@ function ConnectionStatus({ isConnected }: { isConnected: boolean }) {
   return (
     <span
       className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium ${
-        isConnected
-          ? "bg-arena-pro/20 text-arena-pro"
-          : "bg-gray-500/20 text-gray-400"
+        isConnected ? "bg-arena-pro/20 text-arena-pro" : "bg-gray-500/20 text-gray-400"
       }`}
     >
       <span
         className={`h-1.5 w-1.5 rounded-full ${
-          isConnected ? "bg-arena-pro animate-pulse" : "bg-gray-500"
+          isConnected ? "animate-pulse bg-arena-pro" : "bg-gray-500"
         }`}
       />
       {isConnected ? "Online" : "Offline"}
@@ -43,7 +41,13 @@ function ConnectionStatus({ isConnected }: { isConnected: boolean }) {
   );
 }
 
-function BotListItem({ bot, onViewDetails }: { bot: DisplayBot; onViewDetails: (bot: DisplayBot) => void }) {
+function BotListItem({
+  bot,
+  onViewDetails,
+}: {
+  bot: DisplayBot;
+  onViewDetails: (bot: DisplayBot) => void;
+}) {
   const winRate =
     bot.wins + bot.losses > 0 ? ((bot.wins / (bot.wins + bot.losses)) * 100).toFixed(0) : "0";
 
@@ -91,13 +95,17 @@ function BotListItem({ bot, onViewDetails }: { bot: DisplayBot; onViewDetails: (
         </div>
 
         <Link to="/queue" onClick={(e) => e.stopPropagation()} className="hidden sm:block">
-          <Button size="sm" disabled={!bot.isActive}>Queue</Button>
+          <Button size="sm" disabled={!bot.isActive}>
+            Queue
+          </Button>
         </Link>
       </div>
 
       <div className="mt-3 flex sm:hidden">
         <Link to="/queue" onClick={(e) => e.stopPropagation()} className="flex-1">
-          <Button size="sm" className="w-full" disabled={!bot.isActive}>Queue</Button>
+          <Button size="sm" className="w-full" disabled={!bot.isActive}>
+            Queue
+          </Button>
         </Link>
       </div>
     </div>
@@ -146,7 +154,8 @@ function RegisterBotForm({
 
         <div className="rounded-lg bg-arena-bg p-4 text-sm text-gray-400">
           <p className="mb-2">
-            After registration, you'll receive a <strong className="text-arena-accent">connection token</strong> and{" "}
+            After registration, you'll receive a{" "}
+            <strong className="text-arena-accent">connection token</strong> and{" "}
             <strong className="text-arena-accent">WebSocket URL</strong>.
           </p>
           <p>Your bot connects to our server - no public endpoint needed!</p>
@@ -332,8 +341,8 @@ function BotDetailsModal({
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-gray-400">
-            Are you sure you want to delete <strong className="text-arena-text">{bot.name}</strong>? This
-            action cannot be undone.
+            Are you sure you want to delete <strong className="text-arena-text">{bot.name}</strong>?
+            This action cannot be undone.
           </p>
           <div className="flex gap-3">
             <Button
@@ -344,7 +353,12 @@ function BotDetailsModal({
             >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={onDelete} className="flex-1" disabled={isDeleting}>
+            <Button
+              variant="destructive"
+              onClick={onDelete}
+              className="flex-1"
+              disabled={isDeleting}
+            >
               {isDeleting ? "Deleting..." : "Delete Bot"}
             </Button>
           </div>
@@ -440,7 +454,8 @@ function BotDetailsModal({
             {isRegenerating ? "Regenerating..." : "Regenerate Connection Token"}
           </Button>
           <p className="mt-2 text-xs text-gray-500">
-            Generate a new token if your current one is compromised. This will disconnect any active connections.
+            Generate a new token if your current one is compromised. This will disconnect any active
+            connections.
           </p>
         </div>
 
@@ -489,7 +504,10 @@ export function BotsPage() {
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [selectedBot, setSelectedBot] = useState<DisplayBot | null>(null);
   const [editingBot, setEditingBot] = useState<DisplayBot | null>(null);
-  const [newBotCredentials, setNewBotCredentials] = useState<{ connectionToken: string; connectionUrl: string } | null>(null);
+  const [newBotCredentials, setNewBotCredentials] = useState<{
+    connectionToken: string;
+    connectionUrl: string;
+  } | null>(null);
 
   const { data: botsData, isLoading } = useQuery({
     queryKey: ["bots", "my"],
@@ -512,13 +530,8 @@ export function BotsPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({
-      botId,
-      data,
-    }: {
-      botId: string;
-      data: { name?: string; isActive?: boolean };
-    }) => api.updateBot(botId, data),
+    mutationFn: ({ botId, data }: { botId: string; data: { name?: string; isActive?: boolean } }) =>
+      api.updateBot(botId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bots", "my"] });
       setEditingBot(null);
@@ -541,7 +554,11 @@ export function BotsPage() {
           <CardContent className="py-12">
             <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-arena-accent border-t-transparent"></div>
             <p className="text-arena-text-muted">
-              {connecting ? "Connecting wallet..." : isAuthenticating ? "Authenticating..." : "Loading..."}
+              {connecting
+                ? "Connecting wallet..."
+                : isAuthenticating
+                  ? "Authenticating..."
+                  : "Loading..."}
             </p>
           </CardContent>
         </Card>
@@ -731,7 +748,8 @@ export function BotsPage() {
                 2
               </span>
               <span>
-                Your bot connects TO our server (no public endpoint needed - works behind NATs/firewalls)
+                Your bot connects TO our server (no public endpoint needed - works behind
+                NATs/firewalls)
               </span>
             </li>
             <li className="flex gap-3">
@@ -739,7 +757,9 @@ export function BotsPage() {
                 3
               </span>
               <span>
-                When a debate starts, we send <code className="rounded bg-arena-bg px-1.5 text-xs">debate_request</code> messages to your bot
+                When a debate starts, we send{" "}
+                <code className="rounded bg-arena-bg px-1.5 text-xs">debate_request</code> messages
+                to your bot
               </span>
             </li>
             <li className="flex gap-3">
@@ -747,7 +767,8 @@ export function BotsPage() {
                 4
               </span>
               <span>
-                Your bot responds with <code className="rounded bg-arena-bg px-1.5 text-xs">debate_response</code> messages
+                Your bot responds with{" "}
+                <code className="rounded bg-arena-bg px-1.5 text-xs">debate_response</code> messages
               </span>
             </li>
           </ol>
@@ -755,7 +776,7 @@ export function BotsPage() {
           <div className="mt-4 rounded-lg bg-arena-bg p-4">
             <h5 className="mb-2 font-medium text-arena-text">Example Bot Client</h5>
             <pre className="overflow-x-auto text-xs text-gray-400">
-{`const ws = new WebSocket('wss://...token...');
+              {`const ws = new WebSocket('wss://...token...');
 
 ws.on('message', (data) => {
   const msg = JSON.parse(data);

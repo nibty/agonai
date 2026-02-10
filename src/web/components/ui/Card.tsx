@@ -30,7 +30,7 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
       ref={ref}
       className={cn(
         // Override Flowbite defaults with theme colors
-        "!bg-arena-card !border-arena-border",
+        "!border-arena-border !bg-arena-card",
         variantClasses[variant],
         paddingClasses[padding],
         className

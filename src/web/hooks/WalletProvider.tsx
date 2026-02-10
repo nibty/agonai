@@ -72,7 +72,18 @@ function WalletContextProvider({ children }: WalletContextProviderProps) {
       select,
       userInitiatedConnect,
     }),
-    [connected, connecting, publicKey, wallet, connection, connect, disconnect, signMessage, select, userInitiatedConnect]
+    [
+      connected,
+      connecting,
+      publicKey,
+      wallet,
+      connection,
+      connect,
+      disconnect,
+      signMessage,
+      select,
+      userInitiatedConnect,
+    ]
   );
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;

@@ -15,7 +15,12 @@ import type {
 import { getPreset, getDefaultPreset } from "../types/index.js";
 import { botRunner } from "./botRunner.js";
 import { calculateMatchEloChanges } from "./elo.js";
-import { debateRepository, botRepository, betRepository, userRepository } from "../repositories/index.js";
+import {
+  debateRepository,
+  botRepository,
+  betRepository,
+  userRepository,
+} from "../repositories/index.js";
 import { decryptToken } from "../repositories/botRepository.js";
 import type { Bot, Topic } from "../db/types.js";
 
@@ -224,7 +229,11 @@ export class DebateOrchestratorService {
   /**
    * Run a single round of the debate
    */
-  private async runRound(state: DebateState, roundIndex: number, roundConfig: RoundConfig): Promise<void> {
+  private async runRound(
+    state: DebateState,
+    roundIndex: number,
+    roundConfig: RoundConfig
+  ): Promise<void> {
     const { timeLimit, speaker, exchanges = 1 } = roundConfig;
 
     // Broadcast round started
@@ -355,7 +364,11 @@ export class DebateOrchestratorService {
   /**
    * Run the voting phase for a round
    */
-  private async runVotingPhase(state: DebateState, roundIndex: number, roundConfig: RoundConfig): Promise<void> {
+  private async runVotingPhase(
+    state: DebateState,
+    roundIndex: number,
+    roundConfig: RoundConfig
+  ): Promise<void> {
     const voteWindow = state.preset.voteWindow;
 
     // Initialize votes for this round
@@ -381,7 +394,10 @@ export class DebateOrchestratorService {
       await this.sleep(updateInterval);
 
       // Get vote counts from database
-      const { proVotes, conVotes } = await debateRepository.countRoundVotes(state.debate.id, roundIndex);
+      const { proVotes, conVotes } = await debateRepository.countRoundVotes(
+        state.debate.id,
+        roundIndex
+      );
 
       const updatePayload: VoteUpdatePayload = {
         round: roundConfig.name,
@@ -397,10 +413,14 @@ export class DebateOrchestratorService {
     }
 
     // Tally final votes from database
-    const { proVotes, conVotes } = await debateRepository.countRoundVotes(state.debate.id, roundIndex);
+    const { proVotes, conVotes } = await debateRepository.countRoundVotes(
+      state.debate.id,
+      roundIndex
+    );
 
     // Determine winner (null if tie)
-    const winner: DebatePosition | null = proVotes > conVotes ? "pro" : conVotes > proVotes ? "con" : null;
+    const winner: DebatePosition | null =
+      proVotes > conVotes ? "pro" : conVotes > proVotes ? "con" : null;
 
     const result = {
       roundIndex,
@@ -489,10 +509,14 @@ export class DebateOrchestratorService {
     }
 
     // Determine overall winner (null if tied)
-    const winner: DebatePosition | null = proWins > conWins ? "pro" : conWins > proWins ? "con" : null;
+    const winner: DebatePosition | null =
+      proWins > conWins ? "pro" : conWins > proWins ? "con" : null;
 
     // Calculate ELO changes (only if there's a winner)
-    let eloChanges = { winner: { oldElo: 0, newElo: 0, change: 0 }, loser: { oldElo: 0, newElo: 0, change: 0 } };
+    let eloChanges = {
+      winner: { oldElo: 0, newElo: 0, change: 0 },
+      loser: { oldElo: 0, newElo: 0, change: 0 },
+    };
     if (winner) {
       const winnerBot = winner === "pro" ? state.proBot : state.conBot;
       const loserBot = winner === "pro" ? state.conBot : state.proBot;
@@ -525,13 +549,15 @@ export class DebateOrchestratorService {
     const endPayload: DebateEndedPayload = {
       winner,
       finalScore: { pro: proWins, con: conWins },
-      eloChanges: winner ? {
-        proBot: winner === "pro" ? eloChanges.winner : eloChanges.loser,
-        conBot: winner === "con" ? eloChanges.winner : eloChanges.loser,
-      } : {
-        proBot: { oldElo: state.proBot.elo, newElo: state.proBot.elo, change: 0 },
-        conBot: { oldElo: state.conBot.elo, newElo: state.conBot.elo, change: 0 },
-      },
+      eloChanges: winner
+        ? {
+            proBot: winner === "pro" ? eloChanges.winner : eloChanges.loser,
+            conBot: winner === "con" ? eloChanges.winner : eloChanges.loser,
+          }
+        : {
+            proBot: { oldElo: state.proBot.elo, newElo: state.proBot.elo, change: 0 },
+            conBot: { oldElo: state.conBot.elo, newElo: state.conBot.elo, change: 0 },
+          },
       payouts,
     };
 
@@ -716,12 +742,14 @@ export class DebateOrchestratorService {
   /**
    * Get all active debates with bot info
    */
-  getActiveDebates(): Array<DebateState["debate"] & {
-    proBotName: string;
-    proBotElo: number;
-    conBotName: string;
-    conBotElo: number;
-  }> {
+  getActiveDebates(): Array<
+    DebateState["debate"] & {
+      proBotName: string;
+      proBotElo: number;
+      conBotName: string;
+      conBotElo: number;
+    }
+  > {
     return Array.from(this.activeDebates.values()).map((s) => ({
       ...s.debate,
       proBotName: s.proBot.name,

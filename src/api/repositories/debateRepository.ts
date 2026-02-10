@@ -31,11 +31,7 @@ export const debateRepository = {
   },
 
   async update(id: number, data: Partial<NewDebate>): Promise<Debate | undefined> {
-    const result = await db
-      .update(debates)
-      .set(data)
-      .where(eq(debates.id, id))
-      .returning();
+    const result = await db.update(debates).set(data).where(eq(debates.id, id)).returning();
     return result[0];
   },
 
@@ -48,11 +44,7 @@ export const debateRepository = {
   },
 
   async getRecent(limit = 20): Promise<Debate[]> {
-    return db
-      .select()
-      .from(debates)
-      .orderBy(desc(debates.createdAt))
-      .limit(limit);
+    return db.select().from(debates).orderBy(desc(debates.createdAt)).limit(limit);
   },
 
   // ============================================================================
@@ -69,10 +61,7 @@ export const debateRepository = {
   },
 
   async getRoundResults(debateId: number): Promise<RoundResult[]> {
-    return db
-      .select()
-      .from(roundResults)
-      .where(eq(roundResults.debateId, debateId));
+    return db.select().from(roundResults).where(eq(roundResults.debateId, debateId));
   },
 
   async updateRoundResult(
@@ -195,10 +184,7 @@ export const debateRepository = {
     const debate = await this.findById(id);
     if (!debate) return null;
 
-    const [results, messages] = await Promise.all([
-      this.getRoundResults(id),
-      this.getMessages(id),
-    ]);
+    const [results, messages] = await Promise.all([this.getRoundResults(id), this.getMessages(id)]);
 
     return {
       debate,

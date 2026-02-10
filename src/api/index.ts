@@ -66,55 +66,63 @@ function startMatchmaking(): void {
       }
 
       const matches = await matchmaking.runMatchmaking(async (entry1, entry2) => {
-      console.log(`[Matchmaking] Creating debate between bot ${entry1.botId} and ${entry2.botId}`);
+        console.log(
+          `[Matchmaking] Creating debate between bot ${entry1.botId} and ${entry2.botId}`
+        );
 
-      // Get bots from repository
-      const bot1 = await botRepository.findById(entry1.botId);
-      const bot2 = await botRepository.findById(entry2.botId);
+        // Get bots from repository
+        const bot1 = await botRepository.findById(entry1.botId);
+        const bot2 = await botRepository.findById(entry2.botId);
 
-      if (!bot1 || !bot2) {
-        // Clean up stale queue entries for deleted bots
-        if (!bot1) {
-          console.warn(`[Matchmaking] Bot ${entry1.botId} not found, removing from queue`);
-          matchmaking.removeFromQueue(entry1.botId);
+        if (!bot1 || !bot2) {
+          // Clean up stale queue entries for deleted bots
+          if (!bot1) {
+            console.warn(`[Matchmaking] Bot ${entry1.botId} not found, removing from queue`);
+            matchmaking.removeFromQueue(entry1.botId);
+          }
+          if (!bot2) {
+            console.warn(`[Matchmaking] Bot ${entry2.botId} not found, removing from queue`);
+            matchmaking.removeFromQueue(entry2.botId);
+          }
+          throw new Error("Bot not found during matchmaking (stale entries cleaned)");
         }
-        if (!bot2) {
-          console.warn(`[Matchmaking] Bot ${entry2.botId} not found, removing from queue`);
-          matchmaking.removeFromQueue(entry2.botId);
+
+        // Get random topic
+        const topic = await topicRepository.getRandomTopic();
+        if (!topic) {
+          console.error("[Matchmaking] No topics available!");
+          throw new Error("No topics available");
         }
-        throw new Error("Bot not found during matchmaking (stale entries cleaned)");
+
+        await topicRepository.markUsed(topic.id);
+
+        // Randomly assign positions
+        const [proBot, conBot] = Math.random() > 0.5 ? [bot1, bot2] : [bot2, bot1];
+
+        // Create debate with the matched preset
+        const stake = Math.min(entry1.stake, entry2.stake);
+        const presetId = entry1.presetId; // Both entries have same preset (matched by preset)
+        const debate = await debateOrchestrator.createDebate(
+          proBot,
+          conBot,
+          topic,
+          stake,
+          presetId
+        );
+
+        // Start debate in background
+        debateOrchestrator.startDebate(debate, proBot, conBot, topic, (debateId, message) =>
+          wsServer.broadcast(debateId, message)
+        );
+
+        console.log(`Match created: ${proBot.name} vs ${conBot.name} on "${topic.text}"`);
+
+        return debate;
+      });
+
+      if (matches.length > 0) {
+        console.log(`Matchmaking: created ${matches.length} matches`);
       }
-
-      // Get random topic
-      const topic = await topicRepository.getRandomTopic();
-      if (!topic) {
-        console.error("[Matchmaking] No topics available!");
-        throw new Error("No topics available");
-      }
-
-      await topicRepository.markUsed(topic.id);
-
-      // Randomly assign positions
-      const [proBot, conBot] = Math.random() > 0.5 ? [bot1, bot2] : [bot2, bot1];
-
-      // Create debate with the matched preset
-      const stake = Math.min(entry1.stake, entry2.stake);
-      const presetId = entry1.presetId; // Both entries have same preset (matched by preset)
-      const debate = await debateOrchestrator.createDebate(proBot, conBot, topic, stake, presetId);
-
-      // Start debate in background
-      debateOrchestrator.startDebate(debate, proBot, conBot, topic, (debateId, message) =>
-        wsServer.broadcast(debateId, message)
-      );
-
-      console.log(`Match created: ${proBot.name} vs ${conBot.name} on "${topic.text}"`);
-
-      return debate;
-    });
-
-    if (matches.length > 0) {
-      console.log(`Matchmaking: created ${matches.length} matches`);
-    }
     } catch (error) {
       console.error("[Matchmaking] Error in matchmaking loop:", error);
     }

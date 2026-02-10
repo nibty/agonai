@@ -28,7 +28,8 @@ const Progress = forwardRef<HTMLDivElement, ProgressProps>(
       size={size}
       color={variantToFlowbiteColor[variant]}
       className={cn(
-        variant === "gradient" && "[&_div]:bg-gradient-to-r [&_div]:from-arena-accent [&_div]:to-purple-500",
+        variant === "gradient" &&
+          "[&_div]:bg-gradient-to-r [&_div]:from-arena-accent [&_div]:to-purple-500",
         className
       )}
       {...props}

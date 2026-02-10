@@ -272,7 +272,9 @@ export function ProfilePage() {
             </Avatar>
             <div className="flex-1 text-center md:text-left">
               <div className="mb-2 flex items-center justify-center gap-3 md:justify-start">
-                <h1 className="text-2xl font-bold text-arena-text">{user.username || shortAddress}</h1>
+                <h1 className="text-2xl font-bold text-arena-text">
+                  {user.username || shortAddress}
+                </h1>
                 <RankBadge rank={user.rank} size="lg" />
               </div>
               <p className="mb-4 text-gray-400">{shortAddress}</p>

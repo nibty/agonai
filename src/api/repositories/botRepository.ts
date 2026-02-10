@@ -88,14 +88,13 @@ export const botRepository = {
     return bot;
   },
 
-  async update(id: number, data: Partial<Pick<NewBot, "name" | "isActive">>): Promise<Bot | undefined> {
+  async update(
+    id: number,
+    data: Partial<Pick<NewBot, "name" | "isActive">>
+  ): Promise<Bot | undefined> {
     const updateData = { ...data, updatedAt: new Date() };
 
-    const result = await db
-      .update(bots)
-      .set(updateData)
-      .where(eq(bots.id, id))
-      .returning();
+    const result = await db.update(bots).set(updateData).where(eq(bots.id, id)).returning();
     return result[0];
   },
 

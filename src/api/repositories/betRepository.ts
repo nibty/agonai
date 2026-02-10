@@ -60,10 +60,7 @@ export const betRepository = {
     if (winner === null) {
       for (const bet of debateBets) {
         payouts.push({ bettorId: bet.bettorId, amount: bet.amount });
-        await db
-          .update(bets)
-          .set({ settled: true, payout: bet.amount })
-          .where(eq(bets.id, bet.id));
+        await db.update(bets).set({ settled: true, payout: bet.amount }).where(eq(bets.id, bet.id));
       }
       return payouts;
     }
@@ -95,10 +92,7 @@ export const betRepository = {
       }
 
       // Update bet record
-      await db
-        .update(bets)
-        .set({ settled: true, payout })
-        .where(eq(bets.id, bet.id));
+      await db.update(bets).set({ settled: true, payout }).where(eq(bets.id, bet.id));
     }
 
     return payouts;

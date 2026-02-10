@@ -241,7 +241,8 @@ export const PRESETS: Record<string, DebatePreset> = {
     name: "Escalation",
     description: "Starts casual, gets increasingly formal and intense.",
     bestFor: "Building tension and variety within a single debate",
-    structure: "Word limits grow each round; early rounds loose, final round requires structured arguments",
+    structure:
+      "Word limits grow each round; early rounds loose, final round requires structured arguments",
     prepTime: 20,
     voteWindow: 50,
     winCondition: "Win 4 of 6 rounds",
@@ -337,7 +338,7 @@ export function estimateDuration(preset: DebatePreset): number {
     // For "both" speakers, double the time (pro + con)
     const multiplier = r.speaker === "both" ? 2 : 1;
     const exchanges = r.exchanges ?? 1;
-    return sum + (r.timeLimit * multiplier * exchanges) + preset.voteWindow;
+    return sum + r.timeLimit * multiplier * exchanges + preset.voteWindow;
   }, 0);
 
   return preset.prepTime + roundTime;

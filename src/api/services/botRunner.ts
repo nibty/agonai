@@ -1,9 +1,4 @@
-import type {
-  BotRequest,
-  BotResponse,
-  DebatePosition,
-  RoundConfig,
-} from "../types/index.js";
+import type { BotRequest, BotResponse, DebatePosition, RoundConfig } from "../types/index.js";
 import { BOT_TIMEOUT_SECONDS } from "../types/index.js";
 import { getBotConnectionServer } from "../ws/botConnectionServer.js";
 

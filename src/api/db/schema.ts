@@ -163,7 +163,9 @@ export const votes = pgTable(
       .references(() => users.id),
     choice: varchar("choice", { length: 3 }).notNull(),
   },
-  (table) => [unique("debate_round_voter_unique").on(table.debateId, table.roundIndex, table.voterId)]
+  (table) => [
+    unique("debate_round_voter_unique").on(table.debateId, table.roundIndex, table.voterId),
+  ]
 );
 
 // ============================================================================

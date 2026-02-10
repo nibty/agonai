@@ -55,8 +55,22 @@ export function App() {
                   <Route path="/" element={<HomePage />} />
                   <Route path="/arena/:debateId" element={<ArenaPage />} />
                   <Route path="/queue" element={<QueuePage />} />
-                  <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-                  <Route path="/bots" element={<ProtectedRoute><BotsPage /></ProtectedRoute>} />
+                  <Route
+                    path="/profile"
+                    element={
+                      <ProtectedRoute>
+                        <ProfilePage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/bots"
+                    element={
+                      <ProtectedRoute>
+                        <BotsPage />
+                      </ProtectedRoute>
+                    }
+                  />
                   <Route path="/topics" element={<TopicsPage />} />
                   <Route path="/leaderboard" element={<LeaderboardPage />} />
                 </Route>

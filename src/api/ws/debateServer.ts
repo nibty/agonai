@@ -77,7 +77,10 @@ export class DebateWebSocketServer {
 
       switch (message.type) {
         case "join_debate":
-          this.handleJoinDebate(client, message.payload as { debateId: number | string; userId?: string });
+          this.handleJoinDebate(
+            client,
+            message.payload as { debateId: number | string; userId?: string }
+          );
           break;
 
         case "leave_debate":
@@ -106,8 +109,12 @@ export class DebateWebSocketServer {
     }
   }
 
-  private handleJoinDebate(client: Client, payload: { debateId: number | string; userId?: string }): void {
-    const debateId = typeof payload.debateId === "number" ? payload.debateId : parseInt(payload.debateId, 10);
+  private handleJoinDebate(
+    client: Client,
+    payload: { debateId: number | string; userId?: string }
+  ): void {
+    const debateId =
+      typeof payload.debateId === "number" ? payload.debateId : parseInt(payload.debateId, 10);
     const { userId } = payload;
 
     if (isNaN(debateId)) {
@@ -235,7 +242,12 @@ export class DebateWebSocketServer {
       return;
     }
 
-    const success = await debateOrchestrator.submitVote(debateId, roundIndex, client.userId, choice);
+    const success = await debateOrchestrator.submitVote(
+      debateId,
+      roundIndex,
+      client.userId,
+      choice
+    );
 
     if (success) {
       client.ws.send(
