@@ -214,8 +214,12 @@ router.post("/bots", authMiddleware, async (req: AuthenticatedRequest, res: Resp
   // Create bot
   const bot = await botRepository.create(req.userId, name, endpoint, authToken);
 
-  // Test the bot endpoint
-  const testResult = await botRunner.testBot(bot);
+  // Test the bot endpoint (include auth token for signed test request)
+  const testResult = await botRunner.testBot({
+    id: bot.id,
+    endpoint: bot.endpoint,
+    authToken: authToken ?? null,
+  });
   if (!testResult.success) {
     // Delete the bot if test fails
     await botRepository.delete(bot.id);

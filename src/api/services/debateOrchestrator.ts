@@ -16,6 +16,7 @@ import { getPreset, getDefaultPreset } from "../types/index.js";
 import { botRunner } from "./botRunner.js";
 import { calculateMatchEloChanges } from "./elo.js";
 import { debateRepository, botRepository, betRepository, userRepository } from "../repositories/index.js";
+import { decryptToken } from "../repositories/botRepository.js";
 import type { Bot, Topic } from "../db/types.js";
 
 type BroadcastFn = (debateId: number, message: WSMessage) => void;
@@ -292,7 +293,15 @@ export class DebateOrchestratorService {
       state.messages
     );
 
-    const result = await botRunner.callBot(bot, request, timeLimit * 1000);
+    // Decrypt auth token for HMAC signing (if configured)
+    const authToken = bot.authTokenEncrypted ? decryptToken(bot.authTokenEncrypted) : null;
+    const botForRunner = {
+      id: bot.id,
+      endpoint: bot.endpoint,
+      authToken,
+    };
+
+    const result = await botRunner.callBot(botForRunner, request, timeLimit * 1000);
 
     let content: string;
     if (result.success && result.response) {

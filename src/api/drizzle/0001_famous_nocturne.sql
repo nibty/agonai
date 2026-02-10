@@ -1,0 +1,1 @@
+ALTER TABLE "bots" ADD COLUMN "auth_token_encrypted" varchar(500);

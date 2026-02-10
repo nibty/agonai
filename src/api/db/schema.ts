@@ -36,7 +36,8 @@ export const bots = pgTable("bots", {
     .references(() => users.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 50 }).notNull(),
   endpoint: varchar("endpoint", { length: 500 }).notNull(),
-  authTokenHash: varchar("auth_token_hash", { length: 64 }),
+  authTokenHash: varchar("auth_token_hash", { length: 64 }), // For verifying bot-to-platform auth
+  authTokenEncrypted: varchar("auth_token_encrypted", { length: 500 }), // For platform-to-bot HMAC signing
   elo: integer("elo").notNull().default(1200),
   wins: integer("wins").notNull().default(0),
   losses: integer("losses").notNull().default(0),

@@ -1,11 +1,41 @@
 import { eq, desc, sql } from "drizzle-orm";
 import { db, bots } from "../db/index.js";
 import type { Bot, NewBot, BotPublic } from "../db/types.js";
-import { createHash } from "crypto";
+import { createHash, createCipheriv, createDecipheriv, randomBytes } from "crypto";
+
+// Encryption key from environment (32 bytes for AES-256)
+// In production, use a secure key management service
+const ENCRYPTION_KEY = process.env.BOT_TOKEN_ENCRYPTION_KEY || "default-dev-key-change-in-prod!!"; // 32 chars
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
+
+function encryptToken(token: string): string {
+  const key = Buffer.from(ENCRYPTION_KEY.padEnd(32).slice(0, 32));
+  const iv = randomBytes(16);
+  const cipher = createCipheriv("aes-256-cbc", key, iv);
+  let encrypted = cipher.update(token, "utf8", "hex");
+  encrypted += cipher.final("hex");
+  return iv.toString("hex") + ":" + encrypted;
+}
+
+function decryptToken(encrypted: string): string | null {
+  try {
+    const [ivHex, encryptedData] = encrypted.split(":");
+    if (!ivHex || !encryptedData) return null;
+    const key = Buffer.from(ENCRYPTION_KEY.padEnd(32).slice(0, 32));
+    const iv = Buffer.from(ivHex, "hex");
+    const decipher = createDecipheriv("aes-256-cbc", key, iv);
+    let decrypted = decipher.update(encryptedData, "hex", "utf8");
+    decrypted += decipher.final("utf8");
+    return decrypted;
+  } catch {
+    return null;
+  }
+}
+
+export { decryptToken };
 
 function toPublic(bot: Bot): BotPublic {
   return {
@@ -49,6 +79,7 @@ export const botRepository = {
         name,
         endpoint,
         authTokenHash: authToken ? hashToken(authToken) : null,
+        authTokenEncrypted: authToken ? encryptToken(authToken) : null,
       })
       .returning();
 
@@ -59,11 +90,12 @@ export const botRepository = {
     return bot;
   },
 
-  async update(id: number, data: Partial<Omit<NewBot, "authTokenHash">> & { authToken?: string }): Promise<Bot | undefined> {
+  async update(id: number, data: Partial<Omit<NewBot, "authTokenHash" | "authTokenEncrypted">> & { authToken?: string }): Promise<Bot | undefined> {
     const updateData: Partial<NewBot> = { ...data, updatedAt: new Date() };
 
     if (data.authToken) {
       updateData.authTokenHash = hashToken(data.authToken);
+      updateData.authTokenEncrypted = encryptToken(data.authToken);
       delete (updateData as Record<string, unknown>)["authToken"];
     }
 

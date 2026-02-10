@@ -46,7 +46,7 @@ export type NewAuthChallenge = InferInsertModel<typeof authChallenges>;
 // Public Types (for API responses - excludes sensitive fields)
 // ============================================================================
 
-export type BotPublic = Omit<Bot, "authTokenHash" | "endpoint">;
+export type BotPublic = Omit<Bot, "authTokenHash" | "authTokenEncrypted" | "endpoint">;
 
 export type UserPublic = Omit<User, "updatedAt">;
 

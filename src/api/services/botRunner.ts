@@ -1,3 +1,4 @@
+import { createHmac } from "crypto";
 import type {
   BotRequest,
   BotResponse,
@@ -10,6 +11,7 @@ import { BotResponseSchema, BOT_TIMEOUT_SECONDS } from "../types/index.js";
 interface BotForRunner {
   id: number;
   endpoint: string;
+  authToken?: string | null; // Decrypted auth token for HMAC signing
 }
 
 // Message interface for building requests
@@ -31,9 +33,19 @@ interface BotCallResult {
  *
  * Handles calling external bot endpoints with timeouts and error handling.
  * Validates responses and enforces time limits.
+ * Signs requests with HMAC-SHA256 when auth token is available.
  */
 export class BotRunnerService {
   private readonly defaultTimeout = BOT_TIMEOUT_SECONDS * 1000;
+
+  /**
+   * Create HMAC-SHA256 signature for a request
+   * Signature = HMAC(key=authToken, message=timestamp.body)
+   */
+  private createSignature(authToken: string, timestamp: number, body: string): string {
+    const message = `${timestamp}.${body}`;
+    return createHmac("sha256", authToken).update(message).digest("hex");
+  }
 
   /**
    * Call a bot's endpoint and get its response
@@ -49,13 +61,25 @@ export class BotRunnerService {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeout);
 
+      const body = JSON.stringify(request);
+      const timestamp = Math.floor(Date.now() / 1000);
+
+      // Build headers with optional HMAC signature
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        "X-Debate-ID": request.debate_id,
+        "X-Timestamp": String(timestamp),
+      };
+
+      // Add signature if bot has an auth token configured
+      if (bot.authToken) {
+        headers["X-Signature"] = this.createSignature(bot.authToken, timestamp, body);
+      }
+
       const response = await fetch(bot.endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debate-ID": request.debate_id,
-        },
-        body: JSON.stringify(request),
+        headers,
+        body,
         signal: controller.signal,
       });
 
@@ -155,6 +179,7 @@ export class BotRunnerService {
 
   /**
    * Test a bot endpoint to verify it's working
+   * @param bot - Bot with endpoint and optional authToken for signed requests
    */
   async testBot(bot: BotForRunner): Promise<{ success: boolean; error?: string }> {
     const testRequest: BotRequest = {
@@ -169,6 +194,7 @@ export class BotRunnerService {
       messages_so_far: [],
     };
 
+    // Test with signature if auth token provided
     const result = await this.callBot(bot, testRequest, 30000); // 30s timeout for test
 
     if (result.success) {
