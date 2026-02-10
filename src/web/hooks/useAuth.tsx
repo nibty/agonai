@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 interface AuthState {
   isAuthenticated: boolean;
   isAuthenticating: boolean;
+  isInitialized: boolean; // True once initial auth check is complete
   userId: string | null;
   error: string | null;
   authenticate: () => Promise<void>;
@@ -17,6 +18,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { connected, publicKey, signMessage, disconnect, userInitiatedConnect } = useWallet();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const hasTriedAutoAuth = useRef(false); // Only auto-auth once per session
@@ -88,7 +90,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Token invalid, clear it
           localStorage.removeItem("auth_token");
           api.setAuthToken(null);
+        })
+        .finally(() => {
+          setIsInitialized(true);
         });
+    } else {
+      setIsInitialized(true);
     }
   }, []);
 
@@ -126,6 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         isAuthenticated,
         isAuthenticating,
+        isInitialized,
         userId,
         error,
         authenticate,

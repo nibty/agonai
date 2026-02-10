@@ -13,10 +13,18 @@ import { LeaderboardPage } from "@/routes/Leaderboard";
 import { arenaTheme } from "@/lib/flowbiteTheme";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isAuthenticating } = useAuth();
+  const { isAuthenticated, isAuthenticating, isInitialized } = useAuth();
 
-  if (isAuthenticating) {
-    return <div className="flex min-h-[50vh] items-center justify-center text-gray-400">Authenticating...</div>;
+  // Wait for initial auth check to complete
+  if (!isInitialized || isAuthenticating) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-arena-accent border-t-transparent"></div>
+          <p className="text-arena-text-muted">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
