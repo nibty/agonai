@@ -675,21 +675,25 @@ export function ArenaPage() {
             <div className="mt-3 border-t border-arena-border/30 pt-3">
               <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-arena-text-dim">Rounds</div>
               <div className="space-y-1">
-                {preset.rounds.map((round, i) => (
-                  <div
-                    key={i}
-                    className={`flex items-center justify-between rounded px-2 py-1 text-xs ${
-                      debate?.currentRoundIndex === i && debate?.status === "in_progress"
-                        ? "bg-arena-accent/20 text-arena-accent"
-                        : i < (debate?.currentRoundIndex ?? 0)
-                          ? "text-arena-text-muted line-through opacity-50"
-                          : "text-arena-text-dim"
-                    }`}
-                  >
-                    <span>{round.name}</span>
-                    <span className="text-[10px]">{round.wordLimit.min}-{round.wordLimit.max}w</span>
-                  </div>
-                ))}
+                {preset.rounds.map((round, i) => {
+                  const isCompleted = debate?.status === "completed" || i < (debate?.currentRoundIndex ?? 0);
+                  const isCurrent = debate?.currentRoundIndex === i && debate?.status === "in_progress";
+                  return (
+                    <div
+                      key={i}
+                      className={`flex items-center justify-between rounded px-2 py-1 text-xs ${
+                        isCurrent
+                          ? "bg-arena-accent/20 text-arena-accent"
+                          : isCompleted
+                            ? "text-arena-text-muted line-through opacity-50"
+                            : "text-arena-text-dim"
+                      }`}
+                    >
+                      <span>{round.name}</span>
+                      <span className="text-[10px]">{round.wordLimit.min}-{round.wordLimit.max}w</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
