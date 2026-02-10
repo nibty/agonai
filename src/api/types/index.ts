@@ -345,7 +345,7 @@ export interface ErrorPayload {
 // API Request/Response Types
 // ============================================================================
 
-export const BotTypeSchema = z.enum(["http", "openclaw"]).default("http");
+export const BotTypeSchema = z.enum(["http", "openclaw", "websocket"]).default("http");
 export type BotType = z.infer<typeof BotTypeSchema>;
 
 export const RegisterBotSchema = z.object({

@@ -35,10 +35,11 @@ export const bots = pgTable("bots", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 50 }).notNull(),
-  type: varchar("type", { length: 20 }).notNull().default("http"), // "http" or "openclaw"
+  type: varchar("type", { length: 20 }).notNull().default("http"), // "http", "openclaw", or "websocket"
   endpoint: varchar("endpoint", { length: 500 }).notNull(),
   authTokenHash: varchar("auth_token_hash", { length: 64 }), // For verifying bot-to-platform auth
   authTokenEncrypted: varchar("auth_token_encrypted", { length: 500 }), // For platform-to-bot HMAC signing
+  connectionToken: varchar("connection_token", { length: 64 }).unique(), // For WebSocket bot authentication
   elo: integer("elo").notNull().default(1200),
   wins: integer("wins").notNull().default(0),
   losses: integer("losses").notNull().default(0),

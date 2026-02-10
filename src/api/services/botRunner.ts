@@ -8,6 +8,7 @@ import type {
 import { BotResponseSchema, BOT_TIMEOUT_SECONDS } from "../types/index.js";
 import type { BotType } from "../db/types.js";
 import { callOpenClawBot, testOpenClawEndpoint } from "./openclawService.js";
+import { getBotConnectionServer } from "../ws/botConnectionServer.js";
 
 // Bot interface for the runner - needs endpoint for calling
 interface BotForRunner {
@@ -53,7 +54,7 @@ export class BotRunnerService {
 
   /**
    * Call a bot's endpoint and get its response
-   * Handles both HTTP and OpenClaw bot types
+   * Handles HTTP, OpenClaw, and WebSocket bot types
    */
   async callBot(
     bot: BotForRunner,
@@ -63,6 +64,21 @@ export class BotRunnerService {
     // Route to OpenClaw handler for OpenClaw bots
     if (bot.type === "openclaw") {
       return this.callOpenClawBot(bot, request, timeout);
+    }
+
+    // Check if bot is connected via WebSocket (works for both http and websocket types)
+    const wsServer = getBotConnectionServer();
+    if (wsServer?.isConnected(bot.id)) {
+      return this.callWebSocketBot(bot.id, request, timeout);
+    }
+
+    // For websocket-only bots, fail if not connected
+    if (bot.type === "websocket") {
+      return {
+        success: false,
+        error: "WebSocket bot is not connected",
+        latencyMs: 0,
+      };
     }
 
     // Standard HTTP bot handling
@@ -209,6 +225,41 @@ export class BotRunnerService {
   }
 
   /**
+   * Call a bot via WebSocket connection
+   */
+  private async callWebSocketBot(
+    botId: number,
+    request: BotRequest,
+    timeout: number
+  ): Promise<BotCallResult> {
+    const startTime = Date.now();
+    const wsServer = getBotConnectionServer();
+
+    if (!wsServer) {
+      return {
+        success: false,
+        error: "WebSocket server not initialized",
+        latencyMs: 0,
+      };
+    }
+
+    try {
+      const response = await wsServer.sendRequest(botId, request, timeout);
+      return {
+        success: true,
+        response,
+        latencyMs: Date.now() - startTime,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "WebSocket call failed",
+        latencyMs: Date.now() - startTime,
+      };
+    }
+  }
+
+  /**
    * Test a bot endpoint to verify it's working
    * @param bot - Bot with endpoint and optional authToken for signed requests
    */
@@ -216,6 +267,13 @@ export class BotRunnerService {
     // For OpenClaw bots, just test gateway connectivity
     if (bot.type === "openclaw") {
       return testOpenClawEndpoint(bot.endpoint, bot.authToken ?? undefined);
+    }
+
+    // For WebSocket bots, skip endpoint test - they connect to us
+    if (bot.type === "websocket") {
+      // WebSocket bots don't need HTTP endpoint testing
+      // They will connect to our server using their connection token
+      return { success: true };
     }
 
     // For HTTP bots, send a test request

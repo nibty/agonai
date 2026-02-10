@@ -11,6 +11,10 @@ function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
+function generateConnectionToken(): string {
+  return randomBytes(32).toString("hex"); // 64 char hex string
+}
+
 function encryptToken(token: string): string {
   const key = Buffer.from(ENCRYPTION_KEY.padEnd(32).slice(0, 32));
   const iv = randomBytes(16);
@@ -42,7 +46,7 @@ function toPublic(bot: Bot): BotPublic {
     id: bot.id,
     ownerId: bot.ownerId,
     name: bot.name,
-    type: bot.type as "http" | "openclaw",
+    type: bot.type as "http" | "openclaw" | "websocket",
     elo: bot.elo,
     wins: bot.wins,
     losses: bot.losses,
@@ -67,6 +71,11 @@ export const botRepository = {
     return db.select().from(bots).where(eq(bots.ownerId, ownerId));
   },
 
+  async findByConnectionToken(token: string): Promise<Bot | undefined> {
+    const result = await db.select().from(bots).where(eq(bots.connectionToken, token)).limit(1);
+    return result[0];
+  },
+
   async findByOwnerPublic(ownerId: number): Promise<BotPublic[]> {
     const result = await this.findByOwner(ownerId);
     return result.map(toPublic);
@@ -77,8 +86,9 @@ export const botRepository = {
     name: string,
     endpoint: string,
     authToken?: string,
-    type: "http" | "openclaw" = "http"
+    type: "http" | "openclaw" | "websocket" = "http"
   ): Promise<Bot> {
+    const connectionToken = generateConnectionToken();
     const result = await db
       .insert(bots)
       .values({
@@ -88,6 +98,7 @@ export const botRepository = {
         type,
         authTokenHash: authToken ? hashToken(authToken) : null,
         authTokenEncrypted: authToken ? encryptToken(authToken) : null,
+        connectionToken,
       })
       .returning();
 
@@ -158,5 +169,15 @@ export const botRepository = {
     const bot = await this.findById(id);
     if (!bot) return false;
     return bot.authTokenHash === hashToken(authToken);
+  },
+
+  async regenerateConnectionToken(id: number): Promise<string | null> {
+    const newToken = generateConnectionToken();
+    const result = await db
+      .update(bots)
+      .set({ connectionToken: newToken, updatedAt: new Date() })
+      .where(eq(bots.id, id))
+      .returning();
+    return result[0] ? newToken : null;
   },
 };
