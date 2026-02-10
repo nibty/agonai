@@ -317,6 +317,7 @@ interface DebateDetails {
   proBot?: Bot | null;
   conBot?: Bot | null;
   topic?: Topic | null;
+  preset?: DebatePreset | null;
 }
 
 interface RoundConfig {

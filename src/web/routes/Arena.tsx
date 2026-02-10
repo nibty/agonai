@@ -438,6 +438,11 @@ export function ArenaPage() {
           });
         }
 
+        // Set preset info
+        if (data.preset) {
+          setPreset(data.preset);
+        }
+
         // Set messages (for completed debates)
         if (data.messages && data.messages.length > 0) {
           setMessages(

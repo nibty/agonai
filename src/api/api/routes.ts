@@ -449,7 +449,8 @@ router.get("/debates/:debateId", async (req: Request<{ debateId: string }>, res:
   // First check if it's an active debate in the orchestrator
   const activeDebate = debateOrchestrator.getDebate(debateId);
   if (activeDebate) {
-    res.json({ debate: activeDebate });
+    const preset = getPreset(activeDebate.presetId);
+    res.json({ debate: activeDebate, preset });
     return;
   }
 
@@ -467,6 +468,8 @@ router.get("/debates/:debateId", async (req: Request<{ debateId: string }>, res:
     fullDebate.debate.topicId ? topicRepository.findById(fullDebate.debate.topicId) : null,
   ]);
 
+  const preset = getPreset(fullDebate.debate.presetId);
+
   res.json({
     debate: fullDebate.debate,
     roundResults: fullDebate.roundResults,
@@ -474,6 +477,7 @@ router.get("/debates/:debateId", async (req: Request<{ debateId: string }>, res:
     proBot,
     conBot,
     topic,
+    preset,
   });
 });
 
