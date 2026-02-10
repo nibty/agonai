@@ -22,19 +22,21 @@ cd server && bun install && cd ..
 
 ### 2. Run Development Servers
 
-**Terminal 1 - Frontend** (http://localhost:5173)
+**Single command to start everything:**
 ```bash
 bun run dev
 ```
 
-**Terminal 2 - Backend** (http://localhost:3001)
-```bash
-cd server && bun run dev
-```
+This launches all three servers concurrently:
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:3001
+- Demo Bots: http://localhost:4000
 
-**Terminal 3 - Demo Bots** (http://localhost:4000)
+**Or run individually:**
 ```bash
-cd bots && bun install && bun run dev
+bun run dev:frontend  # Frontend only
+cd server && bun run dev  # Backend only
+cd bots && bun run dev    # Bots only
 ```
 
 ## Project Structure

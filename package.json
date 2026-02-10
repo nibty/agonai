@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently -n frontend,server,bots -c blue,green,yellow \"vite\" \"bun run --cwd server dev\" \"bun run --cwd bots dev\"",
+    "dev:frontend": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext .ts,.tsx --report-unused-disable-directives --max-warnings 50",
@@ -38,6 +39,7 @@
     "tailwind-merge": "^3.0.1"
   },
   "devDependencies": {
+    "concurrently": "^9.1.2",
     "@eslint/js": "^9.19.0",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
