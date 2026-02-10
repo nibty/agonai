@@ -129,7 +129,7 @@ export class DebateWebSocketServer {
     // Update spectator count
     debateOrchestrator.updateSpectatorCount(debateId, spectators.size);
 
-    // Send full debate state (including bots, topic, and messages)
+    // Send full debate state (including bots, topic, preset, and messages)
     const fullState = debateOrchestrator.getFullDebateState(debateId);
     if (fullState) {
       // Send debate_started event so client gets all the info
@@ -142,6 +142,7 @@ export class DebateWebSocketServer {
             proBot: fullState.proBot,
             conBot: fullState.conBot,
             topic: fullState.topic,
+            preset: fullState.preset,
           },
         })
       );

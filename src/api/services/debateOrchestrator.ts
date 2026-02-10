@@ -566,6 +566,7 @@ export class DebateOrchestratorService {
   getFullDebateState(debateId: number):
     | {
         debate: DebateState["debate"];
+        preset: DebatePreset;
         proBot: {
           id: number;
           ownerId: number;
@@ -593,6 +594,7 @@ export class DebateOrchestratorService {
 
     return {
       debate: state.debate,
+      preset: state.preset,
       proBot: {
         id: state.proBot.id,
         ownerId: state.proBot.ownerId,
