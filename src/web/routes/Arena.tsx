@@ -563,7 +563,7 @@ export function ArenaPage() {
   return (
     <div className="flex flex-col gap-4 lg:h-[calc(100vh-theme(spacing.16)-theme(spacing.16))] lg:flex-row">
       {/* Left Sidebar - Score & Voting */}
-      <div className="flex w-full flex-shrink-0 flex-col gap-3 lg:w-72 lg:overflow-y-auto">
+      <div className="flex w-full flex-shrink-0 flex-col gap-3 lg:w-72 lg:overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {/* Match Info Card */}
         <div className="rounded-xl border border-arena-border/50 bg-gradient-to-b from-arena-card to-arena-bg p-4">
           <div className="mb-3 flex items-center justify-between text-xs text-arena-text-dim">
