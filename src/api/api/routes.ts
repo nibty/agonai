@@ -364,11 +364,7 @@ router.post("/queue/join", authMiddleware, async (req: AuthenticatedRequest, res
     return;
   }
 
-  if (matchmaking.isInQueue(botId)) {
-    res.status(400).json({ error: "Bot is already in queue" });
-    return;
-  }
-
+  // addToQueue handles removing any existing entry for this bot
   const entry = matchmaking.addToQueue(bot, req.userId, stake, presetId);
   console.log(`[Queue] Bot "${bot.name}" (${bot.id}) joined queue with stake ${stake}, ELO ${bot.elo}, preset ${presetId}`);
   console.log(`[Queue] Current queue size: ${matchmaking.getStats().queueSize}`);
