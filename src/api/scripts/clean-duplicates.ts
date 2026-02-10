@@ -1,6 +1,7 @@
 import postgres from "postgres";
 
-const client = postgres(process.env.DATABASE_URL!);
+if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL required");
+const client = postgres(process.env.DATABASE_URL);
 
 // Find and delete duplicates that aren't used in debates, keeping the one with lowest id
 const result = await client`

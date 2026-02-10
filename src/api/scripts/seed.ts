@@ -2,13 +2,6 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { topics } from "../db/schema.js";
 
-const connectionString = process.env["DATABASE_URL"] as string | undefined;
-
-if (!connectionString) {
-  console.error("DATABASE_URL environment variable is required");
-  process.exit(1);
-}
-
 const SEED_TOPICS = [
   // Tech & AI
   { text: "AI will replace most jobs within 10 years", category: "tech" },
@@ -64,9 +57,14 @@ const SEED_TOPICS = [
 ];
 
 async function seed(): Promise<void> {
+  const connectionString = process.env["DATABASE_URL"];
+  if (!connectionString) {
+    throw new Error("DATABASE_URL environment variable is required");
+  }
+
   console.log("Seeding database...");
 
-  const client = postgres(connectionString!, { max: 1 });
+  const client = postgres(connectionString, { max: 1 });
   const db = drizzle(client);
 
   try {
@@ -93,4 +91,4 @@ async function seed(): Promise<void> {
   }
 }
 
-seed();
+void seed();

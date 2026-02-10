@@ -2,17 +2,15 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { sql } from "drizzle-orm";
 
-const connectionString = process.env["DATABASE_URL"] as string | undefined;
-
-if (!connectionString) {
-  console.error("DATABASE_URL environment variable is required");
-  process.exit(1);
-}
-
 async function clear(): Promise<void> {
+  const connectionString = process.env["DATABASE_URL"];
+  if (!connectionString) {
+    throw new Error("DATABASE_URL environment variable is required");
+  }
+
   console.log("Dropping all tables and migration history...");
 
-  const client = postgres(connectionString!, { max: 1 });
+  const client = postgres(connectionString, { max: 1 });
   const db = drizzle(client);
 
   try {
@@ -44,4 +42,4 @@ async function clear(): Promise<void> {
   }
 }
 
-clear();
+void clear();

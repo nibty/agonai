@@ -50,4 +50,4 @@ async function backfillTokens(): Promise<void> {
   }
 }
 
-backfillTokens();
+void backfillTokens();

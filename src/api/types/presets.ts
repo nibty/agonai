@@ -327,7 +327,9 @@ export const DEFAULT_PRESET_ID = "classic";
  * Get the default preset
  */
 export function getDefaultPreset(): DebatePreset {
-  return PRESETS[DEFAULT_PRESET_ID]!;
+  const preset = PRESETS[DEFAULT_PRESET_ID];
+  if (!preset) throw new Error(`Default preset "${DEFAULT_PRESET_ID}" not found`);
+  return preset;
 }
 
 /**

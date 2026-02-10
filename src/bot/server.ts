@@ -446,9 +446,9 @@ function connect(url: string, botId: string, personality: BotPersonality): void 
     reconnectAttempts = 0;
   });
 
-  ws.on("message", (data) => {
+  ws.on("message", (data: Buffer) => {
     try {
-      const message = JSON.parse(data.toString()) as ServerMessage;
+      const message = JSON.parse(data.toString("utf-8")) as ServerMessage;
 
       switch (message.type) {
         case "connected":

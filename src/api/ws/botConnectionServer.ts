@@ -77,7 +77,7 @@ export class BotConnectionServer {
     this.wss = new WebSocketServer({ noServer: true });
 
     this.wss.on("connection", (ws, req) => {
-      this.handleConnection(ws, req);
+      void this.handleConnection(ws, req);
     });
 
     // Ping connected bots every 30 seconds
@@ -130,8 +130,8 @@ export class BotConnectionServer {
     this.connectedBots.set(bot.id, connectedBot);
     console.log(`[BotWS] Bot "${bot.name}" (${bot.id}) connected`);
 
-    ws.on("message", (data) => {
-      this.handleMessage(connectedBot, data.toString());
+    ws.on("message", (data: Buffer) => {
+      this.handleMessage(connectedBot, data.toString("utf-8"));
     });
 
     ws.on("close", () => {

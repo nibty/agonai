@@ -219,38 +219,43 @@ function connect(url: string): void {
     reconnectAttempts = 0;
   });
 
-  ws.on("message", async (data) => {
-    try {
-      const message = JSON.parse(data.toString()) as ServerMessage;
+  ws.on("message", (data: Buffer) => {
+    void (async () => {
+      try {
+        const message = JSON.parse(data.toString("utf-8")) as ServerMessage;
 
-      switch (message.type) {
-        case "connected":
-          console.log(`[Claude Bot] Authenticated as "${message.botName}" (ID: ${message.botId})`);
-          break;
+        switch (message.type) {
+          case "connected":
+            console.log(
+              `[Claude Bot] Authenticated as "${message.botName}" (ID: ${message.botId})`
+            );
+            break;
 
-        case "ping":
-          ws.send(JSON.stringify({ type: "pong" }));
-          break;
+          case "ping":
+            ws.send(JSON.stringify({ type: "pong" }));
+            break;
 
-        case "debate_request":
-          console.log(`[Claude Bot] Received debate request ${message.requestId}`);
-          const response = await generateResponse(message);
-          ws.send(
-            JSON.stringify({
-              type: "debate_response",
-              requestId: message.requestId,
-              message: response.message,
-              confidence: response.confidence,
-            })
-          );
-          break;
+          case "debate_request": {
+            console.log(`[Claude Bot] Received debate request ${message.requestId}`);
+            const response = await generateResponse(message);
+            ws.send(
+              JSON.stringify({
+                type: "debate_response",
+                requestId: message.requestId,
+                message: response.message,
+                confidence: response.confidence,
+              })
+            );
+            break;
+          }
 
-        default:
-          console.warn("[Claude Bot] Unknown message type:", (message as { type: string }).type);
+          default:
+            console.warn("[Claude Bot] Unknown message type:", (message as { type: string }).type);
+        }
+      } catch (error) {
+        console.error("[Claude Bot] Error handling message:", error);
       }
-    } catch (error) {
-      console.error("[Claude Bot] Error handling message:", error);
-    }
+    })();
   });
 
   ws.on("close", (code, reason) => {
@@ -317,7 +322,7 @@ if (specPath) {
     console.log(`[Claude Bot] Loaded spec (${botSpec.length} characters)`);
   } catch (error) {
     console.error(
-      `[Claude Bot] ERROR loading spec: ${error instanceof Error ? error.message : error}`
+      `[Claude Bot] ERROR loading spec: ${error instanceof Error ? error.message : String(error)}`
     );
     process.exit(1);
   }

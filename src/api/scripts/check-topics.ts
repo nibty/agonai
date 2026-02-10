@@ -3,7 +3,8 @@ import postgres from "postgres";
 import { topics } from "../db/schema.js";
 import { desc, sql, like } from "drizzle-orm";
 
-const client = postgres(process.env.DATABASE_URL!);
+if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL required");
+const client = postgres(process.env.DATABASE_URL);
 const db = drizzle(client);
 
 // Check AI topic specifically

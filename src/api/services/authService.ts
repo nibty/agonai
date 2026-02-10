@@ -116,7 +116,7 @@ This signature will not trigger any blockchain transaction or cost any gas fees.
       if (allChallenges.length > 0) {
         const latest = allChallenges[allChallenges.length - 1];
         console.log(
-          `[Auth] Latest challenge - used: ${latest?.used}, expires: ${latest?.expiresAt}, now: ${new Date()}`
+          `[Auth] Latest challenge - used: ${latest?.used}, expires: ${latest?.expiresAt?.toISOString()}, now: ${new Date().toISOString()}`
         );
       }
       return null;

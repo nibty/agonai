@@ -54,8 +54,8 @@ export class DebateWebSocketServer {
 
     this.clients.set(ws, client);
 
-    ws.on("message", (data) => {
-      this.handleMessage(client, data.toString());
+    ws.on("message", (data: Buffer) => {
+      this.handleMessage(client, data.toString("utf-8"));
     });
 
     ws.on("close", () => {
@@ -88,7 +88,7 @@ export class DebateWebSocketServer {
           break;
 
         case "submit_vote":
-          this.handleSubmitVote(client, message.payload);
+          void this.handleSubmitVote(client, message.payload);
           break;
 
         case "ping":

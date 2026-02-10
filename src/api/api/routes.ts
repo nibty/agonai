@@ -77,6 +77,7 @@ router.get("/health", (_req: Request, res: Response) => {
  * @deprecated Use /api/presets instead for configurable formats
  */
 router.get("/debate-format", (_req: Request, res: Response) => {
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
   res.json(DEBATE_FORMAT);
 });
 
@@ -452,7 +453,7 @@ router.post(
       return;
     }
 
-    const upvote = req.body["upvote"] === true;
+    const upvote = (req.body as { upvote?: boolean }).upvote === true;
 
     const topic = await topicRepository.vote(topicId, req.userId, upvote);
     if (!topic) {
@@ -513,8 +514,8 @@ router.post("/queue/leave", authMiddleware, async (req: AuthenticatedRequest, re
     return;
   }
 
-  const botIdRaw = req.body["botId"];
-  const botId = typeof botIdRaw === "number" ? botIdRaw : parseInt(botIdRaw, 10);
+  const botIdRaw = (req.body as { botId?: string | number }).botId;
+  const botId = typeof botIdRaw === "number" ? botIdRaw : parseInt(String(botIdRaw), 10);
   if (isNaN(botId)) {
     res.status(400).json({ error: "Missing or invalid botId" });
     return;

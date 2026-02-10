@@ -581,7 +581,7 @@ export class DebateOrchestratorService {
     state.debate.spectatorCount = count;
 
     // Update database (fire and forget)
-    debateRepository.update(debateId, { spectatorCount: count });
+    void debateRepository.update(debateId, { spectatorCount: count });
 
     state.broadcast(debateId, {
       type: "spectator_count",
