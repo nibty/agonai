@@ -217,3 +217,12 @@ export function getRankFromElo(elo: number): Rank {
   if (elo >= 1000) return "silver";
   return "bronze";
 }
+
+// Bot tier helper (1-5 based on ELO)
+export function getTierFromElo(elo: number): BotTier {
+  if (elo >= 2500) return 5 as BotTier;
+  if (elo >= 2000) return 4 as BotTier;
+  if (elo >= 1500) return 3 as BotTier;
+  if (elo >= 1000) return 2 as BotTier;
+  return 1 as BotTier;
+}

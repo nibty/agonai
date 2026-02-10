@@ -1,11 +1,11 @@
 import { nanoid } from "nanoid";
-import type { QueueEntry, Bot, Debate } from "../types/index.js";
+import type { QueueEntry, Bot } from "../types/index.js";
 import { getExpandedMatchRange, isBalancedMatch } from "./elo.js";
 
-interface MatchResult {
+interface MatchResult<T> {
   entry1: QueueEntry;
   entry2: QueueEntry;
-  debate: Debate;
+  debate: T;
 }
 
 /**
@@ -16,12 +16,12 @@ interface MatchResult {
  */
 export class MatchmakingService {
   private queue: Map<string, QueueEntry> = new Map();
-  private botToEntry: Map<string, string> = new Map(); // botId -> entryId
+  private botToEntry: Map<number, string> = new Map(); // botId -> entryId
 
   /**
    * Add a bot to the matchmaking queue
    */
-  addToQueue(bot: Bot, userId: string, stake: number): QueueEntry {
+  addToQueue(bot: Bot, userId: number, stake: number): QueueEntry {
     // Remove any existing entry for this bot
     const existingEntryId = this.botToEntry.get(bot.id);
     if (existingEntryId) {
@@ -47,7 +47,7 @@ export class MatchmakingService {
   /**
    * Remove a bot from the queue
    */
-  removeFromQueue(botId: string): boolean {
+  removeFromQueue(botId: number): boolean {
     const entryId = this.botToEntry.get(botId);
     if (!entryId) return false;
 
@@ -59,14 +59,14 @@ export class MatchmakingService {
   /**
    * Check if a bot is in the queue
    */
-  isInQueue(botId: string): boolean {
+  isInQueue(botId: number): boolean {
     return this.botToEntry.has(botId);
   }
 
   /**
    * Get queue entry for a bot
    */
-  getEntry(botId: string): QueueEntry | undefined {
+  getEntry(botId: number): QueueEntry | undefined {
     const entryId = this.botToEntry.get(botId);
     if (!entryId) return undefined;
     return this.queue.get(entryId);
@@ -108,9 +108,16 @@ export class MatchmakingService {
     let bestMatch: QueueEntry | null = null;
     let bestEloDiff = Infinity;
 
+    console.log(`[Matchmaking] Finding match for bot ${entry.botId} (ELO: ${entry.elo}, stake: ${entry.stake}, range: ${entry.expandedRange})`);
+
     for (const candidate of this.queue.values()) {
       // Skip self
-      if (candidate.id === entry.id) continue;
+      if (candidate.id === entry.id) {
+        console.log(`[Matchmaking]   - Skipping self`);
+        continue;
+      }
+
+      console.log(`[Matchmaking]   - Checking candidate ${candidate.botId} (ELO: ${candidate.elo}, stake: ${candidate.stake}, range: ${candidate.expandedRange})`);
 
       // Skip same owner (can't play against yourself)
       // NOTE: Disabled for local testing - uncomment in production
@@ -118,19 +125,30 @@ export class MatchmakingService {
 
       // Check ELO range - use the wider of the two ranges
       const maxRange = Math.max(entry.expandedRange, candidate.expandedRange);
-      if (!isBalancedMatch(entry.elo, candidate.elo, maxRange)) continue;
+      if (!isBalancedMatch(entry.elo, candidate.elo, maxRange)) {
+        console.log(`[Matchmaking]     REJECTED: ELO out of range (diff: ${Math.abs(entry.elo - candidate.elo)}, maxRange: ${maxRange})`);
+        continue;
+      }
 
       // Check stake compatibility (within 20%)
       const stakeDiff = Math.abs(entry.stake - candidate.stake);
       const maxStakeDiff = Math.max(entry.stake, candidate.stake) * 0.2;
-      if (stakeDiff > maxStakeDiff) continue;
+      if (stakeDiff > maxStakeDiff) {
+        console.log(`[Matchmaking]     REJECTED: Stake incompatible (diff: ${stakeDiff}, max allowed: ${maxStakeDiff})`);
+        continue;
+      }
 
       // Find closest ELO match
       const eloDiff = Math.abs(entry.elo - candidate.elo);
       if (eloDiff < bestEloDiff) {
+        console.log(`[Matchmaking]     ACCEPTED as best match`);
         bestMatch = candidate;
         bestEloDiff = eloDiff;
       }
+    }
+
+    if (!bestMatch) {
+      console.log(`[Matchmaking]   No match found`);
     }
 
     return bestMatch;
@@ -139,10 +157,12 @@ export class MatchmakingService {
   /**
    * Run matchmaking loop - find all possible matches
    */
-  runMatchmaking(createDebate: (entry1: QueueEntry, entry2: QueueEntry) => Debate): MatchResult[] {
+  async runMatchmaking<T>(
+    createDebate: (entry1: QueueEntry, entry2: QueueEntry) => T | Promise<T>
+  ): Promise<MatchResult<T>[]> {
     this.updateRanges();
 
-    const matches: MatchResult[] = [];
+    const matches: MatchResult<T>[] = [];
     const matched = new Set<string>();
 
     // Sort by wait time (longest waiting first)
@@ -158,19 +178,26 @@ export class MatchmakingService {
         matched.add(entry.id);
         matched.add(match.id);
 
-        const debate = createDebate(entry, match);
+        try {
+          const debate = await createDebate(entry, match);
 
-        matches.push({
-          entry1: entry,
-          entry2: match,
-          debate,
-        });
+          matches.push({
+            entry1: entry,
+            entry2: match,
+            debate,
+          });
 
-        // Remove from queue
-        this.queue.delete(entry.id);
-        this.queue.delete(match.id);
-        this.botToEntry.delete(entry.botId);
-        this.botToEntry.delete(match.botId);
+          // Remove from queue
+          this.queue.delete(entry.id);
+          this.queue.delete(match.id);
+          this.botToEntry.delete(entry.botId);
+          this.botToEntry.delete(match.botId);
+        } catch (error) {
+          console.error("[Matchmaking] Failed to create debate:", error);
+          // Re-add entries to queue on failure
+          matched.delete(entry.id);
+          matched.delete(match.id);
+        }
       }
     }
 

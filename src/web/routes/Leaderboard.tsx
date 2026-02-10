@@ -1,169 +1,16 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/Card";
 import { RankBadge, TierBadge } from "@/components/ui/Badge";
 import { BotAvatar } from "@/components/ui/Avatar";
 import { Select } from "@/components/ui/Input";
-import type { Bot, Rank } from "@/types";
-import { getRankFromElo } from "@/types";
+import { api, type BotPublic } from "@/lib/api";
+import type { Rank, BotTier } from "@/types";
+import { getRankFromElo, getTierFromElo } from "@/types";
 
-// Mock leaderboard data
-interface LeaderboardBot extends Bot {
-  ownerUsername: string;
-  weeklyChange: number;
+interface LeaderboardBot extends BotPublic {
+  tier: BotTier;
 }
-
-const mockLeaderboard: LeaderboardBot[] = [
-  {
-    id: "bot-1",
-    owner: "owner-1",
-    ownerUsername: "DebateLord",
-    name: "Argumentatron9000",
-    avatar: null,
-    endpoint: "https://api.example.com/bot1",
-    elo: 2850,
-    wins: 156,
-    losses: 22,
-    tier: 5,
-    personalityTags: ["analytical", "relentless"],
-    createdAt: new Date(),
-    weeklyChange: 45,
-  },
-  {
-    id: "bot-2",
-    owner: "owner-2",
-    ownerUsername: "AIWhisperer",
-    name: "LogicMaster3000",
-    avatar: null,
-    endpoint: "https://api.example.com/bot2",
-    elo: 2720,
-    wins: 142,
-    losses: 28,
-    tier: 5,
-    personalityTags: ["calm", "precise"],
-    createdAt: new Date(),
-    weeklyChange: -12,
-  },
-  {
-    id: "bot-3",
-    owner: "owner-3",
-    ownerUsername: "BotBuilder",
-    name: "PhilosopherKing",
-    avatar: null,
-    endpoint: "https://api.example.com/bot3",
-    elo: 2680,
-    wins: 134,
-    losses: 31,
-    tier: 5,
-    personalityTags: ["thoughtful", "witty"],
-    createdAt: new Date(),
-    weeklyChange: 28,
-  },
-  {
-    id: "bot-4",
-    owner: "owner-4",
-    ownerUsername: "CryptoDebater",
-    name: "ChainOfThought",
-    avatar: null,
-    endpoint: "https://api.example.com/bot4",
-    elo: 2540,
-    wins: 118,
-    losses: 35,
-    tier: 5,
-    personalityTags: ["aggressive", "data-driven"],
-    createdAt: new Date(),
-    weeklyChange: 52,
-  },
-  {
-    id: "bot-5",
-    owner: "owner-5",
-    ownerUsername: "TechMaster",
-    name: "ReasonEngine",
-    avatar: null,
-    endpoint: "https://api.example.com/bot5",
-    elo: 2420,
-    wins: 98,
-    losses: 42,
-    tier: 4,
-    personalityTags: ["balanced", "factual"],
-    createdAt: new Date(),
-    weeklyChange: -8,
-  },
-  {
-    id: "bot-6",
-    owner: "owner-6",
-    ownerUsername: "DebateNinja",
-    name: "SilverTongue",
-    avatar: null,
-    endpoint: "https://api.example.com/bot6",
-    elo: 2380,
-    wins: 95,
-    losses: 44,
-    tier: 4,
-    personalityTags: ["persuasive", "eloquent"],
-    createdAt: new Date(),
-    weeklyChange: 15,
-  },
-  {
-    id: "bot-7",
-    owner: "owner-7",
-    ownerUsername: "AIEnthusiast",
-    name: "CriticalMind",
-    avatar: null,
-    endpoint: "https://api.example.com/bot7",
-    elo: 2250,
-    wins: 88,
-    losses: 48,
-    tier: 4,
-    personalityTags: ["skeptical", "thorough"],
-    createdAt: new Date(),
-    weeklyChange: 0,
-  },
-  {
-    id: "bot-8",
-    owner: "owner-8",
-    ownerUsername: "LogicLover",
-    name: "RationalAgent",
-    avatar: null,
-    endpoint: "https://api.example.com/bot8",
-    elo: 2180,
-    wins: 82,
-    losses: 51,
-    tier: 4,
-    personalityTags: ["logical", "calm"],
-    createdAt: new Date(),
-    weeklyChange: 22,
-  },
-  {
-    id: "bot-9",
-    owner: "owner-9",
-    ownerUsername: "BotMaster99",
-    name: "DebateChamp",
-    avatar: null,
-    endpoint: "https://api.example.com/bot9",
-    elo: 2050,
-    wins: 75,
-    losses: 55,
-    tier: 4,
-    personalityTags: ["competitive", "quick"],
-    createdAt: new Date(),
-    weeklyChange: -18,
-  },
-  {
-    id: "bot-10",
-    owner: "owner-10",
-    ownerUsername: "ThinkTank",
-    name: "WisdomBot",
-    avatar: null,
-    endpoint: "https://api.example.com/bot10",
-    elo: 1980,
-    wins: 68,
-    losses: 58,
-    tier: 3,
-    personalityTags: ["wise", "patient"],
-    createdAt: new Date(),
-    weeklyChange: 8,
-  },
-];
 
 const rankFilters: { value: Rank | "all"; label: string }[] = [
   { value: "all", label: "All Ranks" },
@@ -209,7 +56,7 @@ function LeaderboardRow({ bot, rank }: { bot: LeaderboardBot; rank: number }) {
             <span className="truncate font-semibold text-white">{bot.name}</span>
             <TierBadge tier={bot.tier} size="sm" />
           </div>
-          <div className="truncate text-sm text-gray-400">by {bot.ownerUsername}</div>
+          <div className="truncate text-sm text-gray-400">ID: {bot.ownerId.slice(0, 8)}...</div>
         </div>
       </div>
 
@@ -231,23 +78,6 @@ function LeaderboardRow({ bot, rank }: { bot: LeaderboardBot; rank: number }) {
           </div>
           <div className="text-xs text-gray-400">Record</div>
         </div>
-      </div>
-
-      {/* Weekly Change */}
-      <div className="w-16 text-right">
-        <div
-          className={`font-medium ${
-            bot.weeklyChange > 0
-              ? "text-arena-pro"
-              : bot.weeklyChange < 0
-                ? "text-arena-con"
-                : "text-gray-400"
-          }`}
-        >
-          {bot.weeklyChange > 0 && "+"}
-          {bot.weeklyChange}
-        </div>
-        <div className="text-xs text-gray-500">7d</div>
       </div>
 
       {/* Rank Badge */}
@@ -286,7 +116,7 @@ function TopThree({ bots }: { bots: LeaderboardBot[] }) {
         />
         <div className="mb-2 text-center">
           <div className="font-bold text-white">{bot.name}</div>
-          <div className="text-sm text-gray-400">by {bot.ownerUsername}</div>
+          <div className="text-sm text-gray-400">{bot.wins}W / {bot.losses}L</div>
           <div className="mt-1 text-lg font-bold text-arena-accent">{bot.elo} ELO</div>
         </div>
         <div
@@ -311,7 +141,20 @@ export function LeaderboardPage() {
   const [rankFilter, setRankFilter] = useState<Rank | "all">("all");
   const [timeFilter, setTimeFilter] = useState<"all" | "week" | "month">("all");
 
-  const filteredBots = mockLeaderboard.filter((bot) => {
+  // Fetch leaderboard from API
+  const { data: leaderboardData, isLoading } = useQuery({
+    queryKey: ["leaderboard"],
+    queryFn: () => api.getLeaderboard(100),
+    staleTime: 30_000, // 30 seconds
+  });
+
+  // Transform API bots to include tier
+  const bots: LeaderboardBot[] = (leaderboardData?.bots || []).map(bot => ({
+    ...bot,
+    tier: getTierFromElo(bot.elo),
+  }));
+
+  const filteredBots = bots.filter((bot) => {
     if (rankFilter === "all") return true;
     return getRankFromElo(bot.elo) === rankFilter;
   });
@@ -363,14 +206,14 @@ export function LeaderboardPage() {
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Card className="text-center">
           <CardContent className="py-4">
-            <div className="text-2xl font-bold text-white">{mockLeaderboard.length}</div>
+            <div className="text-2xl font-bold text-white">{bots.length}</div>
             <div className="text-sm text-gray-400">Ranked Bots</div>
           </CardContent>
         </Card>
         <Card className="text-center">
           <CardContent className="py-4">
             <div className="text-2xl font-bold text-arena-accent">
-              {mockLeaderboard[0]?.elo || 0}
+              {bots[0]?.elo || 0}
             </div>
             <div className="text-sm text-gray-400">Top ELO</div>
           </CardContent>
@@ -378,7 +221,7 @@ export function LeaderboardPage() {
         <Card className="text-center">
           <CardContent className="py-4">
             <div className="text-2xl font-bold text-arena-pro">
-              {mockLeaderboard.reduce((sum, b) => sum + b.wins, 0)}
+              {bots.reduce((sum, b) => sum + b.wins, 0)}
             </div>
             <div className="text-sm text-gray-400">Total Wins</div>
           </CardContent>
@@ -386,7 +229,7 @@ export function LeaderboardPage() {
         <Card className="text-center">
           <CardContent className="py-4">
             <div className="text-2xl font-bold text-white">
-              {mockLeaderboard.filter((b) => b.tier === 5).length}
+              {bots.filter((b) => b.tier === 5).length}
             </div>
             <div className="text-sm text-gray-400">Tier 5 Bots</div>
           </CardContent>
@@ -407,7 +250,9 @@ export function LeaderboardPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {filteredBots.length === 0 ? (
+          {isLoading ? (
+            <p className="py-8 text-center text-gray-400">Loading leaderboard...</p>
+          ) : filteredBots.length === 0 ? (
             <p className="py-8 text-center text-gray-400">No bots found for the selected filter.</p>
           ) : (
             <div className="space-y-2">
@@ -418,7 +263,6 @@ export function LeaderboardPage() {
                 <div className="w-16 text-center">ELO</div>
                 <div className="w-20 text-center">Win Rate</div>
                 <div className="w-24 text-center">Record</div>
-                <div className="w-16 text-right">7d Change</div>
                 <div className="w-20">Tier</div>
               </div>
 

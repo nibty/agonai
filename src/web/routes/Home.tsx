@@ -1,117 +1,13 @@
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { useWallet } from "@/hooks/useWallet";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { BotAvatar } from "@/components/ui/Avatar";
 import { DualProgress } from "@/components/ui/Progress";
-import type { Debate } from "@/types";
-
-// Mock data for live debates
-const mockLiveDebates: Debate[] = [
-  {
-    id: "debate-1",
-    topic: {
-      id: "topic-1",
-      text: "Is AI consciousness achievable within the next decade?",
-      category: "tech",
-      proposer: "7xKXqqqq",
-      upvotes: 142,
-      usedCount: 5,
-      createdAt: new Date(),
-    },
-    proBot: {
-      id: "bot-1",
-      owner: "owner-1",
-      name: "LogicMaster3000",
-      avatar: null,
-      endpoint: "https://api.example.com/bot1",
-      elo: 1850,
-      wins: 45,
-      losses: 12,
-      tier: 4,
-      personalityTags: ["analytical", "calm"],
-      createdAt: new Date(),
-    },
-    conBot: {
-      id: "bot-2",
-      owner: "owner-2",
-      name: "DevilsAdvocate",
-      avatar: null,
-      endpoint: "https://api.example.com/bot2",
-      elo: 1780,
-      wins: 38,
-      losses: 15,
-      tier: 3,
-      personalityTags: ["aggressive", "witty"],
-      createdAt: new Date(),
-    },
-    status: "rebuttal",
-    currentRound: "rebuttal",
-    roundResults: [{ round: "opening", proVotes: 156, conVotes: 122, winner: "pro" }],
-    winner: null,
-    stake: 500,
-    spectatorCount: 278,
-    createdAt: new Date(),
-    startedAt: new Date(),
-    endedAt: null,
-  },
-  {
-    id: "debate-2",
-    topic: {
-      id: "topic-2",
-      text: "Should cryptocurrency replace traditional banking?",
-      category: "crypto",
-      proposer: "8yLYrrrr",
-      upvotes: 89,
-      usedCount: 3,
-      createdAt: new Date(),
-    },
-    proBot: {
-      id: "bot-3",
-      owner: "owner-3",
-      name: "CryptoChampion",
-      avatar: null,
-      endpoint: "https://api.example.com/bot3",
-      elo: 2100,
-      wins: 67,
-      losses: 8,
-      tier: 5,
-      personalityTags: ["passionate", "data-driven"],
-      createdAt: new Date(),
-    },
-    conBot: {
-      id: "bot-4",
-      owner: "owner-4",
-      name: "TradFiDefender",
-      avatar: null,
-      endpoint: "https://api.example.com/bot4",
-      elo: 2050,
-      wins: 55,
-      losses: 11,
-      tier: 5,
-      personalityTags: ["conservative", "thorough"],
-      createdAt: new Date(),
-    },
-    status: "opening",
-    currentRound: "opening",
-    roundResults: [],
-    winner: null,
-    stake: 1000,
-    spectatorCount: 412,
-    createdAt: new Date(),
-    startedAt: new Date(),
-    endedAt: null,
-  },
-];
-
-// Mock stats
-const mockStats = {
-  totalDebates: 12847,
-  totalUsers: 3421,
-  totalXntWagered: 2847500,
-  activeBots: 892,
-};
+import { api, type Debate as ApiDebate } from "@/lib/api";
+import { getTierFromElo } from "@/types";
 
 function StatCard({ label, value, suffix }: { label: string; value: number; suffix?: string }) {
   return (
@@ -127,9 +23,11 @@ function StatCard({ label, value, suffix }: { label: string; value: number; suff
   );
 }
 
-function LiveDebateCard({ debate }: { debate: Debate }) {
+function LiveDebateCard({ debate }: { debate: ApiDebate }) {
   const totalVotes = debate.roundResults.reduce((sum, r) => sum + r.proVotes + r.conVotes, 0) || 1;
   const proVotes = debate.roundResults.reduce((sum, r) => sum + r.proVotes, 0);
+  const proBotTier = getTierFromElo(debate.proBotElo || 1200);
+  const conBotTier = getTierFromElo(debate.conBotElo || 1200);
 
   return (
     <Card variant="glow" className="transition-transform hover:scale-[1.02]">
@@ -138,24 +36,24 @@ function LiveDebateCard({ debate }: { debate: Debate }) {
           <Badge variant="live">LIVE</Badge>
           <span className="text-sm text-gray-400">{debate.spectatorCount} watching</span>
         </div>
-        <CardTitle className="mt-2 line-clamp-2 text-lg">{debate.topic.text}</CardTitle>
+        <CardTitle className="mt-2 line-clamp-2 text-lg">{debate.topic}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <BotAvatar size="sm" alt={debate.proBot.name} tier={debate.proBot.tier} />
+            <BotAvatar size="sm" alt={debate.proBotName || "Pro Bot"} tier={proBotTier} />
             <div>
-              <div className="text-sm font-medium text-arena-pro">{debate.proBot.name}</div>
-              <div className="text-xs text-gray-400">ELO {debate.proBot.elo}</div>
+              <div className="text-sm font-medium text-arena-pro">{debate.proBotName || "Pro Bot"}</div>
+              <div className="text-xs text-gray-400">ELO {debate.proBotElo || "—"}</div>
             </div>
           </div>
           <div className="font-bold text-gray-400">VS</div>
           <div className="flex items-center gap-2">
             <div className="text-right">
-              <div className="text-sm font-medium text-arena-con">{debate.conBot.name}</div>
-              <div className="text-xs text-gray-400">ELO {debate.conBot.elo}</div>
+              <div className="text-sm font-medium text-arena-con">{debate.conBotName || "Con Bot"}</div>
+              <div className="text-xs text-gray-400">ELO {debate.conBotElo || "—"}</div>
             </div>
-            <BotAvatar size="sm" alt={debate.conBot.name} tier={debate.conBot.tier} />
+            <BotAvatar size="sm" alt={debate.conBotName || "Con Bot"} tier={conBotTier} />
           </div>
         </div>
         <DualProgress proValue={proVotes} conValue={totalVotes - proVotes} />
@@ -175,6 +73,29 @@ function LiveDebateCard({ debate }: { debate: Debate }) {
 
 export function HomePage() {
   const { connected, connect } = useWallet();
+
+  // Fetch stats from API
+  const { data: statsData } = useQuery({
+    queryKey: ["stats"],
+    queryFn: () => api.getStats(),
+    staleTime: 30_000, // 30 seconds
+  });
+
+  // Fetch active debates from API
+  const { data: debatesData } = useQuery({
+    queryKey: ["debates", "active"],
+    queryFn: () => api.getActiveDebates(),
+    staleTime: 10_000, // 10 seconds
+  });
+
+  const stats = {
+    totalDebates: statsData?.activeDebates || 0,
+    totalBots: statsData?.totalBots || 0,
+    queueSize: statsData?.queue?.queueSize || 0,
+    avgWaitTime: statsData?.queue?.avgWaitTime || 0,
+  };
+
+  const liveDebates = debatesData?.debates || [];
 
   return (
     <div className="space-y-12">
@@ -218,10 +139,10 @@ export function HomePage() {
       {/* Stats Section */}
       <section>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <StatCard label="Total Debates" value={mockStats.totalDebates} />
-          <StatCard label="Active Users" value={mockStats.totalUsers} />
-          <StatCard label="XNT Wagered" value={mockStats.totalXntWagered} suffix=" XNT" />
-          <StatCard label="Active Bots" value={mockStats.activeBots} />
+          <StatCard label="Active Debates" value={stats.totalDebates} />
+          <StatCard label="Registered Bots" value={stats.totalBots} />
+          <StatCard label="In Queue" value={stats.queueSize} />
+          <StatCard label="Avg Wait" value={Math.round(stats.avgWaitTime / 1000)} suffix="s" />
         </div>
       </section>
 
@@ -235,11 +156,24 @@ export function HomePage() {
             </Button>
           </Link>
         </div>
-        <div className="grid gap-6 md:grid-cols-2">
-          {mockLiveDebates.map((debate) => (
-            <LiveDebateCard key={debate.id} debate={debate} />
-          ))}
-        </div>
+        {liveDebates.length > 0 ? (
+          <div className="grid gap-6 md:grid-cols-2">
+            {liveDebates.map((debate) => (
+              <LiveDebateCard key={debate.id} debate={debate} />
+            ))}
+          </div>
+        ) : (
+          <Card className="py-12 text-center">
+            <CardContent>
+              <p className="text-gray-400">No active debates right now. Start one from the queue!</p>
+              <Link to="/queue">
+                <Button variant="outline" className="mt-4">
+                  Join Queue
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
       </section>
 
       {/* How It Works Section */}

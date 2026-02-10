@@ -44,6 +44,18 @@ class ApiClient {
     return response.json();
   }
 
+  // Auth
+  async getChallenge(walletAddress: string): Promise<{ challenge: string; expiresAt: string }> {
+    return this.request("POST", "/auth/challenge", { walletAddress });
+  }
+
+  async verifyChallenge(
+    walletAddress: string,
+    signature: string
+  ): Promise<{ token: string; user: User }> {
+    return this.request("POST", "/auth/verify", { walletAddress, signature });
+  }
+
   // Health & Stats
   async getHealth(): Promise<{ status: string; timestamp: string }> {
     return this.request("GET", "/health");
@@ -59,7 +71,7 @@ class ApiClient {
 
   // User
   async getMe(): Promise<{ user: User }> {
-    return this.request("GET", "/user/me");
+    return this.request("GET", "/auth/me");
   }
 
   async getUser(walletAddress: string): Promise<{ user: UserPublic }> {
@@ -225,6 +237,10 @@ interface Debate {
   topic: string;
   proBotId: string;
   conBotId: string;
+  proBotName?: string;
+  proBotElo?: number;
+  conBotName?: string;
+  conBotElo?: number;
   status: "pending" | "in_progress" | "voting" | "completed" | "cancelled";
   currentRound: "opening" | "rebuttal" | "closing";
   roundStatus: "pending" | "bot_responding" | "voting" | "completed";

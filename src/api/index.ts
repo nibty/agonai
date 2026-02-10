@@ -5,7 +5,8 @@ import { router } from "./api/routes.js";
 import { DebateWebSocketServer } from "./ws/debateServer.js";
 import { matchmaking } from "./services/matchmaking.js";
 import { debateOrchestrator } from "./services/debateOrchestrator.js";
-import * as store from "./services/store.js";
+import { topicRepository, botRepository } from "./repositories/index.js";
+import { closeDatabase } from "./db/index.js";
 
 const PORT = parseInt(process.env["PORT"] ?? "3001");
 
@@ -41,18 +42,18 @@ const wsServer = new DebateWebSocketServer(server);
 let matchmakingInterval: ReturnType<typeof setInterval>;
 
 function startMatchmaking(): void {
-  matchmakingInterval = setInterval(() => {
+  matchmakingInterval = setInterval(async () => {
     const stats = matchmaking.getStats();
     if (stats.queueSize >= 2) {
       console.log(`[Matchmaking] Queue has ${stats.queueSize} entries, attempting to match...`);
     }
 
-    const matches = matchmaking.runMatchmaking((entry1, entry2) => {
+    const matches = await matchmaking.runMatchmaking(async (entry1, entry2) => {
       console.log(`[Matchmaking] Creating debate between bot ${entry1.botId} and ${entry2.botId}`);
 
-      // Get bots
-      const bot1 = store.getBotById(entry1.botId);
-      const bot2 = store.getBotById(entry2.botId);
+      // Get bots from repository
+      const bot1 = await botRepository.findById(entry1.botId);
+      const bot2 = await botRepository.findById(entry2.botId);
 
       if (!bot1 || !bot2) {
         console.error(`[Matchmaking] Bot not found: bot1=${!!bot1}, bot2=${!!bot2}`);
@@ -60,20 +61,20 @@ function startMatchmaking(): void {
       }
 
       // Get random topic
-      const topic = store.getRandomTopic();
+      const topic = await topicRepository.getRandomTopic();
       if (!topic) {
         console.error("[Matchmaking] No topics available!");
         throw new Error("No topics available");
       }
 
-      store.markTopicUsed(topic.id);
+      await topicRepository.markUsed(topic.id);
 
       // Randomly assign positions
       const [proBot, conBot] = Math.random() > 0.5 ? [bot1, bot2] : [bot2, bot1];
 
       // Create debate
       const stake = Math.min(entry1.stake, entry2.stake);
-      const debate = debateOrchestrator.createDebate(proBot, conBot, topic, stake);
+      const debate = await debateOrchestrator.createDebate(proBot, conBot, topic, stake);
 
       // Start debate in background
       debateOrchestrator.startDebate(debate, proBot, conBot, topic, (debateId, message) =>
@@ -92,10 +93,11 @@ function startMatchmaking(): void {
 }
 
 // Cleanup on shutdown
-function shutdown(): void {
+async function shutdown(): Promise<void> {
   console.log("\nShutting down...");
   clearInterval(matchmakingInterval);
   server.close();
+  await closeDatabase();
   process.exit(0);
 }
 
@@ -114,10 +116,8 @@ server.listen(PORT, () => {
 ╚═══════════════════════════════════════════════════════════╝
 `);
 
-  // Seed initial data
-  store.seedData();
-
   // Start matchmaking
   startMatchmaking();
   console.log("Matchmaking service started");
+  console.log("Database connected (PostgreSQL via Drizzle)");
 });

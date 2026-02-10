@@ -26,7 +26,7 @@ export const BOT_TIMEOUT_SECONDS = 120;
 // ============================================================================
 
 export interface User {
-  id: string;
+  id: number;
   walletAddress: string;
   username: string | null;
   elo: number;
@@ -37,21 +37,22 @@ export interface User {
 }
 
 export interface Bot {
-  id: string;
-  ownerId: string;
+  id: number;
+  ownerId: number;
   name: string;
   endpoint: string;
-  authToken: string; // Hashed, never sent to client
+  authTokenHash: string | null; // SHA-256 hashed auth token
   elo: number;
   wins: number;
   losses: number;
   isActive: boolean;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface BotPublic {
-  id: string;
-  ownerId: string;
+  id: number;
+  ownerId: number;
   name: string;
   elo: number;
   wins: number;
@@ -64,10 +65,10 @@ export interface BotPublic {
 // ============================================================================
 
 export interface Topic {
-  id: string;
+  id: number;
   text: string;
   category: string;
-  proposerId: string;
+  proposerId: number | null;
   upvotes: number;
   downvotes: number;
   timesUsed: number;
@@ -79,11 +80,11 @@ export interface Topic {
 // ============================================================================
 
 export interface DebateMessage {
-  id: string;
-  debateId: string;
+  id: number;
+  debateId: number;
   round: DebateRound;
   position: DebatePosition;
-  botId: string;
+  botId: number;
   content: string;
   timestamp: Date;
 }
@@ -96,11 +97,11 @@ export interface RoundResult {
 }
 
 export interface Debate {
-  id: string;
-  topicId: string;
+  id: number;
+  topicId: number;
   topic: string;
-  proBotId: string;
-  conBotId: string;
+  proBotId: number;
+  conBotId: number;
   status: DebateStatus;
   currentRound: DebateRound;
   roundStatus: RoundStatus;
@@ -114,18 +115,18 @@ export interface Debate {
 }
 
 export interface Vote {
-  id: string;
-  debateId: string;
+  id: number;
+  debateId: number;
   round: DebateRound;
-  voterId: string;
+  voterId: number;
   choice: DebatePosition;
   timestamp: Date;
 }
 
 export interface Bet {
-  id: string;
-  debateId: string;
-  bettorId: string;
+  id: number;
+  debateId: number;
+  bettorId: number;
   amount: number; // In lamports (XNT)
   side: DebatePosition;
   settled: boolean;
@@ -139,8 +140,8 @@ export interface Bet {
 
 export interface QueueEntry {
   id: string;
-  botId: string;
-  userId: string;
+  botId: number;
+  userId: number;
   elo: number;
   stake: number;
   joinedAt: Date;
@@ -194,7 +195,7 @@ export type WSMessageType =
 
 export interface WSMessage {
   type: WSMessageType;
-  debateId: string;
+  debateId: number;
   payload: unknown;
 }
 
@@ -213,14 +214,14 @@ export interface RoundStartedPayload {
 export interface BotMessagePayload {
   round: DebateRound;
   position: DebatePosition;
-  botId: string;
+  botId: number;
   content: string;
   isComplete: boolean;
 }
 
 export interface BotTypingPayload {
   position: DebatePosition;
-  botId: string;
+  botId: number;
 }
 
 export interface VotingStartedPayload {
@@ -247,7 +248,7 @@ export interface DebateEndedPayload {
     proBot: { oldElo: number; newElo: number; change: number };
     conBot: { oldElo: number; newElo: number; change: number };
   };
-  payouts: Array<{ bettorId: string; amount: number }>;
+  payouts: Array<{ bettorId: number; amount: number }>;
 }
 
 export interface SpectatorCountPayload {
@@ -266,7 +267,7 @@ export interface ErrorPayload {
 export const RegisterBotSchema = z.object({
   name: z.string().min(1).max(50),
   endpoint: z.string().url(),
-  authToken: z.string().min(1),
+  authToken: z.string().optional(),
 });
 
 export type RegisterBotRequest = z.infer<typeof RegisterBotSchema>;
@@ -279,14 +280,14 @@ export const SubmitTopicSchema = z.object({
 export type SubmitTopicRequest = z.infer<typeof SubmitTopicSchema>;
 
 export const JoinQueueSchema = z.object({
-  botId: z.string(),
+  botId: z.coerce.number().int().positive(),
   stake: z.number().min(0),
 });
 
 export type JoinQueueRequest = z.infer<typeof JoinQueueSchema>;
 
 export const PlaceBetSchema = z.object({
-  debateId: z.string(),
+  debateId: z.coerce.number().int().positive(),
   side: z.enum(["pro", "con"]),
   amount: z.number().positive(),
 });
@@ -294,7 +295,7 @@ export const PlaceBetSchema = z.object({
 export type PlaceBetRequest = z.infer<typeof PlaceBetSchema>;
 
 export const SubmitVoteSchema = z.object({
-  debateId: z.string(),
+  debateId: z.coerce.number().int().positive(),
   round: z.enum(["opening", "rebuttal", "closing"]),
   choice: z.enum(["pro", "con"]),
 });

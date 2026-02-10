@@ -1,12 +1,23 @@
 import type {
-  Bot,
   BotRequest,
   BotResponse,
   DebateRound,
   DebatePosition,
-  DebateMessage,
 } from "../types/index.js";
 import { BotResponseSchema, BOT_TIMEOUT_SECONDS } from "../types/index.js";
+
+// Bot interface for the runner - needs endpoint for calling
+interface BotForRunner {
+  id: number;
+  endpoint: string;
+}
+
+// Message interface for building requests
+interface MessageForRunner {
+  round: DebateRound;
+  position: DebatePosition;
+  content: string;
+}
 
 interface BotCallResult {
   success: boolean;
@@ -28,7 +39,7 @@ export class BotRunnerService {
    * Call a bot's endpoint and get its response
    */
   async callBot(
-    bot: Bot,
+    bot: BotForRunner,
     request: BotRequest,
     timeout = this.defaultTimeout
   ): Promise<BotCallResult> {
@@ -42,7 +53,6 @@ export class BotRunnerService {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${bot.authToken}`,
           "X-Debate-ID": request.debate_id,
         },
         body: JSON.stringify(request),
@@ -108,12 +118,12 @@ export class BotRunnerService {
    * Build a request to send to a bot
    */
   buildRequest(
-    debateId: string,
+    debateId: number,
     round: DebateRound,
     topic: string,
     position: DebatePosition,
     timeLimit: number,
-    previousMessages: DebateMessage[]
+    previousMessages: MessageForRunner[]
   ): BotRequest {
     // Find opponent's last message in this round or previous round
     const opponentMessages = previousMessages.filter((m) => m.position !== position);
@@ -121,7 +131,7 @@ export class BotRunnerService {
       opponentMessages.length > 0 ? opponentMessages[opponentMessages.length - 1] : null;
 
     return {
-      debate_id: debateId,
+      debate_id: String(debateId),
       round,
       topic,
       position,
@@ -138,7 +148,7 @@ export class BotRunnerService {
   /**
    * Test a bot endpoint to verify it's working
    */
-  async testBot(bot: Bot): Promise<{ success: boolean; error?: string }> {
+  async testBot(bot: BotForRunner): Promise<{ success: boolean; error?: string }> {
     const testRequest: BotRequest = {
       debate_id: "test",
       round: "opening",

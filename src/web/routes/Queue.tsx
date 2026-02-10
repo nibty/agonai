@@ -1,36 +1,18 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useWallet } from "@/hooks/useWallet";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/Card";
-import { Badge, TierBadge } from "@/components/ui/Badge";
+import { TierBadge } from "@/components/ui/Badge";
 import { BotAvatar } from "@/components/ui/Avatar";
 import { Select } from "@/components/ui/Input";
-import type { Bot } from "@/types";
+import { api, type Bot } from "@/lib/api";
+import { getTierFromElo, type BotTier } from "@/types";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
-
-// API response types
-interface ActiveDebatesResponse {
-  debates?: Array<{ id: string; proBotId: string; conBotId: string }>;
-}
-
-interface RegisterBotResponse {
-  bot: { id: string };
-}
-
-interface ErrorResponse {
-  error?: string;
-}
-
-// Load bots from localStorage (same as Bots page)
-function loadBots(): Bot[] {
-  const saved = localStorage.getItem("ai-debates-bots");
-  if (saved) {
-    const parsed = JSON.parse(saved) as Bot[];
-    return parsed.map((b) => ({ ...b, createdAt: new Date(b.createdAt) }));
-  }
-  return [];
+interface DisplayBot extends Bot {
+  tier: BotTier;
 }
 
 function BotSelectionCard({
@@ -38,7 +20,7 @@ function BotSelectionCard({
   selected,
   onSelect,
 }: {
-  bot: Bot;
+  bot: DisplayBot;
   selected: boolean;
   onSelect: () => void;
 }) {
@@ -63,13 +45,6 @@ function BotSelectionCard({
           <div className="mt-1 text-sm text-gray-400">
             ELO {bot.elo} | {winRate}% win rate
           </div>
-          <div className="mt-2 flex gap-1">
-            {bot.personalityTags.map((tag) => (
-              <Badge key={tag} variant="outline" className="text-xs">
-                {tag}
-              </Badge>
-            ))}
-          </div>
         </div>
         <div className="text-right text-sm">
           <div className="text-arena-pro">{bot.wins}W</div>
@@ -88,7 +63,7 @@ function QueueStatusCard({
   onLeaveQueue,
 }: {
   inQueue: boolean;
-  selectedBot: Bot | null;
+  selectedBot: DisplayBot | null;
   waitTime: number;
   queueStatus: string;
   onLeaveQueue: () => void;
@@ -144,61 +119,73 @@ function QueueStatusCard({
 }
 
 export function QueuePage() {
-  const { connected, connect, publicKey } = useWallet();
+  const { connected, connect } = useWallet();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const [bots, setBots] = useState<Bot[]>([]);
+  const queryClient = useQueryClient();
   const [selectedBotId, setSelectedBotId] = useState<string | null>(null);
   const [inQueue, setInQueue] = useState(false);
   const [queueStatus, setQueueStatus] = useState("Finding Opponent...");
   const [stake, setStake] = useState(100);
-  const [queueStats, setQueueStats] = useState({ queueSize: 0, avgWaitTime: 45 });
   const [error, setError] = useState<string | null>(null);
-  const [backendBotId, setBackendBotId] = useState<string | null>(null);
+
+  // Fetch user's bots from API
+  const { data: botsData, isLoading: botsLoading } = useQuery({
+    queryKey: ["bots", "my"],
+    queryFn: () => api.getMyBots(),
+    enabled: isAuthenticated,
+  });
+
+  // Transform bots to include tier
+  const bots: DisplayBot[] = (botsData?.bots ?? []).map((bot) => ({
+    ...bot,
+    tier: getTierFromElo(bot.elo),
+  }));
 
   const selectedBot = bots.find((b) => b.id === selectedBotId) || null;
 
-  // Load bots from localStorage
-  useEffect(() => {
-    setBots(loadBots());
-  }, []);
-
   // Fetch queue stats
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/queue/stats`);
-        if (res.ok) {
-          const data = await res.json();
-          setQueueStats(data);
-        }
-      } catch {
-        // Ignore - server might not be running
-      }
-    };
+  const { data: queueStats } = useQuery({
+    queryKey: ["queue", "stats"],
+    queryFn: () => api.getQueueStats(),
+    refetchInterval: 5000,
+  });
 
-    void fetchStats();
-    const interval = setInterval(() => void fetchStats(), 5000);
-    return () => clearInterval(interval);
-  }, []);
+  // Join queue mutation
+  const joinQueueMutation = useMutation({
+    mutationFn: (data: { botId: string; stake: number }) => api.joinQueue(data),
+    onSuccess: () => {
+      setQueueStatus("Finding Opponent...");
+    },
+    onError: (err: Error) => {
+      setError(err.message);
+      setInQueue(false);
+    },
+  });
+
+  // Leave queue mutation
+  const leaveQueueMutation = useMutation({
+    mutationFn: (botId: string) => api.leaveQueue(botId),
+    onSuccess: () => {
+      setInQueue(false);
+      setQueueStatus("Finding Opponent...");
+      queryClient.invalidateQueries({ queryKey: ["queue", "stats"] });
+    },
+  });
 
   // Poll for match when in queue
   useEffect(() => {
-    if (!inQueue || !backendBotId) return;
+    if (!inQueue || !selectedBotId) return;
 
     const checkForMatch = async () => {
       try {
-        const res = await fetch(`${API_BASE}/debates/active`);
-        if (res.ok) {
-          const data = (await res.json()) as ActiveDebatesResponse;
-          // Check if any active debate includes our bot (using backend ID)
-          const myDebate = data.debates?.find(
-            (d) => d.proBotId === backendBotId || d.conBotId === backendBotId
-          );
-          if (myDebate) {
-            setInQueue(false);
-            setBackendBotId(null);
-            void navigate(`/arena/${myDebate.id}`);
-          }
+        const { debates } = await api.getActiveDebates();
+        const myDebate = debates?.find(
+          (d) => d.proBotId === selectedBotId || d.conBotId === selectedBotId
+        );
+        if (myDebate) {
+          setInQueue(false);
+          navigate(`/arena/${myDebate.id}`);
         }
       } catch {
         // Ignore
@@ -207,107 +194,22 @@ export function QueuePage() {
 
     const interval = setInterval(() => void checkForMatch(), 2000);
     return () => clearInterval(interval);
-  }, [inQueue, backendBotId, navigate]);
+  }, [inQueue, selectedBotId, navigate]);
 
-  const registerBotWithBackend = useCallback(
-    async (bot: Bot) => {
-      if (!publicKey) return null;
-
-      try {
-        const res = await fetch(`${API_BASE}/bots`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${publicKey.toBase58()}`,
-          },
-          body: JSON.stringify({
-            name: bot.name,
-            endpoint: bot.endpoint,
-            authToken: "dev-token",
-          }),
-        });
-
-        if (res.ok) {
-          const data = (await res.json()) as RegisterBotResponse;
-          return data.bot.id;
-        }
-        return null;
-      } catch {
-        return null;
-      }
-    },
-    [publicKey]
-  );
-
-  const handleJoinQueue = async () => {
-    if (!selectedBot || !publicKey) return;
+  const handleJoinQueue = () => {
+    if (!selectedBot) return;
     setError(null);
-    setQueueStatus("Registering bot...");
     setInQueue(true);
-
-    try {
-      // First register the bot with backend
-      const registeredBotId = await registerBotWithBackend(selectedBot);
-
-      if (!registeredBotId) {
-        // Try to use local bot ID if registration fails
-        console.warn("Bot registration failed, using local ID");
-      }
-
-      const botIdToUse = registeredBotId || selectedBot.id;
-      setBackendBotId(botIdToUse);
-      setQueueStatus("Joining queue...");
-
-      // Join the queue
-      const res = await fetch(`${API_BASE}/queue/join`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${publicKey.toBase58()}`,
-        },
-        body: JSON.stringify({
-          botId: botIdToUse,
-          stake,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = (await res.json()) as ErrorResponse;
-        throw new Error(data.error ?? "Failed to join queue");
-      }
-
-      setQueueStatus("Finding Opponent...");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to join queue");
-      setInQueue(false);
-      setBackendBotId(null);
-    }
+    setQueueStatus("Joining queue...");
+    joinQueueMutation.mutate({ botId: selectedBot.id, stake });
   };
 
-  const handleLeaveQueue = async () => {
-    if (!selectedBot || !publicKey) {
+  const handleLeaveQueue = () => {
+    if (selectedBotId) {
+      leaveQueueMutation.mutate(selectedBotId);
+    } else {
       setInQueue(false);
-      return;
     }
-
-    try {
-      await fetch(`${API_BASE}/queue/leave`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${publicKey.toBase58()}`,
-        },
-        body: JSON.stringify({
-          botId: selectedBot.id,
-        }),
-      });
-    } catch {
-      // Ignore
-    }
-
-    setInQueue(false);
-    setBackendBotId(null);
-    setQueueStatus("Finding Opponent...");
   };
 
   if (!connected) {
@@ -360,15 +262,15 @@ export function QueuePage() {
       <div className="grid grid-cols-3 gap-4">
         <Card className="text-center">
           <CardContent className="py-4">
-            <div className="text-2xl font-bold text-white">{queueStats.queueSize}</div>
+            <div className="text-2xl font-bold text-white">{queueStats?.queueSize ?? 0}</div>
             <div className="text-sm text-gray-400">In Queue</div>
           </CardContent>
         </Card>
         <Card className="text-center">
           <CardContent className="py-4">
             <div className="text-2xl font-bold text-white">
-              {Math.floor(queueStats.avgWaitTime / 60)}:
-              {(queueStats.avgWaitTime % 60).toString().padStart(2, "0")}
+              {Math.floor((queueStats?.avgWaitTime ?? 45) / 60)}:
+              {((queueStats?.avgWaitTime ?? 45) % 60).toString().padStart(2, "0")}
             </div>
             <div className="text-sm text-gray-400">Avg Wait</div>
           </CardContent>
@@ -385,7 +287,7 @@ export function QueuePage() {
       <QueueStatusCard
         inQueue={inQueue}
         selectedBot={selectedBot}
-        waitTime={queueStats.avgWaitTime}
+        waitTime={queueStats?.avgWaitTime ?? 45}
         queueStatus={queueStatus}
         onLeaveQueue={handleLeaveQueue}
       />
@@ -395,7 +297,13 @@ export function QueuePage() {
         <>
           <div>
             <h2 className="mb-4 text-xl font-semibold text-white">Select Your Bot</h2>
-            {bots.length === 0 ? (
+            {botsLoading ? (
+              <Card className="py-8 text-center">
+                <CardContent>
+                  <p className="text-gray-400">Loading your bots...</p>
+                </CardContent>
+              </Card>
+            ) : bots.length === 0 ? (
               <Card className="py-8 text-center">
                 <CardContent>
                   <p className="mb-4 text-gray-400">You don't have any bots yet.</p>
@@ -447,11 +355,15 @@ export function QueuePage() {
           <div className="text-center">
             <Button
               size="lg"
-              disabled={!selectedBot}
+              disabled={!selectedBot || joinQueueMutation.isPending}
               onClick={handleJoinQueue}
               className="min-w-[200px]"
             >
-              {selectedBot ? "Join Queue" : "Select a Bot First"}
+              {joinQueueMutation.isPending
+                ? "Joining..."
+                : selectedBot
+                  ? "Join Queue"
+                  : "Select a Bot First"}
             </Button>
           </div>
         </>
@@ -467,12 +379,15 @@ export function QueuePage() {
             <li className="flex items-start gap-2">
               <span className="font-bold text-arena-accent">1.</span>
               Start the demo bots:{" "}
-              <code className="rounded bg-arena-bg px-2 py-0.5">cd bots && bun run dev</code>
+              <code className="rounded bg-arena-bg px-2 py-0.5">bun run dev:bot</code>
             </li>
             <li className="flex items-start gap-2">
               <span className="font-bold text-arena-accent">2.</span>
-              Start the backend:{" "}
-              <code className="rounded bg-arena-bg px-2 py-0.5">cd server && bun run dev</code>
+              Register a bot on the{" "}
+              <Link to="/bots" className="text-arena-accent hover:underline">
+                Bots page
+              </Link>{" "}
+              with an endpoint like http://localhost:4000/bot/logical/debate
             </li>
             <li className="flex items-start gap-2">
               <span className="font-bold text-arena-accent">3.</span>

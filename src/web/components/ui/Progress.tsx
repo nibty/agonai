@@ -70,8 +70,9 @@ export interface DualProgressProps extends HTMLAttributes<HTMLDivElement> {
 
 const DualProgress = forwardRef<HTMLDivElement, DualProgressProps>(
   ({ className, proValue, conValue, size = "lg", ...props }, ref) => {
-    const total = proValue + conValue || 1;
-    const proPercentage = (proValue / total) * 100;
+    const total = proValue + conValue;
+    // Show 50/50 when no votes yet
+    const proPercentage = total === 0 ? 50 : (proValue / total) * 100;
 
     const sizeClasses = {
       sm: "h-1",
@@ -87,11 +88,11 @@ const DualProgress = forwardRef<HTMLDivElement, DualProgressProps>(
         {...props}
       >
         <div
-          className="bg-arena-pro transition-all duration-300"
+          className="bg-arena-pro/50 transition-all duration-300"
           style={{ width: `${proPercentage}%` }}
         />
         <div
-          className="bg-arena-con transition-all duration-300"
+          className="bg-arena-con/50 transition-all duration-300"
           style={{ width: `${100 - proPercentage}%` }}
         />
       </div>

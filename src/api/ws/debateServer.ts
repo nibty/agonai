@@ -6,7 +6,7 @@ import { debateOrchestrator } from "../services/debateOrchestrator.js";
 
 interface Client {
   ws: WebSocket;
-  debateId: string | null;
+  debateId: number | null;
   userId: string | null;
 }
 
@@ -22,7 +22,7 @@ interface Client {
 export class DebateWebSocketServer {
   private wss: WebSocketServer;
   private clients: Map<WebSocket, Client> = new Map();
-  private debateSpectators: Map<string, Set<WebSocket>> = new Map();
+  private debateSpectators: Map<number, Set<WebSocket>> = new Map();
 
   constructor(server: Server) {
     this.wss = new WebSocketServer({ server, path: "/ws" });
@@ -66,7 +66,7 @@ export class DebateWebSocketServer {
 
       switch (message.type) {
         case "join_debate":
-          this.handleJoinDebate(client, message.payload as { debateId: string; userId?: string });
+          this.handleJoinDebate(client, message.payload as { debateId: number | string; userId?: string });
           break;
 
         case "leave_debate":
@@ -95,8 +95,19 @@ export class DebateWebSocketServer {
     }
   }
 
-  private handleJoinDebate(client: Client, payload: { debateId: string; userId?: string }): void {
-    const { debateId, userId } = payload;
+  private handleJoinDebate(client: Client, payload: { debateId: number | string; userId?: string }): void {
+    const debateId = typeof payload.debateId === "number" ? payload.debateId : parseInt(payload.debateId, 10);
+    const { userId } = payload;
+
+    if (isNaN(debateId)) {
+      client.ws.send(
+        JSON.stringify({
+          type: "error",
+          payload: { code: "INVALID_DEBATE_ID", message: "Invalid debate ID" },
+        })
+      );
+      return;
+    }
 
     // Leave current debate if any
     if (client.debateId) {
@@ -178,7 +189,7 @@ export class DebateWebSocketServer {
     client.userId = null;
   }
 
-  private handleSubmitVote(client: Client, payload: unknown): void {
+  private async handleSubmitVote(client: Client, payload: unknown): Promise<void> {
     if (!client.debateId || !client.userId) {
       client.ws.send(
         JSON.stringify({
@@ -212,7 +223,7 @@ export class DebateWebSocketServer {
       return;
     }
 
-    const success = debateOrchestrator.submitVote(debateId, round, client.userId, choice);
+    const success = await debateOrchestrator.submitVote(debateId, round, client.userId, choice);
 
     if (success) {
       client.ws.send(
@@ -239,7 +250,7 @@ export class DebateWebSocketServer {
   /**
    * Broadcast a message to all spectators of a debate
    */
-  broadcast(debateId: string, message: WSMessage): void {
+  broadcast(debateId: number, message: WSMessage): void {
     const spectators = this.debateSpectators.get(debateId);
     if (!spectators) return;
 
@@ -255,7 +266,7 @@ export class DebateWebSocketServer {
   /**
    * Get number of spectators for a debate
    */
-  getSpectatorCount(debateId: string): number {
+  getSpectatorCount(debateId: number): number {
     return this.debateSpectators.get(debateId)?.size ?? 0;
   }
 

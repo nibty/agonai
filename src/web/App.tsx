@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { WalletProvider } from "@/hooks";
+import { WalletProvider, AuthProvider } from "@/hooks";
 import { Layout } from "@/components/Layout";
 import { HomePage } from "@/routes/Home";
 import { ArenaPage } from "@/routes/Arena";
@@ -23,19 +23,21 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <WalletProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route element={<Layout />}>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/arena/:debateId" element={<ArenaPage />} />
-              <Route path="/queue" element={<QueuePage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/bots" element={<BotsPage />} />
-              <Route path="/topics" element={<TopicsPage />} />
-              <Route path="/leaderboard" element={<LeaderboardPage />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
+        <AuthProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route element={<Layout />}>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/arena/:debateId" element={<ArenaPage />} />
+                <Route path="/queue" element={<QueuePage />} />
+                <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/bots" element={<BotsPage />} />
+                <Route path="/topics" element={<TopicsPage />} />
+                <Route path="/leaderboard" element={<LeaderboardPage />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
       </WalletProvider>
     </QueryClientProvider>
   );

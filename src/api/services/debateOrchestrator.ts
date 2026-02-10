@@ -1,12 +1,6 @@
-import { nanoid } from "nanoid";
 import type {
-  Debate,
-  DebateMessage,
   DebateRound,
   DebatePosition,
-  RoundResult,
-  Bot,
-  Topic,
   WSMessage,
   DebateStartedPayload,
   RoundStartedPayload,
@@ -25,16 +19,47 @@ import {
 } from "../types/index.js";
 import { botRunner } from "./botRunner.js";
 import { calculateMatchEloChanges } from "./elo.js";
+import { debateRepository, botRepository, betRepository, userRepository } from "../repositories/index.js";
+import type { Bot, Topic } from "../db/types.js";
 
-type BroadcastFn = (debateId: string, message: WSMessage) => void;
+type BroadcastFn = (debateId: number, message: WSMessage) => void;
 
+// In-memory representation for active debates (compatible with old types)
 interface DebateState {
-  debate: Debate;
+  debate: {
+    id: number;
+    topicId: number;
+    topic: string;
+    proBotId: number;
+    conBotId: number;
+    status: "pending" | "in_progress" | "voting" | "completed" | "cancelled";
+    currentRound: DebateRound;
+    roundStatus: "pending" | "bot_responding" | "voting" | "completed";
+    roundResults: Array<{
+      round: DebateRound;
+      proVotes: number;
+      conVotes: number;
+      winner: DebatePosition;
+    }>;
+    winner: DebatePosition | null;
+    stake: number;
+    spectatorCount: number;
+    createdAt: Date;
+    startedAt: Date | null;
+    completedAt: Date | null;
+  };
   proBot: Bot;
   conBot: Bot;
   topic: Topic;
-  messages: DebateMessage[];
-  votes: Map<string, Map<string, DebatePosition>>; // round -> voterId -> choice
+  messages: Array<{
+    debateId: number;
+    round: DebateRound;
+    position: DebatePosition;
+    botId: number;
+    content: string;
+    timestamp: Date;
+  }>;
+  votes: Map<string, Map<number, DebatePosition>>; // round -> voterId -> choice
   currentRoundIndex: number;
   broadcast: BroadcastFn;
 }
@@ -46,14 +71,26 @@ interface DebateState {
  * determining winners, and broadcasting updates to spectators.
  */
 export class DebateOrchestratorService {
-  private activeDebates: Map<string, DebateState> = new Map();
+  private activeDebates: Map<number, DebateState> = new Map();
 
   /**
    * Create a new debate between two bots
    */
-  createDebate(proBot: Bot, conBot: Bot, topic: Topic, stake: number): Debate {
-    const debate: Debate = {
-      id: nanoid(),
+  async createDebate(proBot: Bot, conBot: Bot, topic: Topic, stake: number): Promise<DebateState["debate"]> {
+    // Create in database
+    const dbDebate = await debateRepository.create({
+      topicId: topic.id,
+      proBotId: proBot.id,
+      conBotId: conBot.id,
+      status: "pending",
+      currentRound: "opening",
+      roundStatus: "pending",
+      stake,
+    });
+
+    // Return in-memory representation
+    return {
+      id: dbDebate.id,
       topicId: topic.id,
       topic: topic.text,
       proBotId: proBot.id,
@@ -65,26 +102,32 @@ export class DebateOrchestratorService {
       winner: null,
       stake,
       spectatorCount: 0,
-      createdAt: new Date(),
+      createdAt: dbDebate.createdAt,
       startedAt: null,
       completedAt: null,
     };
-
-    return debate;
   }
 
   /**
    * Start a debate - begins the prep phase
    */
   async startDebate(
-    debate: Debate,
+    debate: DebateState["debate"],
     proBot: Bot,
     conBot: Bot,
     topic: Topic,
     broadcast: BroadcastFn
   ): Promise<void> {
+    const startedAt = new Date();
+
+    // Update database
+    await debateRepository.update(debate.id, {
+      status: "in_progress",
+      startedAt,
+    });
+
     const state: DebateState = {
-      debate: { ...debate, status: "in_progress", startedAt: new Date() },
+      debate: { ...debate, status: "in_progress", startedAt },
       proBot,
       conBot,
       topic,
@@ -143,6 +186,12 @@ export class DebateOrchestratorService {
       if (!round) continue;
 
       state.debate.currentRound = round;
+
+      // Update database
+      await debateRepository.update(state.debate.id, {
+        currentRound: round,
+      });
+
       await this.runRound(state, round);
 
       // Check if debate was cancelled
@@ -170,6 +219,7 @@ export class DebateOrchestratorService {
     });
 
     state.debate.roundStatus = "bot_responding";
+    await debateRepository.update(state.debate.id, { roundStatus: "bot_responding" });
 
     // Pro bot goes first
     await this.getBotResponse(state, round, "pro", state.proBot, timeLimit);
@@ -179,9 +229,11 @@ export class DebateOrchestratorService {
 
     // Voting phase
     state.debate.roundStatus = "voting";
+    await debateRepository.update(state.debate.id, { roundStatus: "voting" });
     await this.runVotingPhase(state, round);
 
     state.debate.roundStatus = "completed";
+    await debateRepository.update(state.debate.id, { roundStatus: "completed" });
   }
 
   /**
@@ -222,9 +274,8 @@ export class DebateOrchestratorService {
       content = `[Bot failed to respond: ${result.error ?? "Unknown error"}]`;
     }
 
-    // Create message
-    const message: DebateMessage = {
-      id: nanoid(),
+    // Create message in memory
+    const message = {
       debateId: state.debate.id,
       round,
       position,
@@ -234,6 +285,15 @@ export class DebateOrchestratorService {
     };
 
     state.messages.push(message);
+
+    // Persist message to database
+    await debateRepository.addMessage({
+      debateId: state.debate.id,
+      round,
+      position,
+      botId: bot.id,
+      content,
+    });
 
     // Broadcast message
     const messagePayload: BotMessagePayload = {
@@ -276,17 +336,8 @@ export class DebateOrchestratorService {
     for (let i = 0; i < iterations; i++) {
       await this.sleep(updateInterval);
 
-      // Broadcast vote update
-      const roundVotes = state.votes.get(round);
-      let proVotes = 0;
-      let conVotes = 0;
-
-      if (roundVotes) {
-        for (const choice of roundVotes.values()) {
-          if (choice === "pro") proVotes++;
-          else conVotes++;
-        }
-      }
+      // Get vote counts from database
+      const { proVotes, conVotes } = await debateRepository.countRoundVotes(state.debate.id, round);
 
       const updatePayload: VoteUpdatePayload = { round, proVotes, conVotes };
       state.broadcast(state.debate.id, {
@@ -296,21 +347,12 @@ export class DebateOrchestratorService {
       });
     }
 
-    // Tally votes and determine round winner
-    const roundVotes = state.votes.get(round);
-    let proVotes = 0;
-    let conVotes = 0;
-
-    if (roundVotes) {
-      for (const choice of roundVotes.values()) {
-        if (choice === "pro") proVotes++;
-        else conVotes++;
-      }
-    }
+    // Tally final votes from database
+    const { proVotes, conVotes } = await debateRepository.countRoundVotes(state.debate.id, round);
 
     const winner: DebatePosition = proVotes >= conVotes ? "pro" : "con";
 
-    const result: RoundResult = {
+    const result = {
       round,
       proVotes,
       conVotes,
@@ -318,6 +360,15 @@ export class DebateOrchestratorService {
     };
 
     state.debate.roundResults.push(result);
+
+    // Persist round result to database
+    await debateRepository.addRoundResult({
+      debateId: state.debate.id,
+      round,
+      proVotes,
+      conVotes,
+      winner,
+    });
 
     // Calculate overall score
     const overallScore = { pro: 0, con: 0 };
@@ -341,13 +392,14 @@ export class DebateOrchestratorService {
 
   /**
    * Submit a vote for the current round
+   * @param walletAddress - The voter's wallet address (will be converted to user UUID)
    */
-  submitVote(
-    debateId: string,
+  async submitVote(
+    debateId: number,
     round: DebateRound,
-    voterId: string,
+    walletAddress: string,
     choice: DebatePosition
-  ): boolean {
+  ): Promise<boolean> {
     const state = this.activeDebates.get(debateId);
     if (!state) return false;
 
@@ -355,18 +407,18 @@ export class DebateOrchestratorService {
     if (state.debate.currentRound !== round) return false;
     if (state.debate.roundStatus !== "voting") return false;
 
-    // Get or create round votes
-    let roundVotes = state.votes.get(round);
-    if (!roundVotes) {
-      roundVotes = new Map();
-      state.votes.set(round, roundVotes);
-    }
+    // Look up or create user by wallet address
+    const user = await userRepository.findOrCreate(walletAddress);
 
-    // One vote per voter per round
-    if (roundVotes.has(voterId)) return false;
+    // Submit vote to database with user UUID
+    const vote = await debateRepository.submitVote({
+      debateId,
+      round,
+      voterId: user.id,
+      choice,
+    });
 
-    roundVotes.set(voterId, choice);
-    return true;
+    return vote !== null;
   }
 
   /**
@@ -389,10 +441,26 @@ export class DebateOrchestratorService {
     // Calculate ELO changes
     const eloChanges = calculateMatchEloChanges(winnerBot.elo, loserBot.elo);
 
+    // Update bots ELO in database
+    await Promise.all([
+      botRepository.updateStats(winnerBot.id, true, eloChanges.winner.change),
+      botRepository.updateStats(loserBot.id, false, eloChanges.loser.change),
+    ]);
+
+    // Settle bets
+    const payouts = await betRepository.settleBets(state.debate.id, winner);
+
     // Update debate state
     state.debate.status = "completed";
     state.debate.winner = winner;
     state.debate.completedAt = new Date();
+
+    // Update database
+    await debateRepository.update(state.debate.id, {
+      status: "completed",
+      winner,
+      completedAt: state.debate.completedAt,
+    });
 
     // Broadcast debate ended
     const endPayload: DebateEndedPayload = {
@@ -402,7 +470,7 @@ export class DebateOrchestratorService {
         proBot: winner === "pro" ? eloChanges.winner : eloChanges.loser,
         conBot: winner === "con" ? eloChanges.winner : eloChanges.loser,
       },
-      payouts: [], // TODO: Calculate payouts from bets
+      payouts,
     };
 
     state.broadcast(state.debate.id, {
@@ -418,11 +486,15 @@ export class DebateOrchestratorService {
   /**
    * Update spectator count for a debate
    */
-  updateSpectatorCount(debateId: string, count: number): void {
+  updateSpectatorCount(debateId: number, count: number): void {
     const state = this.activeDebates.get(debateId);
     if (!state) return;
 
     state.debate.spectatorCount = count;
+
+    // Update database (fire and forget)
+    debateRepository.update(debateId, { spectatorCount: count });
+
     state.broadcast(debateId, {
       type: "spectator_count",
       debateId,
@@ -433,19 +505,19 @@ export class DebateOrchestratorService {
   /**
    * Get active debate by ID
    */
-  getDebate(debateId: string): Debate | undefined {
+  getDebate(debateId: number): DebateState["debate"] | undefined {
     return this.activeDebates.get(debateId)?.debate;
   }
 
   /**
    * Get full debate state for late joiners
    */
-  getFullDebateState(debateId: string):
+  getFullDebateState(debateId: number):
     | {
-        debate: Debate;
+        debate: DebateState["debate"];
         proBot: {
-          id: string;
-          ownerId: string;
+          id: number;
+          ownerId: number;
           name: string;
           elo: number;
           wins: number;
@@ -453,8 +525,8 @@ export class DebateOrchestratorService {
           isActive: boolean;
         };
         conBot: {
-          id: string;
-          ownerId: string;
+          id: number;
+          ownerId: number;
           name: string;
           elo: number;
           wins: number;
@@ -462,7 +534,7 @@ export class DebateOrchestratorService {
           isActive: boolean;
         };
         topic: Topic;
-        messages: DebateMessage[];
+        messages: DebateState["messages"];
       }
     | undefined {
     const state = this.activeDebates.get(debateId);
@@ -494,20 +566,35 @@ export class DebateOrchestratorService {
   }
 
   /**
-   * Get all active debates
+   * Get all active debates with bot info
    */
-  getActiveDebates(): Debate[] {
-    return Array.from(this.activeDebates.values()).map((s) => s.debate);
+  getActiveDebates(): Array<DebateState["debate"] & {
+    proBotName: string;
+    proBotElo: number;
+    conBotName: string;
+    conBotElo: number;
+  }> {
+    return Array.from(this.activeDebates.values()).map((s) => ({
+      ...s.debate,
+      proBotName: s.proBot.name,
+      proBotElo: s.proBot.elo,
+      conBotName: s.conBot.name,
+      conBotElo: s.conBot.elo,
+    }));
   }
 
   /**
    * Cancel a debate
    */
-  cancelDebate(debateId: string, reason: string): void {
+  async cancelDebate(debateId: number, reason: string): Promise<void> {
     const state = this.activeDebates.get(debateId);
     if (!state) return;
 
     state.debate.status = "cancelled";
+
+    // Update database
+    await debateRepository.update(debateId, { status: "cancelled" });
+
     state.broadcast(debateId, {
       type: "error",
       debateId,

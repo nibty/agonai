@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Wallet, ChevronDown, Copy, LogOut, ExternalLink, Check } from "lucide-react";
+import { Wallet, ChevronDown, Copy, LogOut, ExternalLink, Check, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import {
   DropdownMenu,
@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/DropdownMenu";
 import { useWallet } from "@/hooks/useWallet";
+import { useAuth } from "@/hooks/useAuth";
 import { useBalance } from "@/hooks/useBalance";
 import { cn, truncateAddress, formatNumber } from "@/lib/utils";
 
@@ -18,7 +19,8 @@ interface WalletButtonProps {
 }
 
 export function WalletButton({ className }: WalletButtonProps) {
-  const { connected, connecting, publicKey, connect, disconnect } = useWallet();
+  const { connected, connecting, publicKey, connect } = useWallet();
+  const { isAuthenticated, isAuthenticating, authenticate, logout } = useAuth();
   const { balance } = useBalance(publicKey);
   const [copied, setCopied] = useState(false);
 
@@ -38,10 +40,11 @@ export function WalletButton({ className }: WalletButtonProps) {
     }
   };
 
-  const handleDisconnect = async () => {
-    await disconnect();
+  const handleDisconnect = () => {
+    logout();
   };
 
+  // Not connected - show connect button
   if (!connected) {
     return (
       <Button
@@ -57,6 +60,23 @@ export function WalletButton({ className }: WalletButtonProps) {
     );
   }
 
+  // Connected but not authenticated - show sign in button
+  if (!isAuthenticated) {
+    return (
+      <Button
+        variant="default"
+        size="sm"
+        onClick={() => void authenticate()}
+        disabled={isAuthenticating}
+        className={cn("gap-2", className)}
+      >
+        <KeyRound className="h-4 w-4" />
+        {isAuthenticating ? "Signing..." : "Sign In"}
+      </Button>
+    );
+  }
+
+  // Fully authenticated - show dropdown
   const address = publicKey?.toBase58() ?? "";
   const displayAddress = truncateAddress(address);
   const displayBalance = balance !== null ? formatNumber(balance) : "--";
@@ -64,7 +84,7 @@ export function WalletButton({ className }: WalletButtonProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className={cn("gap-2", className)}>
+        <Button variant="outline" size="sm" className={cn("h-auto gap-2 px-3 py-2", className)}>
           <div className="flex items-center gap-2">
             <div className="flex h-6 w-6 items-center justify-center rounded-full bg-arena-accent/20">
               <Wallet className="h-3.5 w-3.5 text-arena-accent" />
@@ -106,7 +126,7 @@ export function WalletButton({ className }: WalletButtonProps) {
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onClick={() => void handleDisconnect()}
+          onClick={handleDisconnect}
           className="text-arena-con focus:text-arena-con"
         >
           <LogOut className="mr-2 h-4 w-4" />

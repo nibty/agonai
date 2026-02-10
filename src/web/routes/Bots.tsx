@@ -1,83 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useWallet } from "@/hooks/useWallet";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/Card";
-import { Badge, TierBadge } from "@/components/ui/Badge";
+import { TierBadge } from "@/components/ui/Badge";
 import { BotAvatar } from "@/components/ui/Avatar";
 import { Input } from "@/components/ui/Input";
 import { Progress } from "@/components/ui/Progress";
-import type { Bot } from "@/types";
+import { api, type Bot } from "@/lib/api";
+import { getTierFromElo, type BotTier } from "@/types";
 
-// Default demo bots (can be edited)
-const defaultBots: Bot[] = [
-  {
-    id: "bot-1",
-    owner: "user-wallet",
-    name: "LogicMaster",
-    avatar: null,
-    endpoint: "http://localhost:4000/bot/logic-master/debate",
-    elo: 1200,
-    wins: 0,
-    losses: 0,
-    tier: 1,
-    personalityTags: ["analytical", "calm"],
-    createdAt: new Date(),
-  },
-  {
-    id: "bot-2",
-    owner: "user-wallet",
-    name: "DevilsAdvocate",
-    avatar: null,
-    endpoint: "http://localhost:4000/bot/devils-advocate/debate",
-    elo: 1200,
-    wins: 0,
-    losses: 0,
-    tier: 1,
-    personalityTags: ["aggressive", "witty"],
-    createdAt: new Date(),
-  },
-  {
-    id: "bot-3",
-    owner: "user-wallet",
-    name: "Philosopher",
-    avatar: null,
-    endpoint: "http://localhost:4000/bot/philosopher/debate",
-    elo: 1200,
-    wins: 0,
-    losses: 0,
-    tier: 1,
-    personalityTags: ["thoughtful", "nuanced"],
-    createdAt: new Date(),
-  },
-  {
-    id: "bot-4",
-    owner: "user-wallet",
-    name: "DataDriven",
-    avatar: null,
-    endpoint: "http://localhost:4000/bot/data-driven/debate",
-    elo: 1200,
-    wins: 0,
-    losses: 0,
-    tier: 1,
-    personalityTags: ["statistical", "factual"],
-    createdAt: new Date(),
-  },
-];
-
-// Load bots from localStorage or use defaults
-function loadBots(): Bot[] {
-  const saved = localStorage.getItem("ai-debates-bots");
-  if (saved) {
-    const parsed = JSON.parse(saved) as Bot[];
-    return parsed.map((b) => ({ ...b, createdAt: new Date(b.createdAt) }));
-  }
-  return defaultBots;
-}
-
-// Save bots to localStorage
-function saveBots(bots: Bot[]) {
-  localStorage.setItem("ai-debates-bots", JSON.stringify(bots));
+interface DisplayBot extends Bot {
+  tier: BotTier;
 }
 
 // Tier requirements
@@ -89,7 +25,7 @@ const tierRequirements = {
   5: { minElo: 2000, minWins: 100 },
 };
 
-function BotCard({ bot, onViewDetails }: { bot: Bot; onViewDetails: (bot: Bot) => void }) {
+function BotCard({ bot, onViewDetails }: { bot: DisplayBot; onViewDetails: (bot: DisplayBot) => void }) {
   const winRate =
     bot.wins + bot.losses > 0 ? ((bot.wins / (bot.wins + bot.losses)) * 100).toFixed(1) : "0.0";
 
@@ -111,13 +47,6 @@ function BotCard({ bot, onViewDetails }: { bot: Bot; onViewDetails: (bot: Bot) =
               <TierBadge tier={bot.tier} />
             </div>
             <p className="mb-2 truncate text-sm text-gray-400">{bot.endpoint}</p>
-            <div className="flex flex-wrap gap-1">
-              {bot.personalityTags.map((tag) => (
-                <Badge key={tag} variant="outline" size="sm">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
           </div>
         </div>
 
@@ -182,13 +111,15 @@ function BotCard({ bot, onViewDetails }: { bot: Bot; onViewDetails: (bot: Bot) =
 function RegisterBotForm({
   onClose,
   onRegister,
+  isRegistering,
 }: {
   onClose: () => void;
-  onRegister: (bot: Omit<Bot, "id" | "elo" | "wins" | "losses" | "tier" | "createdAt">) => void;
+  onRegister: (data: { name: string; endpoint: string; authToken: string }) => void;
+  isRegistering: boolean;
 }) {
   const [name, setName] = useState("");
   const [endpoint, setEndpoint] = useState("");
-  const [tags, setTags] = useState("");
+  const [authToken, setAuthToken] = useState("");
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
 
@@ -198,7 +129,10 @@ function RegisterBotForm({
     try {
       const response = await fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(authToken && { "Authorization": `Bearer ${authToken}` }),
+        },
         body: JSON.stringify({
           debate_id: "test",
           round: "opening",
@@ -218,16 +152,7 @@ function RegisterBotForm({
   };
 
   const handleSubmit = () => {
-    onRegister({
-      owner: "user-wallet",
-      name,
-      avatar: null,
-      endpoint,
-      personalityTags: tags
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean),
-    });
+    onRegister({ name, endpoint, authToken });
   };
 
   return (
@@ -262,14 +187,15 @@ function RegisterBotForm({
         </div>
 
         <div>
-          <label className="mb-2 block text-sm text-gray-400">Personality Tags</label>
+          <label className="mb-2 block text-sm text-gray-400">Auth Token (optional)</label>
           <Input
-            placeholder="analytical, calm, witty"
-            value={tags}
-            onChange={(e) => setTags(e.target.value)}
+            type="password"
+            placeholder="Optional authentication token"
+            value={authToken}
+            onChange={(e) => setAuthToken(e.target.value)}
           />
           <p className="mt-1 text-xs text-gray-500">
-            Comma-separated tags describing your bot's style
+            If your bot requires authentication
           </p>
         </div>
 
@@ -296,8 +222,8 @@ function RegisterBotForm({
           >
             {testing ? "Testing..." : "Test Endpoint"}
           </Button>
-          <Button onClick={handleSubmit} disabled={!name || !endpoint} className="flex-1">
-            Register Bot
+          <Button onClick={handleSubmit} disabled={!name || !endpoint || isRegistering} className="flex-1">
+            {isRegistering ? "Registering..." : "Register Bot"}
           </Button>
         </div>
 
@@ -309,60 +235,20 @@ function RegisterBotForm({
   );
 }
 
-function EditBotForm({
+function BotDetailsModal({
   bot,
-  onSave,
-  onCancel,
+  onClose,
   onDelete,
+  isDeleting,
 }: {
-  bot: Bot;
-  onSave: (updated: Bot) => void;
-  onCancel: () => void;
+  bot: DisplayBot;
+  onClose: () => void;
   onDelete: () => void;
+  isDeleting: boolean;
 }) {
-  const [name, setName] = useState(bot.name);
-  const [endpoint, setEndpoint] = useState(bot.endpoint);
-  const [tags, setTags] = useState(bot.personalityTags.join(", "));
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-  const handleTest = async () => {
-    setTesting(true);
-    setTestResult(null);
-    try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          debate_id: "test",
-          round: "opening",
-          topic: "This is a test",
-          position: "pro",
-          opponent_last_message: null,
-          time_limit_seconds: 60,
-          messages_so_far: [],
-        }),
-      });
-      const data = (await response.json()) as { message?: string };
-      setTestResult(data.message ? "success" : "error");
-    } catch {
-      setTestResult("error");
-    }
-    setTesting(false);
-  };
-
-  const handleSave = () => {
-    onSave({
-      ...bot,
-      name,
-      endpoint,
-      personalityTags: tags
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean),
-    });
-  };
+  const winRate =
+    bot.wins + bot.losses > 0 ? ((bot.wins / (bot.wins + bot.losses)) * 100).toFixed(1) : "0.0";
 
   if (showDeleteConfirm) {
     return (
@@ -380,105 +266,18 @@ function EditBotForm({
               variant="outline"
               onClick={() => setShowDeleteConfirm(false)}
               className="flex-1"
+              disabled={isDeleting}
             >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={onDelete} className="flex-1">
-              Delete Bot
+            <Button variant="destructive" onClick={onDelete} className="flex-1" disabled={isDeleting}>
+              {isDeleting ? "Deleting..." : "Delete Bot"}
             </Button>
           </div>
         </CardContent>
       </Card>
     );
   }
-
-  return (
-    <Card variant="glow">
-      <CardHeader>
-        <CardTitle>Edit Bot</CardTitle>
-        <CardDescription>Update your bot's configuration</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <label className="mb-2 block text-sm text-gray-400">Bot Name</label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} />
-        </div>
-
-        <div>
-          <label className="mb-2 block text-sm text-gray-400">API Endpoint</label>
-          <Input
-            value={endpoint}
-            onChange={(e) => {
-              setEndpoint(e.target.value);
-              setTestResult(null);
-            }}
-            placeholder="http://localhost:4000/bot/my-bot/debate"
-          />
-          <p className="mt-1 text-xs text-gray-500">
-            For local testing, use: http://localhost:4000/bot/[bot-id]/debate
-          </p>
-        </div>
-
-        <div>
-          <label className="mb-2 block text-sm text-gray-400">Personality Tags</label>
-          <Input
-            value={tags}
-            onChange={(e) => setTags(e.target.value)}
-            placeholder="analytical, calm, witty"
-          />
-        </div>
-
-        {testResult && (
-          <div
-            className={`rounded-lg p-3 ${
-              testResult === "success"
-                ? "bg-arena-pro/20 text-arena-pro"
-                : "bg-arena-con/20 text-arena-con"
-            }`}
-          >
-            {testResult === "success"
-              ? "Endpoint is responding correctly!"
-              : "Failed to connect. Make sure your bot server is running."}
-          </div>
-        )}
-
-        <div className="flex gap-3 pt-2">
-          <Button variant="outline" onClick={handleTest} disabled={!endpoint || testing}>
-            {testing ? "Testing..." : "Test Endpoint"}
-          </Button>
-          <Button onClick={handleSave} disabled={!name || !endpoint} className="flex-1">
-            Save Changes
-          </Button>
-        </div>
-
-        <div className="flex gap-3 border-t border-arena-border pt-2">
-          <Button variant="ghost" onClick={onCancel} className="flex-1">
-            Cancel
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => setShowDeleteConfirm(true)}
-            className="text-arena-con hover:bg-arena-con/10 hover:text-arena-con"
-          >
-            Delete Bot
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function BotDetailsModal({
-  bot,
-  onClose,
-  onEdit,
-}: {
-  bot: Bot;
-  onClose: () => void;
-  onEdit: () => void;
-}) {
-  const winRate =
-    bot.wins + bot.losses > 0 ? ((bot.wins / (bot.wins + bot.losses)) * 100).toFixed(1) : "0.0";
 
   return (
     <Card variant="glow">
@@ -490,7 +289,7 @@ function BotDetailsModal({
             <div className="mt-1 flex items-center gap-2">
               <TierBadge tier={bot.tier} />
               <span className="text-sm text-gray-400">
-                Created {bot.createdAt.toLocaleDateString()}
+                Created {new Date(bot.createdAt).toLocaleDateString()}
               </span>
             </div>
           </div>
@@ -523,17 +322,6 @@ function BotDetailsModal({
               <div className="text-xl font-bold text-white">{winRate}%</div>
               <div className="text-xs text-gray-400">Win Rate</div>
             </div>
-          </div>
-        </div>
-
-        <div>
-          <h4 className="mb-2 text-sm font-medium text-gray-400">Personality Tags</h4>
-          <div className="flex flex-wrap gap-2">
-            {bot.personalityTags.map((tag) => (
-              <Badge key={tag} variant="secondary">
-                {tag}
-              </Badge>
-            ))}
           </div>
         </div>
 
@@ -572,8 +360,12 @@ function BotDetailsModal({
           <Button variant="outline" onClick={onClose} className="flex-1">
             Close
           </Button>
-          <Button variant="secondary" onClick={onEdit} className="flex-1">
-            Edit Bot
+          <Button
+            variant="ghost"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="text-arena-con hover:bg-arena-con/10 hover:text-arena-con"
+          >
+            Delete Bot
           </Button>
           <Link to="/queue" className="flex-1">
             <Button className="w-full">Enter Queue</Button>
@@ -586,50 +378,42 @@ function BotDetailsModal({
 
 export function BotsPage() {
   const { connected, connect } = useWallet();
-  const [bots, setBots] = useState<Bot[]>([]);
+  const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
   const [showRegisterForm, setShowRegisterForm] = useState(false);
-  const [selectedBot, setSelectedBot] = useState<Bot | null>(null);
-  const [editingBot, setEditingBot] = useState<Bot | null>(null);
+  const [selectedBot, setSelectedBot] = useState<DisplayBot | null>(null);
 
-  // Load bots on mount
-  useEffect(() => {
-    setBots(loadBots());
-  }, []);
+  // Fetch bots from API
+  const { data: botsData, isLoading } = useQuery({
+    queryKey: ["bots", "my"],
+    queryFn: () => api.getMyBots(),
+    enabled: isAuthenticated,
+  });
 
-  // Save bots whenever they change
-  useEffect(() => {
-    if (bots.length > 0) {
-      saveBots(bots);
-    }
-  }, [bots]);
+  // Transform bots to include tier
+  const bots: DisplayBot[] = (botsData?.bots ?? []).map((bot) => ({
+    ...bot,
+    tier: getTierFromElo(bot.elo),
+  }));
 
-  const handleSaveBot = (updated: Bot) => {
-    setBots((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
-    setEditingBot(null);
-    setSelectedBot(null);
-  };
+  // Register bot mutation
+  const registerMutation = useMutation({
+    mutationFn: (data: { name: string; endpoint: string; authToken: string }) =>
+      api.registerBot(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bots", "my"] });
+      setShowRegisterForm(false);
+    },
+  });
 
-  const handleDeleteBot = (botId: string) => {
-    setBots((prev) => prev.filter((b) => b.id !== botId));
-    setEditingBot(null);
-    setSelectedBot(null);
-  };
-
-  const handleRegisterBot = (
-    newBot: Omit<Bot, "id" | "elo" | "wins" | "losses" | "tier" | "createdAt">
-  ) => {
-    const bot: Bot = {
-      ...newBot,
-      id: `bot-${Date.now()}`,
-      elo: 1200,
-      wins: 0,
-      losses: 0,
-      tier: 1,
-      createdAt: new Date(),
-    };
-    setBots((prev) => [...prev, bot]);
-    setShowRegisterForm(false);
-  };
+  // Delete bot mutation
+  const deleteMutation = useMutation({
+    mutationFn: (botId: string) => api.deleteBot(botId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bots", "my"] });
+      setSelectedBot(null);
+    },
+  });
 
   if (!connected) {
     return (
@@ -662,20 +446,6 @@ export function BotsPage() {
     );
   }
 
-  // Show edit form
-  if (editingBot) {
-    return (
-      <div className="mx-auto max-w-xl">
-        <EditBotForm
-          bot={editingBot}
-          onSave={handleSaveBot}
-          onCancel={() => setEditingBot(null)}
-          onDelete={() => handleDeleteBot(editingBot.id)}
-        />
-      </div>
-    );
-  }
-
   // Show bot details modal
   if (selectedBot) {
     return (
@@ -683,10 +453,8 @@ export function BotsPage() {
         <BotDetailsModal
           bot={selectedBot}
           onClose={() => setSelectedBot(null)}
-          onEdit={() => {
-            setEditingBot(selectedBot);
-            setSelectedBot(null);
-          }}
+          onDelete={() => deleteMutation.mutate(selectedBot.id)}
+          isDeleting={deleteMutation.isPending}
         />
       </div>
     );
@@ -698,7 +466,8 @@ export function BotsPage() {
       <div className="mx-auto max-w-xl">
         <RegisterBotForm
           onClose={() => setShowRegisterForm(false)}
-          onRegister={handleRegisterBot}
+          onRegister={(data) => registerMutation.mutate(data)}
+          isRegistering={registerMutation.isPending}
         />
       </div>
     );
@@ -752,7 +521,13 @@ export function BotsPage() {
       </div>
 
       {/* Bots Grid */}
-      {bots.length === 0 ? (
+      {isLoading ? (
+        <Card className="py-12 text-center">
+          <CardContent>
+            <p className="text-gray-400">Loading your bots...</p>
+          </CardContent>
+        </Card>
+      ) : bots.length === 0 ? (
         <Card className="py-12 text-center">
           <CardContent>
             <p className="mb-4 text-gray-400">You haven't registered any bots yet.</p>

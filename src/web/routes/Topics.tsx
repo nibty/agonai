@@ -1,85 +1,11 @@
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useWallet } from "@/hooks/useWallet";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/Card";
 import { Textarea, Select } from "@/components/ui/Input";
-import type { Topic, TopicCategory } from "@/types";
-
-// Mock topics data
-const mockTopics: Topic[] = [
-  {
-    id: "topic-1",
-    text: "Is AI consciousness achievable within the next decade?",
-    category: "tech",
-    proposer: "7xKXqqqq",
-    upvotes: 142,
-    usedCount: 5,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
-  },
-  {
-    id: "topic-2",
-    text: "Should cryptocurrency replace traditional banking systems?",
-    category: "crypto",
-    proposer: "8yLYrrrr",
-    upvotes: 89,
-    usedCount: 3,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5),
-  },
-  {
-    id: "topic-3",
-    text: "Is social media a net positive for society?",
-    category: "tech",
-    proposer: "9zMZssss",
-    upvotes: 76,
-    usedCount: 8,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10),
-  },
-  {
-    id: "topic-4",
-    text: "Should universal basic income be implemented globally?",
-    category: "politics",
-    proposer: "1aNAaaaa",
-    upvotes: 65,
-    usedCount: 2,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3),
-  },
-  {
-    id: "topic-5",
-    text: "Is free will an illusion?",
-    category: "philosophy",
-    proposer: "2bOBbbbb",
-    upvotes: 54,
-    usedCount: 4,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7),
-  },
-  {
-    id: "topic-6",
-    text: "Are superhero movies ruining cinema?",
-    category: "pop-culture",
-    proposer: "3cPCcccc",
-    upvotes: 43,
-    usedCount: 6,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 1),
-  },
-  {
-    id: "topic-7",
-    text: "Is DeFi sustainable without regulation?",
-    category: "crypto",
-    proposer: "4dQDdddd",
-    upvotes: 38,
-    usedCount: 1,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 12),
-  },
-  {
-    id: "topic-8",
-    text: "Should AI development be paused for safety research?",
-    category: "tech",
-    proposer: "5eREeeee",
-    upvotes: 31,
-    usedCount: 0,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 6),
-  },
-];
+import { api, type Topic as ApiTopic } from "@/lib/api";
+import type { TopicCategory } from "@/types";
 
 const categoryColors: Record<TopicCategory, string> = {
   politics: "bg-red-500/20 text-red-400",
@@ -103,12 +29,12 @@ function TopicCard({
   onDownvote,
   hasVoted,
 }: {
-  topic: Topic;
+  topic: ApiTopic;
   onUpvote: () => void;
   onDownvote: () => void;
   hasVoted: "up" | "down" | null;
 }) {
-  const timeAgo = getTimeAgo(topic.createdAt);
+  const timeAgo = getTimeAgo(new Date(topic.createdAt));
 
   return (
     <Card className="transition-colors hover:border-arena-accent/30">
@@ -142,7 +68,7 @@ function TopicCard({
                     : "text-white"
               }`}
             >
-              {topic.upvotes}
+              {topic.upvotes - topic.downvotes}
             </span>
             <button
               onClick={onDownvote}
@@ -168,7 +94,7 @@ function TopicCard({
             <div className="mb-2 flex items-center gap-2">
               <span
                 className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                  categoryColors[topic.category]
+                  categoryColors[topic.category as TopicCategory] || "bg-gray-500/20 text-gray-400"
                 }`}
               >
                 {topic.category}
@@ -177,8 +103,8 @@ function TopicCard({
             </div>
             <p className="mb-2 font-medium text-white">{topic.text}</p>
             <div className="flex items-center gap-4 text-xs text-gray-400">
-              <span>by {topic.proposer.slice(0, 8)}...</span>
-              <span>Used {topic.usedCount} times</span>
+              {topic.proposerId && <span>by {topic.proposerId.slice(0, 8)}...</span>}
+              <span>Used {topic.timesUsed} times</span>
             </div>
           </div>
         </div>
@@ -190,15 +116,19 @@ function TopicCard({
 function SubmitTopicForm({ onClose }: { onClose: () => void }) {
   const [text, setText] = useState("");
   const [category, setCategory] = useState<TopicCategory>("tech");
-  const [submitting, setSubmitting] = useState(false);
+  const queryClient = useQueryClient();
+
+  const submitMutation = useMutation({
+    mutationFn: (data: { text: string; category: string }) => api.submitTopic(data),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["topics"] });
+      onClose();
+    },
+  });
 
   const handleSubmit = async () => {
     if (!text.trim()) return;
-    setSubmitting(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setSubmitting(false);
-    onClose();
+    submitMutation.mutate({ text: text.trim(), category });
   };
 
   return (
@@ -234,8 +164,8 @@ function SubmitTopicForm({ onClose }: { onClose: () => void }) {
           <Button variant="outline" onClick={onClose} className="flex-1">
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={!text.trim() || submitting} className="flex-1">
-            {submitting ? "Submitting..." : "Submit Topic"}
+          <Button onClick={handleSubmit} disabled={!text.trim() || submitMutation.isPending} className="flex-1">
+            {submitMutation.isPending ? "Submitting..." : "Submit Topic"}
           </Button>
         </div>
       </CardContent>
@@ -257,27 +187,51 @@ export function TopicsPage() {
   const { connected, connect } = useWallet();
   const [showSubmitForm, setShowSubmitForm] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<TopicCategory | "all">("all");
-  const [sortBy, setSortBy] = useState<"popular" | "new" | "used">("popular");
+  const [sortBy, setSortBy] = useState<"popular" | "newest" | "used">("popular");
   const [votes, setVotes] = useState<Record<string, "up" | "down">>({});
+  const queryClient = useQueryClient();
 
-  const filteredTopics = mockTopics
-    .filter((topic) => selectedCategory === "all" || topic.category === selectedCategory)
-    .sort((a, b) => {
-      if (sortBy === "popular") return b.upvotes - a.upvotes;
-      if (sortBy === "new") return b.createdAt.getTime() - a.createdAt.getTime();
-      return b.usedCount - a.usedCount;
-    });
+  // Fetch topics from API
+  const { data: topicsData, isLoading } = useQuery({
+    queryKey: ["topics", selectedCategory, sortBy],
+    queryFn: () => {
+      const params: { category?: string; sort?: "popular" | "newest" | "used"; limit?: number } = {
+        sort: sortBy,
+        limit: 100,
+      };
+      if (selectedCategory !== "all") {
+        params.category = selectedCategory;
+      }
+      return api.getTopics(params);
+    },
+    staleTime: 30_000, // 30 seconds
+  });
+
+  // Vote mutation
+  const voteMutation = useMutation({
+    mutationFn: ({ topicId, upvote }: { topicId: string; upvote: boolean }) =>
+      api.voteTopic(topicId, upvote),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["topics"] });
+    },
+  });
+
+  const topics = topicsData?.topics || [];
 
   const handleVote = (topicId: string, direction: "up" | "down") => {
     if (!connected) return;
+
+    // Optimistically update local state
     setVotes((prev) => {
       if (prev[topicId] === direction) {
-        // Remove vote
         const { [topicId]: _, ...rest } = prev;
         return rest;
       }
       return { ...prev, [topicId]: direction };
     });
+
+    // Send vote to API
+    voteMutation.mutate({ topicId, upvote: direction === "up" });
   };
 
   if (showSubmitForm) {
@@ -334,25 +288,31 @@ export function TopicsPage() {
         </div>
         <Select
           value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+          onChange={(e) => setSortBy(e.target.value as "popular" | "newest" | "used")}
           className="w-auto"
         >
           <option value="popular">Most Popular</option>
-          <option value="new">Newest</option>
+          <option value="newest">Newest</option>
           <option value="used">Most Used</option>
         </Select>
       </div>
 
       {/* Topics List */}
       <div className="space-y-4">
-        {filteredTopics.length === 0 ? (
+        {isLoading ? (
+          <Card className="py-12 text-center">
+            <CardContent>
+              <p className="text-gray-400">Loading topics...</p>
+            </CardContent>
+          </Card>
+        ) : topics.length === 0 ? (
           <Card className="py-12 text-center">
             <CardContent>
               <p className="text-gray-400">No topics found. Be the first to submit one!</p>
             </CardContent>
           </Card>
         ) : (
-          filteredTopics.map((topic) => (
+          topics.map((topic) => (
             <TopicCard
               key={topic.id}
               topic={topic}
@@ -368,22 +328,22 @@ export function TopicsPage() {
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Card className="text-center">
           <CardContent className="py-4">
-            <div className="text-2xl font-bold text-white">{mockTopics.length}</div>
+            <div className="text-2xl font-bold text-white">{topics.length}</div>
             <div className="text-sm text-gray-400">Total Topics</div>
           </CardContent>
         </Card>
         <Card className="text-center">
           <CardContent className="py-4">
             <div className="text-2xl font-bold text-arena-accent">
-              {mockTopics.reduce((sum, t) => sum + t.upvotes, 0)}
+              {topics.reduce((sum, t) => sum + t.upvotes, 0)}
             </div>
-            <div className="text-sm text-gray-400">Total Votes</div>
+            <div className="text-sm text-gray-400">Total Upvotes</div>
           </CardContent>
         </Card>
         <Card className="text-center">
           <CardContent className="py-4">
             <div className="text-2xl font-bold text-arena-pro">
-              {mockTopics.reduce((sum, t) => sum + t.usedCount, 0)}
+              {topics.reduce((sum, t) => sum + t.timesUsed, 0)}
             </div>
             <div className="text-sm text-gray-400">Debates Held</div>
           </CardContent>

@@ -1,5 +1,16 @@
 {
   "name": "@ai-debates/api",
   "version": "0.1.0",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "@solana/web3.js": "^1.98.4",
+    "bs58": "^6.0.0",
+    "drizzle-orm": "^0.45.1",
+    "jsonwebtoken": "^9.0.2",
+    "postgres": "^3.4.8"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.9",
+    "@types/jsonwebtoken": "^9.0.0"
+  }
 }
