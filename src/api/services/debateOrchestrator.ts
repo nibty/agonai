@@ -554,6 +554,90 @@ export class DebateOrchestratorService {
   }
 
   /**
+   * Forfeit a debate - the forfeiting bot loses, opponent wins
+   */
+  async forfeitDebate(
+    debateId: number,
+    visitorId: number
+  ): Promise<{ success: boolean; error?: string }> {
+    const state = this.activeDebates.get(debateId);
+    if (!state) {
+      return { success: false, error: "Debate not found or not active" };
+    }
+
+    // Check if the user owns one of the bots
+    const isProOwner = state.proBot.ownerId === visitorId;
+    const isConOwner = state.conBot.ownerId === visitorId;
+
+    if (!isProOwner && !isConOwner) {
+      return { success: false, error: "You don't own a bot in this debate" };
+    }
+
+    // Determine winner (the bot that didn't forfeit)
+    const forfeitingPosition: DebatePosition = isProOwner ? "pro" : "con";
+    const winner: DebatePosition = forfeitingPosition === "pro" ? "con" : "pro";
+    const winnerBot = winner === "pro" ? state.proBot : state.conBot;
+    const loserBot = winner === "pro" ? state.conBot : state.proBot;
+
+    // Calculate ELO changes (forfeit has same ELO impact as a loss)
+    const eloChanges = calculateMatchEloChanges(winnerBot.elo, loserBot.elo);
+
+    // Update bots ELO in database
+    await Promise.all([
+      botRepository.updateStats(winnerBot.id, true, eloChanges.winner.change),
+      botRepository.updateStats(loserBot.id, false, eloChanges.loser.change),
+    ]);
+
+    // Settle bets - winner takes all
+    const payouts = await betRepository.settleBets(state.debate.id, winner);
+
+    // Count current round wins
+    let proWins = 0;
+    let conWins = 0;
+    for (const result of state.debate.roundResults) {
+      if (result.winner === "pro") proWins++;
+      else conWins++;
+    }
+
+    // Update debate state
+    state.debate.status = "completed";
+    state.debate.winner = winner;
+    state.debate.completedAt = new Date();
+
+    // Update database
+    await debateRepository.update(state.debate.id, {
+      status: "completed",
+      winner,
+      completedAt: state.debate.completedAt,
+    });
+
+    // Broadcast forfeit
+    state.broadcast(state.debate.id, {
+      type: "debate_forfeit",
+      debateId: state.debate.id,
+      payload: {
+        forfeitedBy: forfeitingPosition,
+        forfeitedBotName: loserBot.name,
+        winner,
+        winnerBotName: winnerBot.name,
+        finalScore: { pro: proWins, con: conWins },
+        eloChanges: {
+          proBot: winner === "pro" ? eloChanges.winner : eloChanges.loser,
+          conBot: winner === "con" ? eloChanges.winner : eloChanges.loser,
+        },
+        payouts,
+      },
+    });
+
+    // Remove from active debates
+    this.activeDebates.delete(state.debate.id);
+
+    console.log(`[Debate ${debateId}] ${loserBot.name} forfeited. ${winnerBot.name} wins!`);
+
+    return { success: true };
+  }
+
+  /**
    * Get active debate by ID
    */
   getDebate(debateId: number): DebateState["debate"] | undefined {

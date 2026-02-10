@@ -481,6 +481,37 @@ router.get("/debates/:debateId", async (req: Request<{ debateId: string }>, res:
   });
 });
 
+/**
+ * POST /api/debates/:debateId/forfeit
+ *
+ * Forfeit a debate. The forfeiting bot loses, opponent wins.
+ * Only the bot owner can forfeit their bot.
+ */
+router.post(
+  "/debates/:debateId/forfeit",
+  authMiddleware,
+  async (req: AuthenticatedRequest & { params: { debateId: string } }, res: Response) => {
+    if (!req.userId) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
+
+  const debateId = parseInt(req.params.debateId, 10);
+  if (isNaN(debateId)) {
+    res.status(400).json({ error: "Invalid debate ID" });
+    return;
+  }
+
+  const result = await debateOrchestrator.forfeitDebate(debateId, req.userId);
+
+  if (!result.success) {
+    res.status(400).json({ error: result.error });
+    return;
+  }
+
+  res.json({ success: true, message: "Debate forfeited" });
+});
+
 // ============================================================================
 // Webhook Routes (OpenClaw async responses)
 // ============================================================================

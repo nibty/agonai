@@ -258,6 +258,7 @@ export type WSMessageType =
   | "vote_update"
   | "round_ended"
   | "debate_ended"
+  | "debate_forfeit"
   | "spectator_count"
   | "error";
 

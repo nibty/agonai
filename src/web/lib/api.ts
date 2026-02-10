@@ -187,6 +187,10 @@ class ApiClient {
   }> {
     return this.request("GET", `/bets/${debateId}`);
   }
+
+  async forfeitDebate(debateId: string): Promise<{ success: boolean; message?: string }> {
+    return this.request("POST", `/debates/${debateId}/forfeit`);
+  }
 }
 
 // Types matching backend

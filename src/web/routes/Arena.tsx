@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useWallet } from "@/hooks/useWallet";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -108,6 +109,7 @@ function MessageBubble({ message, botName }: { message: DebateMessage; botName: 
 export function ArenaPage() {
   const { debateId } = useParams<{ debateId: string }>();
   const { connected, publicKey } = useWallet();
+  const { userId, isAuthenticated } = useAuth();
   const [debate, setDebate] = useState<DebateState | null>(null);
   const [proBot, setProBot] = useState<BotInfo | null>(null);
   const [conBot, setConBot] = useState<BotInfo | null>(null);
@@ -127,6 +129,8 @@ export function ArenaPage() {
   const [votingTimeLeft, setVotingTimeLeft] = useState(0);
   const [votingDuration, setVotingDuration] = useState(0);
   const [botError, setBotError] = useState<{ position: "pro" | "con"; message: string } | null>(null);
+  const [forfeitInfo, setForfeitInfo] = useState<{ forfeitedBy: string; winnerBotName: string } | null>(null);
+  const [isForfeiting, setIsForfeiting] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
   const votingTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -355,6 +359,23 @@ export function ArenaPage() {
           break;
         }
 
+        case "debate_forfeit": {
+          const payload = msg.payload as {
+            forfeitedBy: "pro" | "con";
+            forfeitedBotName: string;
+            winner: "pro" | "con";
+            winnerBotName: string;
+          };
+          setForfeitInfo({
+            forfeitedBy: payload.forfeitedBotName,
+            winnerBotName: payload.winnerBotName,
+          });
+          setDebate((prev) =>
+            prev ? { ...prev, status: "completed", winner: payload.winner } : null
+          );
+          break;
+        }
+
         case "spectator_count": {
           const payload = msg.payload as { count: number };
           setDebate((prev) => (prev ? { ...prev, spectatorCount: payload.count } : null));
@@ -532,6 +553,29 @@ export function ArenaPage() {
       })
     );
   };
+
+  const handleForfeit = async () => {
+    if (!debateId || !isAuthenticated || isForfeiting) return;
+
+    if (!confirm("Are you sure you want to forfeit? Your bot will lose this debate.")) {
+      return;
+    }
+
+    setIsForfeiting(true);
+    try {
+      await api.forfeitDebate(debateId);
+    } catch (err) {
+      console.error("Forfeit error:", err);
+      alert("Failed to forfeit: " + (err instanceof Error ? err.message : "Unknown error"));
+    } finally {
+      setIsForfeiting(false);
+    }
+  };
+
+  // Check if current user owns one of the bots
+  const userOwnsBotInDebate = userId && (
+    proBot?.ownerId === userId || conBot?.ownerId === userId
+  );
 
   if (connectionStatus === "connecting") {
     return (
@@ -760,7 +804,11 @@ export function ArenaPage() {
               {debate.winner === "pro" ? proBot?.name : conBot?.name} Wins!
             </div>
             <div className="text-xs text-arena-text-muted">
-              Final: {proWins} - {conWins}
+              {forfeitInfo ? (
+                <span>{forfeitInfo.forfeitedBy} forfeited</span>
+              ) : (
+                <span>Final: {proWins} - {conWins}</span>
+              )}
             </div>
           </div>
         )}
@@ -779,6 +827,19 @@ export function ArenaPage() {
               </Button>
             </Link>
           </div>
+        )}
+
+        {/* Forfeit Button - only for bot owners during active debate */}
+        {userOwnsBotInDebate && debate?.status === "in_progress" && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleForfeit}
+            disabled={isForfeiting}
+            className="w-full border-arena-con/50 text-arena-con hover:bg-arena-con/10"
+          >
+            {isForfeiting ? "Forfeiting..." : "Forfeit Debate"}
+          </Button>
         )}
 
         {/* TTS Toggle */}
