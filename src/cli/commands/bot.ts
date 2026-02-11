@@ -438,3 +438,144 @@ function connect(url: string): void {
     logger.error({ error: error.message }, "WebSocket error");
   });
 }
+
+/**
+ * Start a bot with a direct WebSocket URL (no login required)
+ * This is the main entrypoint for K8s deployments with pre-registered bots
+ */
+export function start(options: { url: string; spec?: string }): void {
+  const { url, spec } = options;
+
+  // Validate URL
+  if (!url) {
+    logger.error({}, "WebSocket URL required. Use --url <ws-url>");
+    console.log(`
+Usage: bun run cli bot start --url <ws-url> [options]
+
+Options:
+  --url <ws-url>        WebSocket connection URL (required)
+  --spec <file>         Path to spec file or directory (uses Claude API)
+
+Examples:
+  bun run cli bot start --url ws://localhost:3001/bot/connect/abc123
+  bun run cli bot start --url ws://... --spec ./my-spec.md
+  bun run cli bot start --url ws://... --spec src/cli/specs/obama.md
+
+Requires ANTHROPIC_API_KEY environment variable.
+`);
+    process.exit(1);
+  }
+
+  // Check for Claude API
+  if (!process.env["ANTHROPIC_API_KEY"]) {
+    logger.error({}, "ANTHROPIC_API_KEY environment variable is required");
+    process.exit(1);
+  }
+
+  anthropic = new Anthropic();
+
+  // Load spec if provided
+  if (spec) {
+    try {
+      botSpec = loadBotSpec(spec);
+      logger.info({ specLength: botSpec.length, spec }, "Loaded bot spec");
+    } catch (error) {
+      logger.error(
+        { error: error instanceof Error ? error.message : String(error) },
+        "Failed to load spec"
+      );
+      process.exit(1);
+    }
+  }
+
+  logger.info({ spec: spec ?? "none" }, "Starting Claude bot");
+  console.log(`\nConnecting to WebSocket...`);
+  connectDirect(url);
+}
+
+/**
+ * Connect directly with URL using Claude API
+ */
+function connectDirect(url: string): void {
+  logger.info({ url }, "Connecting to WebSocket");
+
+  const ws = new WebSocket(url);
+  let reconnectAttempts = 0;
+  const maxReconnectDelay = 30000;
+
+  ws.on("open", () => {
+    logger.info({}, "WebSocket connected");
+    console.log("Connected! Waiting for debates...");
+    reconnectAttempts = 0;
+  });
+
+  ws.on("message", (data: Buffer) => {
+    void (async () => {
+      try {
+        const message = JSON.parse(data.toString("utf-8")) as ServerMessage;
+
+        switch (message.type) {
+          case "connected":
+            logger.info(
+              { botName: message.botName, botId: message.botId },
+              "Authenticated with server"
+            );
+            console.log(`Authenticated as: ${message.botName} (ID: ${message.botId})`);
+            break;
+
+          case "ping":
+            ws.send(JSON.stringify({ type: "pong" }));
+            break;
+
+          case "debate_request": {
+            logger.info(
+              {
+                round: message.round,
+                position: message.position,
+                topic: message.topic.slice(0, 50),
+              },
+              "Received debate request"
+            );
+            console.log(`\nDebate request: ${message.round} round, position: ${message.position}`);
+            console.log(`Topic: ${message.topic}`);
+
+            const response = await getClaudeResponse(message);
+
+            ws.send(
+              JSON.stringify({
+                type: "debate_response",
+                requestId: message.requestId,
+                message: response.message,
+                confidence: response.confidence,
+              })
+            );
+            logger.info({}, "Response sent");
+            console.log("Response sent!");
+            break;
+          }
+
+          default:
+            logger.warn(
+              { messageType: (message as { type: string }).type },
+              "Unknown message type"
+            );
+        }
+      } catch (error) {
+        logger.error({ error }, "Error handling message");
+      }
+    })();
+  });
+
+  ws.on("close", (code, reason) => {
+    logger.info({ code, reason: reason.toString() }, "Disconnected");
+    console.log("Disconnected from server. Reconnecting...");
+
+    const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), maxReconnectDelay);
+    reconnectAttempts++;
+    setTimeout(() => connectDirect(url), delay);
+  });
+
+  ws.on("error", (error) => {
+    logger.error({ error: error.message }, "WebSocket error");
+  });
+}

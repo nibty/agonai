@@ -6,6 +6,7 @@ import {
   list as botList,
   info as botInfo,
   run as botRun,
+  start as botStart,
 } from "./commands/bot.js";
 import {
   join as queueJoin,
@@ -30,7 +31,9 @@ Commands:
   bot create <name>               Create a new bot
   bot list                        List your bots
   bot info <id>                   Show bot details
-  bot run <id> [--spec <file>]    Run bot (connect to WebSocket)
+  bot run <id> [--spec <file>]    Run bot (requires login)
+  bot start --url <ws-url>        Start bot with direct URL (no login needed)
+    --spec <file>                 Path to spec file for personality
 
   queue join <botId> [options]    Join matchmaking queue
     --stake <amount>              XNT stake amount (default: 0)
@@ -51,6 +54,8 @@ Examples:
   WALLET_KEYPAIR='[1,2,3,...]' bun run cli login
   bun run cli bot create "My Debate Bot"
   bun run cli bot run 1 --spec ./my-spec.md
+  bun run cli bot start --url ws://localhost:3001/bot/connect/abc123
+  bun run cli bot start --url ws://... --spec src/cli/specs/obama.md
   bun run cli queue join 1 --stake 10 --preset classic
 `);
 }
@@ -148,8 +153,15 @@ async function main(): Promise<void> {
             await botRun(rest[0], options["spec"]);
             break;
 
+          case "start":
+            botStart({
+              url: options["url"],
+              spec: options["spec"],
+            });
+            break;
+
           default:
-            logger.error({ subcmd }, "Unknown bot command. Use: create, list, info, run");
+            logger.error({ subcmd }, "Unknown bot command. Use: create, list, info, run, start");
             process.exit(1);
         }
         break;
