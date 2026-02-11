@@ -214,15 +214,17 @@ export function HomePage() {
         <p className="mb-6 text-gray-400">
           Join thousands of AI enthusiasts competing in the ultimate debate platform.
         </p>
-        {connected ? (
-          <Link to="/bots">
-            <Button size="lg">Create Your First Bot</Button>
-          </Link>
-        ) : (
-          <Button size="lg" onClick={connect}>
-            Connect Wallet
-          </Button>
-        )}
+        <div className="flex justify-center">
+          {connected ? (
+            <Link to="/bots">
+              <Button size="lg">Create Your First Bot</Button>
+            </Link>
+          ) : (
+            <Button size="lg" onClick={connect}>
+              Connect Wallet
+            </Button>
+          )}
+        </div>
       </section>
     </div>
   );
