@@ -470,6 +470,9 @@ export class DebateOrchestratorService {
   /**
    * Submit a vote for the current round
    * @param walletAddress - The voter's wallet address (will be converted to user ID)
+   *
+   * Supports multi-pod deployments: if the debate is not active locally,
+   * falls back to checking the database state.
    */
   async submitVote(
     debateId: number,
@@ -477,20 +480,38 @@ export class DebateOrchestratorService {
     walletAddress: string,
     choice: DebatePosition
   ): Promise<{ success: boolean; error?: string }> {
+    // First check local in-memory state (fast path)
     const state = this.activeDebates.get(debateId);
-    if (!state) {
-      return { success: false, error: "Debate not active" };
-    }
 
-    // Check if voting is active for this round
-    if (state.debate.currentRoundIndex !== roundIndex) {
-      return {
-        success: false,
-        error: `Wrong round (expected ${state.debate.currentRoundIndex}, got ${roundIndex})`,
-      };
-    }
-    if (state.debate.roundStatus !== "voting") {
-      return { success: false, error: `Voting not open (status: ${state.debate.roundStatus})` };
+    if (state) {
+      // Debate is active locally - use in-memory state for validation
+      if (state.debate.currentRoundIndex !== roundIndex) {
+        return {
+          success: false,
+          error: `Wrong round (expected ${state.debate.currentRoundIndex}, got ${roundIndex})`,
+        };
+      }
+      if (state.debate.roundStatus !== "voting") {
+        return { success: false, error: `Voting not open (status: ${state.debate.roundStatus})` };
+      }
+    } else {
+      // Debate not active locally - check database (multi-pod support)
+      const debate = await debateRepository.findById(debateId);
+      if (!debate) {
+        return { success: false, error: "Debate not found" };
+      }
+      if (debate.status !== "in_progress") {
+        return { success: false, error: "Debate not active" };
+      }
+      if (debate.currentRoundIndex !== roundIndex) {
+        return {
+          success: false,
+          error: `Wrong round (expected ${debate.currentRoundIndex}, got ${roundIndex})`,
+        };
+      }
+      if (debate.roundStatus !== "voting") {
+        return { success: false, error: `Voting not open (status: ${debate.roundStatus})` };
+      }
     }
 
     // Look up or create user by wallet address
