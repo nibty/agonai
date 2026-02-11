@@ -260,6 +260,9 @@ function startMatchmaking(): void {
           logger.debug({ queueSize: stats.queueSize }, "Matchmaking queue check");
         }
 
+        // Verify bots are connected before matching (removes disconnected bots from queue)
+        const isConnected = (botId: number) => botWsServer.isConnected(botId);
+
         const matches = await matchmaking.runMatchmaking(async (entry1, entry2) => {
           logger.info({ bot1: entry1.botId, bot2: entry2.botId }, "Creating debate between bots");
 
@@ -317,7 +320,7 @@ function startMatchmaking(): void {
           );
 
           return debate;
-        });
+        }, isConnected);
 
         if (matches.length > 0) {
           logger.info({ count: matches.length }, "Matchmaking created matches");

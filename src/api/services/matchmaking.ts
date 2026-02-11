@@ -350,17 +350,41 @@ export class MatchmakingService {
 
   /**
    * Run matchmaking loop - find all possible matches
+   * @param createDebate - Callback to create a debate from two matched entries
+   * @param isConnected - Optional callback to verify a bot is still connected (returns true if connected)
    */
   async runMatchmaking<T>(
-    createDebate: (entry1: QueueEntry, entry2: QueueEntry) => T | Promise<T>
+    createDebate: (entry1: QueueEntry, entry2: QueueEntry) => T | Promise<T>,
+    isConnected?: (botId: number) => boolean | Promise<boolean>
   ): Promise<MatchResult<T>[]> {
     await this.updateRanges();
 
     const matches: MatchResult<T>[] = [];
     const matched = new Set<string>();
+    const disconnectedBotIds: number[] = [];
 
     // Get all entries sorted by wait time
-    const entries = await this.getAllEntries();
+    let entries = await this.getAllEntries();
+
+    // If connection verification is provided, filter out disconnected bots
+    if (isConnected) {
+      const connectedEntries: QueueEntry[] = [];
+      for (const entry of entries) {
+        const connected = await isConnected(entry.botId);
+        if (connected) {
+          connectedEntries.push(entry);
+        } else {
+          disconnectedBotIds.push(entry.botId);
+        }
+      }
+      entries = connectedEntries;
+
+      // Remove disconnected bots from queue
+      for (const botId of disconnectedBotIds) {
+        logger.info({ botId }, "Removing disconnected bot from matchmaking queue");
+        await this.removeFromQueue(botId);
+      }
+    }
 
     for (const entry of entries) {
       if (matched.has(entry.id)) continue;

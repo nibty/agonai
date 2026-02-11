@@ -646,6 +646,15 @@ export class BotConnectionServer {
         await redis.del(KEYS.BOT_CONNECTED(bot.botId));
       }
 
+      // Remove from matchmaking queue - disconnected bots shouldn't be matched
+      const wasInQueue = await matchmaking.removeFromQueue(bot.botId);
+      if (wasInQueue) {
+        logger.info(
+          { botId: bot.botId, botName: bot.botName },
+          "Removed disconnected bot from matchmaking queue"
+        );
+      }
+
       logger.info({ botId: bot.botId, botName: bot.botName }, "Bot disconnected");
     }
   }
