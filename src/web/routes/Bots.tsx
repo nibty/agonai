@@ -8,6 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { TierBadge } from "@/components/ui/Badge";
 import { BotAvatar } from "@/components/ui/Avatar";
 import { Input } from "@/components/ui/Input";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/Tabs";
 import { api, type Bot } from "@/lib/api";
 import { getTierFromElo, type BotTier } from "@/types";
 
@@ -203,22 +204,6 @@ function ConnectionInfoModal({
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-400">Connection Token</label>
-          <div className="flex gap-2">
-            <code className="flex-1 break-all rounded-lg bg-arena-bg p-3 text-xs text-gray-300">
-              {connectionToken}
-            </code>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => copyToClipboard(connectionToken, "token")}
-            >
-              {copied === "token" ? "Copied!" : "Copy"}
-            </Button>
-          </div>
-        </div>
-
-        <div>
           <label className="mb-2 block text-sm font-medium text-gray-400">WebSocket URL</label>
           <div className="flex gap-2">
             <code className="flex-1 break-all rounded-lg bg-arena-bg p-3 text-xs text-gray-300">
@@ -234,9 +219,63 @@ function ConnectionInfoModal({
           </div>
         </div>
 
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-400">Connection Token</label>
+          <div className="flex gap-2">
+            <code className="flex-1 break-all rounded-lg bg-arena-bg p-3 text-xs text-gray-300">
+              {connectionToken}
+            </code>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => copyToClipboard(connectionToken, "token")}
+            >
+              {copied === "token" ? "Copied!" : "Copy"}
+            </Button>
+          </div>
+        </div>
+
         <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm text-yellow-200">
           <strong>Important:</strong> Save this token securely. You can regenerate it later, but any
           existing connections will be disconnected.
+        </div>
+
+        <div>
+          <h4 className="mb-2 text-sm font-medium text-arena-text">Quick Start</h4>
+          <Tabs defaultValue="docker">
+            <TabsList>
+              <TabsTrigger value="docker">Docker</TabsTrigger>
+              <TabsTrigger value="bun">Bun</TabsTrigger>
+            </TabsList>
+            <TabsContent value="docker">
+              <pre className="overflow-x-auto rounded-lg bg-arena-bg p-3 text-xs text-gray-300">
+                {`docker run -it \\
+  -e ANTHROPIC_API_KEY=sk-ant-... \\
+  ghcr.io/nibty/ai-debates-cli \\
+  bot start --url ${connectionUrl} \\
+  --auto-queue --preset all`}
+              </pre>
+            </TabsContent>
+            <TabsContent value="bun">
+              <pre className="overflow-x-auto rounded-lg bg-arena-bg p-3 text-xs text-gray-300">
+                {`ANTHROPIC_API_KEY=sk-ant-... \\
+  bun run cli bot start \\
+  --url ${connectionUrl} \\
+  --auto-queue --preset all`}
+              </pre>
+            </TabsContent>
+          </Tabs>
+          <p className="mt-2 text-xs text-gray-500">
+            See{" "}
+            <Link to="/docs/docker" className="text-arena-accent hover:underline">
+              Docker Guide
+            </Link>{" "}
+            or{" "}
+            <Link to="/docs/cli" className="text-arena-accent hover:underline">
+              CLI Guide
+            </Link>{" "}
+            for personality specs, Ollama support, and more options.
+          </p>
         </div>
 
         <Button onClick={onClose} className="w-full">
