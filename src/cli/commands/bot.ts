@@ -283,6 +283,49 @@ function getRoundInstructions(round: RoundType): string {
   return instructions[round] || "Present your argument.";
 }
 
+// Rate limit handling configuration
+const RATE_LIMIT_MAX_RETRIES = 5;
+const RATE_LIMIT_BASE_DELAY_MS = 2000;
+const RATE_LIMIT_MAX_DELAY_MS = 60000;
+
+interface RateLimitInfo {
+  requestsLimit: number;
+  requestsRemaining: number;
+  requestsReset: string;
+  retryAfter?: number;
+}
+
+function parseRateLimitHeaders(headers: Record<string, string>): RateLimitInfo | null {
+  const limit = headers["anthropic-ratelimit-requests-limit"];
+  const remaining = headers["anthropic-ratelimit-requests-remaining"];
+  const reset = headers["anthropic-ratelimit-requests-reset"];
+  const retryAfter = headers["retry-after"];
+
+  if (!limit || !remaining || !reset) return null;
+
+  return {
+    requestsLimit: parseInt(limit, 10),
+    requestsRemaining: parseInt(remaining, 10),
+    requestsReset: reset,
+    retryAfter: retryAfter ? parseInt(retryAfter, 10) : undefined,
+  };
+}
+
+function isRateLimitError(
+  error: unknown
+): error is { status: number; headers?: Record<string, string> } {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error &&
+    (error as { status: number }).status === 429
+  );
+}
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function getClaudeResponse(
   request: DebateRequestMessage
 ): Promise<{ message: string; confidence: number }> {
@@ -306,31 +349,79 @@ Word limit: ${word_limit.min}-${word_limit.max} words`;
 
   const maxTokens = Math.min(2000, Math.max(200, word_limit.max * 2));
 
-  try {
-    const startTime = Date.now();
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: maxTokens,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userPrompt }],
-    });
+  // Retry loop with exponential backoff for rate limits
+  for (let attempt = 0; attempt <= RATE_LIMIT_MAX_RETRIES; attempt++) {
+    try {
+      const startTime = Date.now();
+      const message = await anthropic.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: maxTokens,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userPrompt }],
+      });
 
-    const responseText =
-      message.content[0].type === "text" ? message.content[0].text : "I stand by my position.";
+      const responseText =
+        message.content[0].type === "text" ? message.content[0].text : "I stand by my position.";
 
-    const latencyMs = Date.now() - startTime;
-    const wordCount = responseText.split(/\s+/).filter((w) => w.length > 0).length;
+      const latencyMs = Date.now() - startTime;
+      const wordCount = responseText.split(/\s+/).filter((w) => w.length > 0).length;
 
-    logger.info({ latencyMs, wordCount }, "Generated Claude response");
+      logger.info({ latencyMs, wordCount, attempt }, "Generated Claude response");
 
-    return {
-      message: responseText,
-      confidence: 0.9,
-    };
-  } catch (error) {
-    logger.error({ error }, "Error generating Claude response, using fallback");
-    return getSimpleResponse(round, topic, position);
+      return {
+        message: responseText,
+        confidence: 0.9,
+      };
+    } catch (error) {
+      if (isRateLimitError(error)) {
+        const headers = (error as { headers?: Record<string, string> }).headers || {};
+        const rateLimitInfo = parseRateLimitHeaders(headers);
+
+        // Calculate backoff delay
+        let delayMs: number;
+        if (rateLimitInfo?.retryAfter) {
+          // Use server-provided retry-after if available
+          delayMs = rateLimitInfo.retryAfter * 1000;
+        } else {
+          // Exponential backoff with jitter
+          const baseDelay = RATE_LIMIT_BASE_DELAY_MS * Math.pow(2, attempt);
+          const jitter = Math.random() * 1000;
+          delayMs = Math.min(baseDelay + jitter, RATE_LIMIT_MAX_DELAY_MS);
+        }
+
+        logger.warn(
+          {
+            attempt: attempt + 1,
+            maxRetries: RATE_LIMIT_MAX_RETRIES,
+            delayMs,
+            requestsRemaining: rateLimitInfo?.requestsRemaining ?? "unknown",
+            requestsLimit: rateLimitInfo?.requestsLimit ?? "unknown",
+            resetAt: rateLimitInfo?.requestsReset ?? "unknown",
+            retryAfter: rateLimitInfo?.retryAfter ?? "none",
+          },
+          "Rate limited by Claude API, backing off"
+        );
+
+        if (attempt < RATE_LIMIT_MAX_RETRIES) {
+          await sleep(delayMs);
+          continue;
+        }
+
+        logger.error(
+          { attempts: attempt + 1 },
+          "Exhausted rate limit retries, using fallback response"
+        );
+        return getSimpleResponse(round, topic, position);
+      }
+
+      // Non-rate-limit error
+      logger.error({ error }, "Error generating Claude response, using fallback");
+      return getSimpleResponse(round, topic, position);
+    }
   }
+
+  // Should not reach here, but just in case
+  return getSimpleResponse(round, topic, position);
 }
 
 /**
