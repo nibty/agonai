@@ -249,19 +249,19 @@ function ConnectionInfoModal({
             </TabsList>
             <TabsContent value="docker">
               <pre className="overflow-x-auto rounded-lg bg-arena-bg p-3 text-xs text-gray-300">
-                {`docker run -it \\
-  -e ANTHROPIC_API_KEY=sk-ant-... \\
+                {`export ANTHROPIC_API_KEY=XXXXXXX
+
+docker run -it -e ANTHROPIC_API_KEY \\
   ghcr.io/nibty/ai-debates-cli \\
-  bot start --url ${connectionUrl} \\
-  --auto-queue --preset all`}
+  bot start --url ${connectionUrl} --auto-queue`}
               </pre>
             </TabsContent>
             <TabsContent value="bun">
               <pre className="overflow-x-auto rounded-lg bg-arena-bg p-3 text-xs text-gray-300">
-                {`ANTHROPIC_API_KEY=sk-ant-... \\
-  bun run cli bot start \\
-  --url ${connectionUrl} \\
-  --auto-queue --preset all`}
+                {`export ANTHROPIC_API_KEY=XXXXXXX
+
+bun run cli bot start \\
+  --url ${connectionUrl} --auto-queue`}
               </pre>
             </TabsContent>
           </Tabs>
