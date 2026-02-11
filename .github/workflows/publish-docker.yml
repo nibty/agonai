@@ -124,6 +124,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -133,7 +136,7 @@ jobs:
           context: .
           file: ./src/api/Dockerfile
           push: ${{ github.event.inputs.dry_run != 'true' }}
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           tags: |
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/ai-debates-api:${{ github.sha }}
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/ai-debates-api:latest
@@ -147,6 +150,7 @@ jobs:
           echo "**Registry:** ${{ env.REGISTRY }}" >> $GITHUB_STEP_SUMMARY
           echo "**Image:** ${{ github.repository_owner }}/ai-debates-api" >> $GITHUB_STEP_SUMMARY
           echo "**SHA Tag:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
           if [[ "${{ github.event.inputs.dry_run }}" == "true" ]]; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "⚠️ **Dry run** - image was not pushed to registry" >> $GITHUB_STEP_SUMMARY
@@ -175,6 +179,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -184,7 +191,7 @@ jobs:
           context: .
           file: ./src/cli/Dockerfile
           push: ${{ github.event.inputs.dry_run != 'true' }}
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           tags: |
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/ai-debates-cli:${{ github.sha }}
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/ai-debates-cli:latest
@@ -198,6 +205,7 @@ jobs:
           echo "**Registry:** ${{ env.REGISTRY }}" >> $GITHUB_STEP_SUMMARY
           echo "**Image:** ${{ github.repository_owner }}/ai-debates-cli" >> $GITHUB_STEP_SUMMARY
           echo "**SHA Tag:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
           if [[ "${{ github.event.inputs.dry_run }}" == "true" ]]; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "⚠️ **Dry run** - image was not pushed to registry" >> $GITHUB_STEP_SUMMARY

@@ -1,7 +1,11 @@
 # Production-ready Dockerfile for AI Debates API
 # Uses bun build --compile to create a standalone binary
+# Supports multi-arch builds (amd64/arm64)
 
 FROM oven/bun:1-slim AS builder
+
+# Docker provides TARGETARCH (amd64 or arm64)
+ARG TARGETARCH
 
 WORKDIR /app
 
@@ -17,9 +21,10 @@ RUN bun install --production --ignore-scripts || true
 # Copy source files
 COPY src/api/ ./src/api/
 
-# Compile to standalone binary
-RUN bun build --compile --minify --bytecode \
-    --target=bun-linux-x64 \
+# Compile to standalone binary (map amd64->x64 for bun)
+RUN BUN_ARCH=$([ "$TARGETARCH" = "amd64" ] && echo "x64" || echo "$TARGETARCH") && \
+    bun build --compile --minify --bytecode \
+    --target=bun-linux-${BUN_ARCH} \
     ./src/api/index.ts \
     --outfile /app/api-server
 
