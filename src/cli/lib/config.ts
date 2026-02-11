@@ -12,7 +12,7 @@ const CONFIG_DIR = path.join(os.homedir(), ".ai-debates");
 const CONFIG_FILE = path.join(CONFIG_DIR, "config.json");
 
 const DEFAULT_CONFIG: Config = {
-  apiUrl: "http://localhost:3001",
+  apiUrl: "https://api.debate.x1.xyz",
   defaultKeypair: path.join(os.homedir(), ".config", "solana", "id.json"),
 };
 
