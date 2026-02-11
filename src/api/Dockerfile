@@ -28,7 +28,9 @@ COPY --from=dependencies /app/node_modules ./node_modules
 COPY --from=dependencies /app/src/api/node_modules ./src/api/node_modules
 
 # Copy source files
+COPY package.json ./
 COPY src/api/ ./src/api/
+COPY src/cli/ ./src/cli/
 
 # Stage 3: Production runtime
 FROM base AS runtime
@@ -39,7 +41,7 @@ RUN groupadd -r app && useradd -r -g app app
 # Copy application from builder
 COPY --from=builder --chown=app:app /app ./
 
-WORKDIR /app/src/api
+WORKDIR /app
 
 # Switch to non-root user
 USER app
@@ -59,4 +61,4 @@ EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:3001/api/health || exit 1
 
-CMD ["bun", "run", "index.ts"]
+CMD ["bun", "run", "src/api/index.ts"]
