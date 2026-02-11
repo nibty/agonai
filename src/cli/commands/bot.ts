@@ -969,6 +969,7 @@ async function waitForOpponentAndJoin(ws: WebSocket): Promise<void> {
 export function start(options: {
   url: string;
   spec?: string;
+  specText?: string;
   autoQueue?: boolean;
   stake?: number;
   preset?: string;
@@ -981,6 +982,7 @@ export function start(options: {
   const {
     url,
     spec,
+    specText,
     autoQueue = false,
     stake = 0,
     preset = "classic",
@@ -1000,6 +1002,7 @@ Usage: bun run cli bot start --url <ws-url> [options]
 Options:
   --url <ws-url>        WebSocket connection URL (required)
   --spec <file>         Path to spec file or directory
+  --spec-text <text>    Inline personality spec (alternative to --spec)
   --auto-queue          Automatically join matchmaking queue
   --stake <amount>      Stake amount for queue (default: 0)
   --preset <id>         Debate preset ID (default: classic)
@@ -1013,6 +1016,9 @@ Examples:
   # Claude (default)
   bun run cli bot start --url ws://localhost:3001/bot/connect/abc123
   bun run cli bot start --url ws://... --spec ./my-spec.md
+
+  # Inline personality spec (no file needed)
+  bun run cli bot start --url ws://... --spec-text "Be a know-it-all. Pompous and pretentious."
 
   # Ollama with Kimi
   bun run cli bot start --url ws://... --provider ollama
@@ -1069,11 +1075,14 @@ Environment Variables:
     apiBaseUrl: getApiBaseUrl(url),
   };
 
-  // Load spec if provided
-  if (spec) {
+  // Load spec if provided (specText takes precedence over spec file)
+  if (specText) {
+    botSpec = specText;
+    logger.info({ specLength: botSpec.length }, "Using inline spec text");
+  } else if (spec) {
     try {
       botSpec = loadBotSpec(spec);
-      logger.info({ specLength: botSpec.length, spec }, "Loaded bot spec");
+      logger.info({ specLength: botSpec.length, spec }, "Loaded bot spec from file");
     } catch (error) {
       logger.error(
         { error: error instanceof Error ? error.message : String(error) },
