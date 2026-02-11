@@ -1347,7 +1347,10 @@ function connectDirect(url: string): void {
 
               if (isReconnect) {
                 // Delay rejoining queue after reconnect to let server stabilize
-                console.log(`Waiting ${RECONNECT_QUEUE_DELAY_SECONDS}s before rejoining queue...`);
+                logger.info(
+                  { delaySeconds: RECONNECT_QUEUE_DELAY_SECONDS },
+                  `Waiting ${RECONNECT_QUEUE_DELAY_SECONDS}s before rejoining queue (reconnect)`
+                );
                 setTimeout(joinQueue, RECONNECT_QUEUE_DELAY_SECONDS * 1000);
               } else {
                 joinQueue();
@@ -1368,21 +1371,16 @@ function connectDirect(url: string): void {
                 stake: parsedMessage.stake,
                 presets: parsedMessage.presetIds,
               },
-              "Joined matchmaking queues"
-            );
-            console.log(
               `Joined ${parsedMessage.presetIds.length} queue(s): ${parsedMessage.presetIds.join(", ")} (stake: ${parsedMessage.stake})`
             );
             break;
 
           case "queue_left":
             logger.info({}, "Left matchmaking queue");
-            console.log("Left matchmaking queue");
             break;
 
           case "queue_error":
-            logger.error({ error: parsedMessage.error }, "Queue error");
-            console.log(`Queue error: ${parsedMessage.error}`);
+            logger.error({ error: parsedMessage.error }, `Queue error: ${parsedMessage.error}`);
             break;
 
           case "debate_complete": {
@@ -1395,13 +1393,10 @@ function connectDirect(url: string): void {
             logger.info(
               {
                 debateId: parsedMessage.debateId,
-                won: parsedMessage.won,
+                result: resultStr,
                 eloChange: parsedMessage.eloChange,
               },
-              "Debate completed"
-            );
-            console.log(
-              `\nDebate #${parsedMessage.debateId} completed: ${resultStr} (ELO: ${eloStr})`
+              `Debate #${parsedMessage.debateId} completed: ${resultStr} (ELO: ${eloStr})`
             );
 
             // Auto-rejoin queue if enabled (with delay)
@@ -1410,16 +1405,16 @@ function connectDirect(url: string): void {
               const rejoinQueue = (): void => {
                 if (ws.readyState !== WebSocket.OPEN) return;
                 if (autoQueueConfig.waitForOpponent) {
-                  console.log("Waiting for opponent before rejoining queue...");
+                  logger.info({}, "Waiting for opponent before rejoining queue");
                   void waitForOpponentAndJoin(ws);
                 } else {
-                  console.log("Rejoining queue...");
+                  logger.info({}, "Rejoining queue");
                   sendQueueJoin(ws);
                 }
               };
 
               if (delay > 0) {
-                console.log(`Waiting ${delay} seconds before rejoining queue...`);
+                logger.info({ delaySeconds: delay }, `Waiting ${delay}s before rejoining queue`);
                 setTimeout(rejoinQueue, delay * 1000);
               } else {
                 rejoinQueue();
