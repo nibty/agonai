@@ -1119,6 +1119,8 @@ const inFlightRequests = new Map<string, { startTime: number; debateId: string; 
 let activeWs: WebSocket | null = null;
 let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 let isShuttingDown = false;
+let hasConnectedBefore = false;
+const RECONNECT_QUEUE_DELAY_SECONDS = 15; // Delay before rejoining queue after reconnect
 
 function gracefulShutdown(signal: string): void {
   if (isShuttingDown) return;
@@ -1322,22 +1324,37 @@ function connectDirect(url: string): void {
         logger.debug({ messageType: parsedMessage.type }, "Parsed message type");
 
         switch (parsedMessage.type) {
-          case "connected":
+          case "connected": {
+            const isReconnect = hasConnectedBefore;
+            hasConnectedBefore = true;
+
             logger.info(
-              { botName: parsedMessage.botName, botId: parsedMessage.botId },
+              { botName: parsedMessage.botName, botId: parsedMessage.botId, isReconnect },
               "Authenticated with server"
             );
             console.log(`Authenticated as: ${parsedMessage.botName} (ID: ${parsedMessage.botId})`);
 
             // Auto-join queue if enabled
             if (autoQueueConfig.enabled) {
-              if (autoQueueConfig.waitForOpponent) {
-                void waitForOpponentAndJoin(ws);
+              const joinQueue = (): void => {
+                if (ws.readyState !== WebSocket.OPEN || isShuttingDown) return;
+                if (autoQueueConfig.waitForOpponent) {
+                  void waitForOpponentAndJoin(ws);
+                } else {
+                  sendQueueJoin(ws);
+                }
+              };
+
+              if (isReconnect) {
+                // Delay rejoining queue after reconnect to let server stabilize
+                console.log(`Waiting ${RECONNECT_QUEUE_DELAY_SECONDS}s before rejoining queue...`);
+                setTimeout(joinQueue, RECONNECT_QUEUE_DELAY_SECONDS * 1000);
               } else {
-                sendQueueJoin(ws);
+                joinQueue();
               }
             }
             break;
+          }
 
           case "ping":
             logger.debug({}, "Received ping, sending pong");
