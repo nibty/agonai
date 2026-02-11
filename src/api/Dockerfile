@@ -1,47 +1,44 @@
 # Production-ready Dockerfile for AI Debates API
-FROM oven/bun:1-slim AS base
+# Uses bun build --compile to create a standalone binary
 
-# Install security updates
-RUN apt-get update && \
-    apt-get upgrade -y && \
-    apt-get install -y --no-install-recommends wget ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
+FROM oven/bun:1-slim AS builder
 
 WORKDIR /app
 
-# Stage 1: Install dependencies
-FROM base AS dependencies
-
-# Copy workspace package.json files (required for frozen-lockfile)
+# Copy workspace package.json files
 COPY package.json bun.lock ./
 COPY src/api/package.json ./src/api/
 COPY src/web/package.json ./src/web/
 COPY src/cli/package.json ./src/cli/
 
-# Install production dependencies only
-RUN bun install --frozen-lockfile --ignore-scripts --production
-
-# Stage 2: Build
-FROM base AS builder
-
-COPY --from=dependencies /app/node_modules ./node_modules
-COPY --from=dependencies /app/src/api/node_modules ./src/api/node_modules
+# Install all dependencies (needed for compilation)
+RUN bun install --production --ignore-scripts || true
 
 # Copy source files
-COPY package.json ./
 COPY src/api/ ./src/api/
-COPY src/cli/ ./src/cli/
 
-# Stage 3: Production runtime
-FROM base AS runtime
+# Compile to standalone binary
+RUN bun build --compile --minify --bytecode \
+    --target=bun-linux-x64 \
+    ./src/api/index.ts \
+    --outfile /app/api-server
+
+# Production runtime - minimal image
+FROM debian:bookworm-slim AS runtime
+
+# Install security updates and required libs
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends wget ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
 RUN groupadd -r app && useradd -r -g app app
 
-# Copy application from builder
-COPY --from=builder --chown=app:app /app ./
-
 WORKDIR /app
+
+# Copy compiled binary
+COPY --from=builder --chown=app:app /app/api-server ./api-server
 
 # Switch to non-root user
 USER app
@@ -61,4 +58,4 @@ EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:3001/api/health || exit 1
 
-CMD ["bun", "run", "src/api/index.ts"]
+CMD ["./api-server"]

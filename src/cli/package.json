@@ -1,6 +1,17 @@
 {
-  "name": "ai-debates-cli",
+  "name": "@ai-debates/cli",
   "version": "0.1.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.74.0",
+    "@solana/web3.js": "^1.98.0",
+    "@x1-labs/logging": "^0.1.25",
+    "tweetnacl": "^1.0.3",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.1",
+    "@types/ws": "^8.5.14"
+  }
 }

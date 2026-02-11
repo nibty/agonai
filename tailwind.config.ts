@@ -4,8 +4,12 @@ import flowbite from "flowbite/plugin";
 export default {
   content: [
     "./src/web/index.html",
-    "./src/web/**/*.{js,ts,jsx,tsx}",
-    "node_modules/flowbite-react/**/*.{js,jsx,ts,tsx}",
+    "./src/web/components/**/*.{ts,tsx}",
+    "./src/web/hooks/**/*.{ts,tsx}",
+    "./src/web/lib/**/*.{ts,tsx}",
+    "./src/web/routes/**/*.{ts,tsx}",
+    "./src/web/*.{ts,tsx}",
+    "./node_modules/flowbite-react/lib/esm/**/*.js",
   ],
   theme: {
     extend: {
