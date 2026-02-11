@@ -938,7 +938,7 @@ async function waitForOpponentAndJoin(ws: WebSocket): Promise<void> {
     logger.debug({ queueSize }, "Checking queue for opponents");
 
     if (queueSize > 0) {
-      console.log(`Found ${queueSize} bot(s) in queue, joining...`);
+      logger.info({ queueSize }, `Found ${queueSize} bot(s) in queue, joining...`);
       sendQueueJoin(ws);
       return;
     }
@@ -946,17 +946,19 @@ async function waitForOpponentAndJoin(ws: WebSocket): Promise<void> {
     const elapsed = Date.now() - startTime;
     if (elapsed >= maxWaitTime) {
       logger.info({}, "Max wait time reached, joining queue anyway");
-      console.log("Max wait time reached, joining queue...");
       sendQueueJoin(ws);
       return;
     }
 
     const remainingMins = Math.round((maxWaitTime - elapsed) / 60000);
-    console.log(`No opponents in queue, checking again in 30s (${remainingMins}m remaining)...`);
+    logger.info(
+      { remainingMins, pollIntervalSec: pollInterval / 1000 },
+      `No opponents in queue, checking again in 30s (${remainingMins}m remaining)...`
+    );
     setTimeout(() => void checkAndJoin(), pollInterval);
   };
 
-  console.log("Waiting for opponent to join queue...");
+  logger.info({}, "Waiting for opponent to join queue...");
   await checkAndJoin();
 }
 
@@ -1087,11 +1089,10 @@ Environment Variables:
       : "Claude (claude-sonnet-4-20250514)";
   logger.info(
     { spec: spec ?? "none", autoQueue, stake, preset, provider: currentProvider },
-    `Starting ${providerInfo} bot`
+    `Starting ${providerInfo} bot, connecting to WebSocket...`
   );
-  console.log(`\nConnecting to WebSocket using ${providerInfo}...`);
   if (autoQueue) {
-    console.log(`Auto-queue enabled (stake: ${stake}, preset: ${preset})`);
+    logger.info({ stake, preset }, `Auto-queue enabled (stake: ${stake}, preset: ${preset})`);
   }
   connectDirect(url);
 }
@@ -1129,7 +1130,6 @@ function gracefulShutdown(signal: string): void {
   isShuttingDown = true;
 
   logger.info({ signal }, "Shutting down bot...");
-  console.log("\nShutting down...");
 
   // Clear any pending reconnect
   if (reconnectTimeout) {
@@ -1206,10 +1206,8 @@ async function handleDebateRequest(ws: WebSocket, message: DebateRequestMessage)
       messagesSoFar: message.messages_so_far?.length ?? 0,
       inFlightCount: inFlightRequests.size,
     },
-    "Received debate request - starting LLM call"
+    `Debate request: ${message.round} round, position: ${message.position}, topic: ${message.topic}`
   );
-  console.log(`\nDebate request: ${message.round} round, position: ${message.position}`);
-  console.log(`Topic: ${message.topic}`);
 
   let response: { message: string; confidence: number };
   try {
@@ -1274,7 +1272,6 @@ async function handleDebateRequest(ws: WebSocket, message: DebateRequestMessage)
       },
       "Response sent successfully"
     );
-    console.log("Response sent!");
   } else {
     logger.error(
       { requestId, totalDurationMs: totalDuration },
@@ -1297,8 +1294,7 @@ function connectDirect(url: string): void {
   const maxReconnectDelay = 30000;
 
   ws.on("open", () => {
-    logger.info({ readyState: ws.readyState }, "WebSocket connected");
-    console.log("Connected! Waiting for debates...");
+    logger.info({ readyState: ws.readyState }, "WebSocket connected, waiting for debates...");
     reconnectAttempts = 0;
 
     // Log any stale in-flight requests from before reconnect
@@ -1338,9 +1334,8 @@ function connectDirect(url: string): void {
                 isReconnect,
                 hasActiveDebate,
               },
-              "Authenticated with server"
+              `Authenticated as: ${parsedMessage.botName} (ID: ${parsedMessage.botId})`
             );
-            console.log(`Authenticated as: ${parsedMessage.botName} (ID: ${parsedMessage.botId})`);
 
             // Don't auto-join queue if bot has active debates
             if (hasActiveDebate) {
@@ -1480,7 +1475,7 @@ function connectDirect(url: string): void {
   });
 
   ws.on("close", (code, reason) => {
-    logger.info({ code, reason: reason.toString() }, "Disconnected");
+    logger.info({ code, reason: reason.toString() }, "Disconnected from server");
 
     // Don't reconnect if shutting down
     if (isShuttingDown) {
@@ -1488,7 +1483,7 @@ function connectDirect(url: string): void {
       return;
     }
 
-    console.log("Disconnected from server. Reconnecting...");
+    logger.info({ reconnectAttempts }, "Reconnecting...");
 
     const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), maxReconnectDelay);
     reconnectAttempts++;
