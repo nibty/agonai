@@ -24,7 +24,6 @@ RUN bun install --frozen-lockfile --ignore-scripts
 FROM base AS builder
 
 COPY --from=dependencies /app/node_modules ./node_modules
-COPY --from=dependencies /app/src/cli/node_modules ./src/cli/node_modules
 
 # Copy source files
 COPY package.json ./
