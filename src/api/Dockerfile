@@ -16,7 +16,6 @@ FROM base AS dependencies
 COPY package.json bun.lock ./
 COPY src/api/package.json ./src/api/
 COPY src/web/package.json ./src/web/
-COPY src/bot/package.json ./src/bot/
 COPY src/cli/package.json ./src/cli/
 
 # Install only api dependencies
