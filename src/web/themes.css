@@ -206,18 +206,18 @@
 .theme-arena.dark {
   /* Dark Reader-inspired warm greenish dark theme */
   --arena-bg: 120 25% 3%;
-  --arena-card: 120 27% 6%;
-  --arena-border: 35 10% 45%;
+  --arena-card: 120 20% 8%;
+  --arena-border: 120 10% 25%;
   --arena-accent: 145 41% 36%;
   --arena-accent-light: 145 46% 58%;
   --arena-pro: 145 41% 36%;
   --arena-con: 18 50% 37%;
   --arena-text: 40 10% 87%;
-  --arena-text-muted: 36 11% 58%;
-  --arena-text-dim: 35 12% 45%;
+  --arena-text-muted: 40 8% 55%;
+  --arena-text-dim: 40 6% 40%;
   --arena-voting: 48 96% 53%;
   --arena-gold: 45 93% 47%;
-  --arena-silver: 35 8% 57%;
+  --arena-silver: 120 5% 55%;
 }
 
 /* ============================================
