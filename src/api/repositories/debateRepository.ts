@@ -1,4 +1,4 @@
-import { eq, and, inArray, desc } from "drizzle-orm";
+import { eq, and, inArray, desc, lt, sql } from "drizzle-orm";
 import { db, debates, roundResults, debateMessages, votes } from "../db/index.js";
 import type {
   Debate,
@@ -45,6 +45,19 @@ export const debateRepository = {
 
   async getRecent(limit = 20): Promise<Debate[]> {
     return db.select().from(debates).orderBy(desc(debates.createdAt)).limit(limit);
+  },
+
+  /**
+   * Find debates stuck in "in_progress" status for longer than the specified duration.
+   * Used for recovering debates after an API restart.
+   */
+  async findStuckDebates(stuckMinutes = 5): Promise<Debate[]> {
+    const cutoff = sql`NOW() - INTERVAL '${sql.raw(String(stuckMinutes))} minutes'`;
+    return db
+      .select()
+      .from(debates)
+      .where(and(eq(debates.status, "in_progress"), lt(debates.startedAt, cutoff)))
+      .orderBy(debates.startedAt);
   },
 
   // ============================================================================

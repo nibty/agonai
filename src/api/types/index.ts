@@ -254,6 +254,7 @@ export type BotResponse = z.infer<typeof BotResponseSchema>;
 
 export type WSMessageType =
   | "debate_started"
+  | "debate_resumed"
   | "round_started"
   | "bot_message"
   | "bot_typing"
@@ -277,6 +278,21 @@ export interface DebateStartedPayload {
   conBot: BotPublic;
   topic: Topic;
   preset: import("./presets.js").DebatePreset;
+}
+
+export interface DebateResumedPayload {
+  debate: Debate;
+  proBot: BotPublic;
+  conBot: BotPublic;
+  topic: Topic;
+  preset: import("./presets.js").DebatePreset;
+  messages: Array<{
+    roundIndex: number;
+    position: DebatePosition;
+    botId: number;
+    content: string;
+  }>;
+  resumingFromRound: number;
 }
 
 export interface RoundStartedPayload {

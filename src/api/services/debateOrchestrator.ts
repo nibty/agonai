@@ -2,6 +2,7 @@ import type {
   DebatePosition,
   WSMessage,
   DebateStartedPayload,
+  DebateResumedPayload,
   RoundStartedPayload,
   BotMessagePayload,
   BotTypingPayload,
@@ -20,10 +21,12 @@ import {
   botRepository,
   betRepository,
   userRepository,
+  topicRepository,
 } from "../repositories/index.js";
 import { decryptToken } from "../repositories/botRepository.js";
-import type { Bot, Topic } from "../db/types.js";
+import type { Bot, Topic, RoundResult as DbRoundResult, DebateMessage } from "../db/types.js";
 import { logger } from "./logger.js";
+import { getBotConnectionServer } from "../ws/botConnectionServer.js";
 
 type BroadcastFn = (debateId: number, message: WSMessage) => void;
 
@@ -795,6 +798,404 @@ export class DebateOrchestratorService {
     });
 
     this.activeDebates.delete(debateId);
+  }
+
+  /**
+   * Recover a stuck debate after API restart.
+   * Reconstructs state from DB, waits for bots to reconnect, then resumes.
+   */
+  async recoverDebate(debateId: number, broadcast: BroadcastFn): Promise<boolean> {
+    logger.info({ debateId }, "Attempting to recover stuck debate");
+
+    // Reconstruct state from database
+    const state = await this.reconstructState(debateId, broadcast);
+    if (!state) {
+      logger.error({ debateId }, "Failed to reconstruct debate state");
+      return false;
+    }
+
+    // Wait for bots to reconnect (up to 60 seconds)
+    const botServer = getBotConnectionServer();
+    if (!botServer) {
+      logger.error({ debateId }, "Bot connection server not available");
+      return false;
+    }
+
+    const startWait = Date.now();
+    const maxWaitMs = 60000;
+    let proConnected = false;
+    let conConnected = false;
+
+    while (Date.now() - startWait < maxWaitMs) {
+      proConnected = await botServer.isConnected(state.proBot.id);
+      conConnected = await botServer.isConnected(state.conBot.id);
+
+      if (proConnected && conConnected) {
+        break;
+      }
+
+      await this.sleep(2000);
+    }
+
+    if (!proConnected || !conConnected) {
+      logger.warn(
+        { debateId, proConnected, conConnected },
+        "Bots did not reconnect in time, cancelling debate"
+      );
+      await this.cancelDebate(debateId, "Bots failed to reconnect after server restart");
+      return false;
+    }
+
+    // Store in active debates
+    this.activeDebates.set(debateId, state);
+
+    // Broadcast debate resumed to spectators
+    const resumePayload: DebateResumedPayload = {
+      debate: state.debate,
+      proBot: {
+        id: state.proBot.id,
+        ownerId: state.proBot.ownerId,
+        name: state.proBot.name,
+        elo: state.proBot.elo,
+        wins: state.proBot.wins,
+        losses: state.proBot.losses,
+        isActive: state.proBot.isActive,
+      },
+      conBot: {
+        id: state.conBot.id,
+        ownerId: state.conBot.ownerId,
+        name: state.conBot.name,
+        elo: state.conBot.elo,
+        wins: state.conBot.wins,
+        losses: state.conBot.losses,
+        isActive: state.conBot.isActive,
+      },
+      topic: state.topic,
+      preset: state.preset,
+      messages: state.messages.map((m) => ({
+        roundIndex: m.roundIndex,
+        position: m.position,
+        botId: m.botId,
+        content: m.content,
+      })),
+      resumingFromRound: state.debate.currentRoundIndex,
+    };
+
+    broadcast(debateId, {
+      type: "debate_resumed",
+      debateId,
+      payload: resumePayload,
+    });
+
+    logger.info(
+      {
+        debateId,
+        currentRound: state.debate.currentRoundIndex,
+        roundStatus: state.debate.roundStatus,
+      },
+      "Debate recovered, resuming"
+    );
+
+    // Resume from where we left off
+    await this.resumeFromCurrentRound(state);
+
+    return true;
+  }
+
+  /**
+   * Reconstruct DebateState from database records.
+   */
+  private async reconstructState(
+    debateId: number,
+    broadcast: BroadcastFn
+  ): Promise<DebateState | null> {
+    // Load debate from DB
+    const dbDebate = await debateRepository.findById(debateId);
+    if (!dbDebate) {
+      logger.error({ debateId }, "Debate not found in database");
+      return null;
+    }
+
+    // Load related data
+    const [proBot, conBot, topic, dbRoundResults, dbMessages] = await Promise.all([
+      botRepository.findById(dbDebate.proBotId),
+      botRepository.findById(dbDebate.conBotId),
+      topicRepository.findById(dbDebate.topicId),
+      debateRepository.getRoundResults(debateId),
+      debateRepository.getMessages(debateId),
+    ]);
+
+    if (!proBot || !conBot || !topic) {
+      logger.error(
+        { debateId, proBot: !!proBot, conBot: !!conBot, topic: !!topic },
+        "Missing debate participants"
+      );
+      return null;
+    }
+
+    // Get preset
+    const preset = getPreset(dbDebate.presetId) ?? getDefaultPreset();
+
+    // Build round results array
+    const roundResults = dbRoundResults.map((r: DbRoundResult) => ({
+      roundIndex: r.roundIndex,
+      roundName: preset.rounds[r.roundIndex]?.name ?? `Round ${r.roundIndex}`,
+      proVotes: r.proVotes,
+      conVotes: r.conVotes,
+      winner: r.winner as DebatePosition | null,
+    }));
+
+    // Build messages array
+    const messages = dbMessages.map((m: DebateMessage) => ({
+      debateId: m.debateId,
+      roundIndex: m.roundIndex,
+      position: m.position as DebatePosition,
+      botId: m.botId,
+      content: m.content,
+      timestamp: m.createdAt,
+    }));
+
+    // Reconstruct in-memory debate state
+    const debate: DebateState["debate"] = {
+      id: dbDebate.id,
+      topicId: dbDebate.topicId,
+      topic: topic.text,
+      presetId: dbDebate.presetId,
+      proBotId: dbDebate.proBotId,
+      conBotId: dbDebate.conBotId,
+      status: dbDebate.status as DebateState["debate"]["status"],
+      currentRoundIndex: dbDebate.currentRoundIndex,
+      roundStatus: dbDebate.roundStatus as DebateState["debate"]["roundStatus"],
+      roundResults,
+      winner: dbDebate.winner as DebatePosition | null,
+      stake: dbDebate.stake,
+      spectatorCount: dbDebate.spectatorCount,
+      createdAt: dbDebate.createdAt,
+      startedAt: dbDebate.startedAt,
+      completedAt: dbDebate.completedAt,
+    };
+
+    return {
+      debate,
+      preset,
+      proBot,
+      conBot,
+      topic,
+      messages,
+      votes: new Map(), // Will be repopulated during voting phases
+      broadcast,
+    };
+  }
+
+  /**
+   * Resume debate from the current round based on roundStatus.
+   */
+  private async resumeFromCurrentRound(state: DebateState): Promise<void> {
+    const { rounds } = state.preset;
+    const currentIndex = state.debate.currentRoundIndex;
+    const roundConfig = rounds[currentIndex];
+
+    if (!roundConfig) {
+      // No more rounds, complete the debate
+      await this.completeDebate(state);
+      return;
+    }
+
+    switch (state.debate.roundStatus) {
+      case "pending":
+        // Round hasn't started yet, run it from the beginning
+        await this.runRemainingRounds(state, currentIndex);
+        break;
+
+      case "bot_responding":
+        // Check which bot messages exist for this round and get missing ones
+        await this.resumeBotResponding(state, currentIndex, roundConfig);
+        break;
+
+      case "voting":
+        // Check if round result exists, restart voting if needed
+        await this.resumeVoting(state, currentIndex, roundConfig);
+        break;
+
+      case "completed":
+        // This round is done, move to next
+        await this.runRemainingRounds(state, currentIndex + 1);
+        break;
+    }
+  }
+
+  /**
+   * Run remaining rounds starting from the given index.
+   */
+  private async runRemainingRounds(state: DebateState, startIndex: number): Promise<void> {
+    const { rounds } = state.preset;
+
+    for (let i = startIndex; i < rounds.length; i++) {
+      const roundConfig = rounds[i];
+      if (!roundConfig) continue;
+
+      state.debate.currentRoundIndex = i;
+      await debateRepository.update(state.debate.id, { currentRoundIndex: i });
+
+      await this.runRound(state, i, roundConfig);
+
+      if (state.debate.status === "cancelled") {
+        return;
+      }
+    }
+
+    await this.completeDebate(state);
+  }
+
+  /**
+   * Resume from bot_responding phase - check existing messages and get missing ones.
+   */
+  private async resumeBotResponding(
+    state: DebateState,
+    roundIndex: number,
+    roundConfig: RoundConfig
+  ): Promise<void> {
+    const { speaker, exchanges = 1 } = roundConfig;
+    const existingMessages = state.messages.filter((m) => m.roundIndex === roundIndex);
+
+    // Broadcast round started for reconnected spectators
+    const roundPayload: RoundStartedPayload = {
+      round: roundConfig.name,
+      roundIndex,
+      timeLimit: roundConfig.timeLimit,
+    };
+    state.broadcast(state.debate.id, {
+      type: "round_started",
+      debateId: state.debate.id,
+      payload: roundPayload,
+    });
+
+    // Determine expected messages based on speaker config
+    for (let exchange = 0; exchange < exchanges; exchange++) {
+      if (speaker === "pro" || speaker === "both") {
+        const hasProMessage = existingMessages.some(
+          (m) => m.position === "pro" && existingMessages.indexOf(m) >= exchange * 2
+        );
+        if (!hasProMessage) {
+          await this.getBotResponse(state, roundIndex, roundConfig, "pro", state.proBot);
+        } else {
+          // Re-broadcast existing message for reconnected spectators
+          const proMsg = existingMessages.find((m) => m.position === "pro");
+          if (proMsg) {
+            this.broadcastExistingMessage(state, roundIndex, roundConfig, proMsg);
+          }
+        }
+      }
+
+      if (speaker === "con" || speaker === "both") {
+        const hasConMessage = existingMessages.some(
+          (m) =>
+            m.position === "con" &&
+            existingMessages.indexOf(m) >= exchange * 2 + (speaker === "both" ? 1 : 0)
+        );
+        if (!hasConMessage) {
+          await this.getBotResponse(state, roundIndex, roundConfig, "con", state.conBot);
+        } else {
+          // Re-broadcast existing message for reconnected spectators
+          const conMsg = existingMessages.find((m) => m.position === "con");
+          if (conMsg) {
+            this.broadcastExistingMessage(state, roundIndex, roundConfig, conMsg);
+          }
+        }
+      }
+    }
+
+    // Proceed to voting
+    state.debate.roundStatus = "voting";
+    await debateRepository.update(state.debate.id, { roundStatus: "voting" });
+    await this.runVotingPhase(state, roundIndex, roundConfig);
+
+    state.debate.roundStatus = "completed";
+    await debateRepository.update(state.debate.id, { roundStatus: "completed" });
+
+    // Continue with remaining rounds
+    await this.runRemainingRounds(state, roundIndex + 1);
+  }
+
+  /**
+   * Broadcast an existing message for reconnected spectators.
+   */
+  private broadcastExistingMessage(
+    state: DebateState,
+    roundIndex: number,
+    roundConfig: RoundConfig,
+    message: DebateState["messages"][0]
+  ): void {
+    const messagePayload: BotMessagePayload = {
+      round: roundConfig.name,
+      roundIndex,
+      position: message.position,
+      botId: message.botId,
+      content: message.content,
+      isComplete: true,
+    };
+
+    state.broadcast(state.debate.id, {
+      type: "bot_message",
+      debateId: state.debate.id,
+      payload: messagePayload,
+    });
+  }
+
+  /**
+   * Resume from voting phase - check if round result exists.
+   */
+  private async resumeVoting(
+    state: DebateState,
+    roundIndex: number,
+    roundConfig: RoundConfig
+  ): Promise<void> {
+    // Check if round result already exists
+    const existingResult = state.debate.roundResults.find((r) => r.roundIndex === roundIndex);
+
+    if (existingResult) {
+      // Round result exists, voting was completed - move to next round
+      state.debate.roundStatus = "completed";
+      await debateRepository.update(state.debate.id, { roundStatus: "completed" });
+      await this.runRemainingRounds(state, roundIndex + 1);
+      return;
+    }
+
+    // Re-broadcast round messages for spectators
+    const roundMessages = state.messages.filter((m) => m.roundIndex === roundIndex);
+    for (const msg of roundMessages) {
+      this.broadcastExistingMessage(state, roundIndex, roundConfig, msg);
+    }
+
+    // Restart voting phase (in-progress votes are lost but acceptable)
+    await this.runVotingPhase(state, roundIndex, roundConfig);
+
+    state.debate.roundStatus = "completed";
+    await debateRepository.update(state.debate.id, { roundStatus: "completed" });
+
+    // Continue with remaining rounds
+    await this.runRemainingRounds(state, roundIndex + 1);
+  }
+
+  /**
+   * Check if a debate is currently active (in-memory)
+   */
+  isDebateActive(debateId: number): boolean {
+    return this.activeDebates.has(debateId);
+  }
+
+  /**
+   * Release a debate from active tracking (for shutdown)
+   */
+  releaseDebate(debateId: number): void {
+    this.activeDebates.delete(debateId);
+  }
+
+  /**
+   * Get all active debate IDs (for shutdown cleanup)
+   */
+  getActiveDebateIds(): number[] {
+    return Array.from(this.activeDebates.keys());
   }
 
   private sleep(ms: number): Promise<void> {

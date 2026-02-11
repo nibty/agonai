@@ -71,6 +71,9 @@ export const KEYS = {
   // Debate broadcasts
   DEBATE_SPECTATOR_COUNT: (debateId: number) => `debate:spectators:${debateId}`, // STRING counter
 
+  // Debate ownership (for recovery coordination)
+  DEBATE_OWNER: (debateId: number) => `debate:owner:${debateId}`, // STRING with instance ID, 5min TTL
+
   // Pub/sub channels
   CHANNEL_DEBATE_BROADCAST: (debateId: number) => `channel:debate:${debateId}`,
   CHANNEL_BOT_REQUEST: (botId: number) => `channel:bot:request:${botId}`,

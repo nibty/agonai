@@ -9,7 +9,8 @@ import { matchmaking } from "./services/matchmaking.js";
 import { debateOrchestrator } from "./services/debateOrchestrator.js";
 import { topicRepository, botRepository } from "./repositories/index.js";
 import { closeDatabase } from "./db/index.js";
-import { closeRedis, INSTANCE_ID } from "./services/redis.js";
+import { closeRedis, INSTANCE_ID, redis, KEYS, isRedisAvailable } from "./services/redis.js";
+import { debateRepository } from "./repositories/index.js";
 import { logger } from "./services/logger.js";
 
 const PORT = parseInt(process.env["PORT"] ?? "3001");
@@ -51,8 +52,101 @@ server.on("upgrade", (request, socket, head) => {
   }
 });
 
+// Debate ownership TTL in seconds
+const DEBATE_OWNERSHIP_TTL = 300; // 5 minutes
+
+/**
+ * Claim ownership of a debate for recovery.
+ * Returns true if successfully claimed, false if another instance owns it.
+ */
+async function claimDebateOwnership(debateId: number): Promise<boolean> {
+  if (!isRedisAvailable()) {
+    // Single instance mode - always claim
+    return true;
+  }
+
+  // Use SETNX (set if not exists) with TTL
+  const result = await redis.set(
+    KEYS.DEBATE_OWNER(debateId),
+    INSTANCE_ID,
+    "EX",
+    DEBATE_OWNERSHIP_TTL,
+    "NX"
+  );
+  return result === "OK";
+}
+
+/**
+ * Release ownership of a debate (for shutdown or completion).
+ */
+async function releaseDebateOwnership(debateId: number): Promise<void> {
+  if (!isRedisAvailable()) return;
+
+  // Only release if we own it
+  const owner = await redis.get(KEYS.DEBATE_OWNER(debateId));
+  if (owner === INSTANCE_ID) {
+    await redis.del(KEYS.DEBATE_OWNER(debateId));
+  }
+}
+
+/**
+ * Refresh ownership TTL for active debates.
+ */
+async function refreshDebateOwnerships(): Promise<void> {
+  if (!isRedisAvailable()) return;
+
+  const activeIds = debateOrchestrator.getActiveDebateIds();
+  for (const debateId of activeIds) {
+    const key = KEYS.DEBATE_OWNER(debateId);
+    const owner = await redis.get(key);
+    if (owner === INSTANCE_ID) {
+      await redis.expire(key, DEBATE_OWNERSHIP_TTL);
+    }
+  }
+}
+
+/**
+ * Recover stuck debates on startup.
+ */
+async function recoverStuckDebates(): Promise<void> {
+  try {
+    const stuckDebates = await debateRepository.findStuckDebates(5);
+
+    if (stuckDebates.length === 0) {
+      logger.info("No stuck debates to recover");
+      return;
+    }
+
+    logger.info({ count: stuckDebates.length }, "Found stuck debates, attempting recovery");
+
+    for (const debate of stuckDebates) {
+      // Try to claim ownership
+      const claimed = await claimDebateOwnership(debate.id);
+      if (!claimed) {
+        logger.debug({ debateId: debate.id }, "Debate being recovered by another instance");
+        continue;
+      }
+
+      // Attempt recovery
+      const recovered = await debateOrchestrator.recoverDebate(debate.id, (debateId, message) =>
+        wsServer.broadcast(debateId, message)
+      );
+
+      if (recovered) {
+        logger.info({ debateId: debate.id }, "Successfully recovered stuck debate");
+      } else {
+        // Release ownership if recovery failed
+        await releaseDebateOwnership(debate.id);
+      }
+    }
+  } catch (error) {
+    logger.error({ err: error }, "Error during debate recovery");
+  }
+}
+
 // Matchmaking loop - runs every 5 seconds
 let matchmakingInterval: ReturnType<typeof setInterval>;
+let ownershipRefreshInterval: ReturnType<typeof setInterval>;
 
 function startMatchmaking(): void {
   matchmakingInterval = setInterval(() => {
@@ -132,7 +226,23 @@ function startMatchmaking(): void {
 // Cleanup on shutdown
 async function shutdown(): Promise<void> {
   logger.info("Shutting down...");
+
+  // Stop intervals
   clearInterval(matchmakingInterval);
+  clearInterval(ownershipRefreshInterval);
+
+  // Release ownership of all active debates so other instances can recover them
+  const activeDebateIds = debateOrchestrator.getActiveDebateIds();
+  if (activeDebateIds.length > 0) {
+    logger.info(
+      { count: activeDebateIds.length },
+      "Releasing debate ownerships for graceful recovery"
+    );
+    for (const debateId of activeDebateIds) {
+      await releaseDebateOwnership(debateId);
+    }
+  }
+
   server.close();
   await closeRedis();
   await closeDatabase();
@@ -159,4 +269,14 @@ server.listen(PORT, () => {
   startMatchmaking();
   logger.info("Matchmaking service started");
   logger.info("Database connected (PostgreSQL via Drizzle)");
+
+  // Refresh debate ownerships every 2 minutes
+  ownershipRefreshInterval = setInterval(() => {
+    void refreshDebateOwnerships();
+  }, 120000);
+
+  // Recover stuck debates after a short delay to allow bots to reconnect
+  setTimeout(() => {
+    void recoverStuckDebates();
+  }, 5000);
 });
