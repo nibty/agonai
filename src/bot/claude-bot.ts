@@ -2,6 +2,10 @@ import Anthropic from "@anthropic-ai/sdk";
 import WebSocket from "ws";
 import * as fs from "fs";
 import * as path from "path";
+import { createLogger } from "@x1-labs/logging";
+
+// Initialize logger
+const logger = createLogger({ name: "claude-bot" });
 
 // Initialize Anthropic client (uses ANTHROPIC_API_KEY env var)
 const anthropic = new Anthropic();
@@ -55,11 +59,11 @@ function loadBotSpec(specPath: string): string {
 
   if (stat.isFile()) {
     // Single file - just read it
-    console.log(`[Claude Bot] Loading spec from file: ${resolvedPath}`);
+    logger.info({ path: resolvedPath }, "Loading spec from file");
     return fs.readFileSync(resolvedPath, "utf-8");
   } else if (stat.isDirectory()) {
     // Directory - read all .md files
-    console.log(`[Claude Bot] Loading specs from directory: ${resolvedPath}`);
+    logger.info({ path: resolvedPath }, "Loading specs from directory");
     const files = fs
       .readdirSync(resolvedPath)
       .filter((f) => f.endsWith(".md"))
@@ -72,7 +76,7 @@ function loadBotSpec(specPath: string): string {
     const contents: string[] = [];
     for (const file of files) {
       const filePath = path.join(resolvedPath, file);
-      console.log(`[Claude Bot]   - ${file}`);
+      logger.debug({ file }, "Loading spec file");
       const content = fs.readFileSync(filePath, "utf-8");
       contents.push(`# ${file}\n\n${content}`);
     }
@@ -138,21 +142,21 @@ async function generateResponse(
 ): Promise<{ message: string; confidence: number }> {
   const { round, topic, position, opponent_last_message, word_limit, time_limit_seconds } = request;
 
-  console.log("\n" + "=".repeat(80));
-  console.log(`[Claude Bot] REQUEST`);
-  console.log("=".repeat(80));
-  console.log(`Debate ID: ${request.debate_id}`);
-  console.log(`Round: ${round} | Position: ${position.toUpperCase()}`);
-  console.log(`Topic: "${topic}"`);
-  console.log(
-    `Word limit: ${word_limit.min}-${word_limit.max} | Time limit: ${time_limit_seconds}s`
+  logger.info(
+    {
+      debateId: request.debate_id,
+      round,
+      position,
+      topic,
+      wordLimit: word_limit,
+      timeLimitSeconds: time_limit_seconds,
+      opponentLastMessage: opponent_last_message
+        ? opponent_last_message.slice(0, 100) + (opponent_last_message.length > 100 ? "..." : "")
+        : null,
+      messagesSoFar: request.messages_so_far.length,
+    },
+    "Received debate request"
   );
-  if (opponent_last_message) {
-    console.log(
-      `Opponent's last message: "${opponent_last_message.slice(0, 100)}${opponent_last_message.length > 100 ? "..." : ""}"`
-    );
-  }
-  console.log(`Messages so far: ${request.messages_so_far.length}`);
 
   const systemPrompt = buildSystemPrompt(word_limit);
 
@@ -186,20 +190,17 @@ Word limit: ${word_limit.min}-${word_limit.max} words`;
     const latencyMs = Date.now() - startTime;
     const wordCount = responseText.split(/\s+/).filter((w) => w.length > 0).length;
 
-    console.log("-".repeat(80));
-    console.log(`[Claude Bot] RESPONSE (${latencyMs}ms, ${wordCount} words)`);
-    console.log("-".repeat(80));
-    console.log(responseText);
-    console.log("=".repeat(80) + "\n");
+    logger.info(
+      { latencyMs, wordCount, response: responseText },
+      "Generated debate response"
+    );
 
     return {
       message: responseText,
       confidence: 0.9,
     };
   } catch (error) {
-    console.error("-".repeat(80));
-    console.error("[Claude Bot] ERROR:", error);
-    console.error("=".repeat(80) + "\n");
+    logger.error({ error, position }, "Error generating response");
     return {
       message: `[Error generating response - falling back to default ${position} argument]`,
       confidence: 0.5,
@@ -208,14 +209,14 @@ Word limit: ${word_limit.min}-${word_limit.max} words`;
 }
 
 function connect(url: string): void {
-  console.log(`[Claude Bot] Connecting to ${url}...`);
+  logger.info({ url }, "Connecting to WebSocket");
 
   const ws = new WebSocket(url);
   let reconnectAttempts = 0;
   const maxReconnectDelay = 30000;
 
   ws.on("open", () => {
-    console.log("[Claude Bot] WebSocket connected");
+    logger.info({}, "WebSocket connected");
     reconnectAttempts = 0;
   });
 
@@ -226,8 +227,9 @@ function connect(url: string): void {
 
         switch (message.type) {
           case "connected":
-            console.log(
-              `[Claude Bot] Authenticated as "${message.botName}" (ID: ${message.botId})`
+            logger.info(
+              { botName: message.botName, botId: message.botId },
+              "Authenticated successfully"
             );
             break;
 
@@ -236,7 +238,7 @@ function connect(url: string): void {
             break;
 
           case "debate_request": {
-            console.log(`[Claude Bot] Received debate request ${message.requestId}`);
+            logger.debug({ requestId: message.requestId }, "Processing debate request");
             const response = await generateResponse(message);
             ws.send(
               JSON.stringify({
@@ -250,26 +252,29 @@ function connect(url: string): void {
           }
 
           default:
-            console.warn("[Claude Bot] Unknown message type:", (message as { type: string }).type);
+            logger.warn(
+              { messageType: (message as { type: string }).type },
+              "Unknown message type"
+            );
         }
       } catch (error) {
-        console.error("[Claude Bot] Error handling message:", error);
+        logger.error({ error }, "Error handling message");
       }
     })();
   });
 
   ws.on("close", (code, reason) => {
-    console.log(`[Claude Bot] Disconnected: ${code} ${reason.toString()}`);
+    logger.info({ code, reason: reason.toString() }, "WebSocket disconnected");
 
     // Reconnect with exponential backoff
     const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), maxReconnectDelay);
     reconnectAttempts++;
-    console.log(`[Claude Bot] Reconnecting in ${delay}ms...`);
+    logger.info({ delayMs: delay, attempt: reconnectAttempts }, "Reconnecting");
     setTimeout(() => connect(url), delay);
   });
 
   ws.on("error", (error) => {
-    console.error("[Claude Bot] WebSocket error:", error.message);
+    logger.error({ error: error.message }, "WebSocket error");
   });
 }
 
@@ -278,40 +283,36 @@ const url = process.argv[2];
 const specPath = process.argv[3];
 
 if (!url) {
-  console.error(`
-╔═══════════════════════════════════════════════════════════╗
-║           Claude Debate Bot                               ║
-╠═══════════════════════════════════════════════════════════╣
-║  Usage: bun run claude <websocket-url> [spec-path]        ║
-║                                                           ║
-║  Arguments:                                               ║
-║    websocket-url  Connection URL from bot registration    ║
-║    spec-path      Optional: markdown file or directory    ║
-║                   defining bot personality/strategy       ║
-║                                                           ║
-║  Examples:                                                ║
-║    bun run claude ws://localhost:3001/bot/connect/abc123  ║
-║    bun run claude ws://... ./my-bot-spec.md               ║
-║    bun run claude ws://... ./bot-specs/                   ║
-║                                                           ║
-║  Spec File Format:                                        ║
-║    Your markdown file(s) can define:                      ║
-║    - Personality traits and debate style                  ║
-║    - Strategic approaches for different rounds            ║
-║    - Rhetorical techniques to employ                      ║
-║    - Topics of expertise or special knowledge             ║
-║                                                           ║
-║  Get your connection URL by registering a bot at:         ║
-║    http://localhost:5173/bots                             ║
-║                                                           ║
-║  Make sure ANTHROPIC_API_KEY is set!                      ║
-╚═══════════════════════════════════════════════════════════╝
-`);
+  logger.error(
+    {},
+    `Usage: bun run claude <websocket-url> [spec-path]
+
+Arguments:
+  websocket-url  Connection URL from bot registration
+  spec-path      Optional: markdown file or directory defining bot personality/strategy
+
+Examples:
+  bun run claude ws://localhost:3001/bot/connect/abc123
+  bun run claude ws://... ./my-bot-spec.md
+  bun run claude ws://... ./bot-specs/
+
+Spec File Format:
+  Your markdown file(s) can define:
+  - Personality traits and debate style
+  - Strategic approaches for different rounds
+  - Rhetorical techniques to employ
+  - Topics of expertise or special knowledge
+
+Get your connection URL by registering a bot at:
+  http://localhost:5173/bots
+
+Make sure ANTHROPIC_API_KEY is set!`
+  );
   process.exit(1);
 }
 
 if (!process.env.ANTHROPIC_API_KEY) {
-  console.error("[Claude Bot] ERROR: ANTHROPIC_API_KEY environment variable is not set");
+  logger.error({}, "ANTHROPIC_API_KEY environment variable is not set");
   process.exit(1);
 }
 
@@ -319,22 +320,16 @@ if (!process.env.ANTHROPIC_API_KEY) {
 if (specPath) {
   try {
     botSpec = loadBotSpec(specPath);
-    console.log(`[Claude Bot] Loaded spec (${botSpec.length} characters)`);
+    logger.info({ specLength: botSpec.length }, "Loaded spec");
   } catch (error) {
-    console.error(
-      `[Claude Bot] ERROR loading spec: ${error instanceof Error ? error.message : String(error)}`
+    logger.error(
+      { error: error instanceof Error ? error.message : String(error) },
+      "Error loading spec"
     );
     process.exit(1);
   }
 }
 
-console.log(`
-╔═══════════════════════════════════════════════════════════╗
-║           Claude Debate Bot                               ║
-╠═══════════════════════════════════════════════════════════╣
-║  Connecting via WebSocket...                              ║
-${specPath ? `║  Spec: ${specPath.slice(0, 47).padEnd(47)}║\n` : ""}║  Make sure ANTHROPIC_API_KEY is set!                      ║
-╚═══════════════════════════════════════════════════════════╝
-`);
+logger.info({ url, specPath: specPath || null }, "Starting Claude Debate Bot");
 
 connect(url);

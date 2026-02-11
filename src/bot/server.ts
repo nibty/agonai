@@ -1,4 +1,7 @@
 import WebSocket from "ws";
+import { createLogger } from "@x1-labs/logging";
+
+const logger = createLogger({ name: "demo-bot" });
 
 // =============================================================================
 // Bot Personalities
@@ -435,14 +438,14 @@ const bots: Record<string, { personality: BotPersonality; description: string }>
 // =============================================================================
 
 function connect(url: string, botId: string, personality: BotPersonality): void {
-  console.log(`[${botId}] Connecting to ${url}...`);
+  logger.info({ botId, url }, "Connecting to WebSocket server");
 
   const ws = new WebSocket(url);
   let reconnectAttempts = 0;
   const maxReconnectDelay = 30000;
 
   ws.on("open", () => {
-    console.log(`[${botId}] WebSocket connected`);
+    logger.info({ botId }, "WebSocket connected");
     reconnectAttempts = 0;
   });
 
@@ -452,7 +455,7 @@ function connect(url: string, botId: string, personality: BotPersonality): void 
 
       switch (message.type) {
         case "connected":
-          console.log(`[${botId}] Authenticated as "${message.botName}" (ID: ${message.botId})`);
+          logger.info({ botId, botName: message.botName, remoteBotId: message.botId }, "Authenticated with server");
           break;
 
         case "ping":
@@ -460,8 +463,9 @@ function connect(url: string, botId: string, personality: BotPersonality): void 
           break;
 
         case "debate_request": {
-          console.log(
-            `[${botId}] ${message.round} - ${message.position} on "${message.topic.slice(0, 50)}..."`
+          logger.info(
+            { botId, round: message.round, position: message.position, topic: message.topic.slice(0, 50) },
+            "Received debate request"
           );
 
           // Simulate thinking time (100-500ms)
@@ -476,31 +480,31 @@ function connect(url: string, botId: string, personality: BotPersonality): void 
                 confidence: response.confidence,
               })
             );
-            console.log(`[${botId}] Response sent (${Math.round(thinkTime)}ms think time)`);
+            logger.info({ botId, thinkTimeMs: Math.round(thinkTime) }, "Response sent");
           }, thinkTime);
           break;
         }
 
         default:
-          console.warn(`[${botId}] Unknown message type:`, (message as { type: string }).type);
+          logger.warn({ botId, messageType: (message as { type: string }).type }, "Unknown message type");
       }
     } catch (error) {
-      console.error(`[${botId}] Error handling message:`, error);
+      logger.error({ botId, error }, "Error handling message");
     }
   });
 
   ws.on("close", (code, reason) => {
-    console.log(`[${botId}] Disconnected: ${code} ${reason.toString()}`);
+    logger.info({ botId, code, reason: reason.toString() }, "Disconnected from WebSocket server");
 
     // Reconnect with exponential backoff
     const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), maxReconnectDelay);
     reconnectAttempts++;
-    console.log(`[${botId}] Reconnecting in ${delay}ms...`);
+    logger.info({ botId, delayMs: delay }, "Reconnecting after delay");
     setTimeout(() => connect(url, botId, personality), delay);
   });
 
   ws.on("error", (error) => {
-    console.error(`[${botId}] WebSocket error:`, error.message);
+    logger.error({ botId, error: error.message }, "WebSocket error");
   });
 }
 
@@ -512,44 +516,19 @@ const botId = process.argv[2];
 const url = process.argv[3];
 
 if (!botId || !url) {
-  console.error(`
-╔═══════════════════════════════════════════════════════════╗
-║           AI Debates - Demo Bot                           ║
-╠═══════════════════════════════════════════════════════════╣
-║  Usage: bun run dev:bot <personality> <websocket-url>     ║
-║                                                           ║
-║  Available personalities:                                 ║
-║    • logic-master    - Analytical and structured          ║
-║    • devils-advocate - Aggressive and witty               ║
-║    • philosopher     - Thoughtful and nuanced             ║
-║    • data-driven     - Statistics and facts focused       ║
-║                                                           ║
-║  Example:                                                 ║
-║    bun run dev:bot logic-master ws://localhost:3001/...   ║
-║                                                           ║
-║  Get your connection URL by registering a bot at:         ║
-║    http://localhost:5173/bots                             ║
-╚═══════════════════════════════════════════════════════════╝
-`);
+  logger.error(
+    { usage: "bun run dev:bot <personality> <websocket-url>" },
+    "Missing required arguments. Available personalities: logic-master, devils-advocate, philosopher, data-driven"
+  );
   process.exit(1);
 }
 
 const bot = bots[botId];
 if (!bot) {
-  console.error(`Unknown bot personality: ${botId}`);
-  console.error(`Available: ${Object.keys(bots).join(", ")}`);
+  logger.error({ botId, available: Object.keys(bots) }, "Unknown bot personality");
   process.exit(1);
 }
 
-console.log(`
-╔═══════════════════════════════════════════════════════════╗
-║           AI Debates - Demo Bot                           ║
-╠═══════════════════════════════════════════════════════════╣
-║  Personality: ${botId.padEnd(42)}║
-║  ${bot.description.padEnd(55)}║
-║                                                           ║
-║  Connecting via WebSocket...                              ║
-╚═══════════════════════════════════════════════════════════╝
-`);
+logger.info({ personality: botId, description: bot.description }, "Starting demo bot");
 
 connect(url, botId, bot.personality);
