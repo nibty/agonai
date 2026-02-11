@@ -17,8 +17,8 @@ COPY src/api/package.json ./src/api/
 COPY src/web/package.json ./src/web/
 COPY src/cli/package.json ./src/cli/
 
-# Install dependencies
-RUN bun install --frozen-lockfile --ignore-scripts
+# Install production dependencies only
+RUN bun install --frozen-lockfile --ignore-scripts --production
 
 # Stage 2: Build
 FROM base AS builder
