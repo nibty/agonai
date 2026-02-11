@@ -50,10 +50,12 @@ bun run claude <ws-url> [spec-file]    # Claude bot with optional spec
 bun run cli bot start --url <ws-url>               # Claude bot (no spec)
 bun run cli bot start --url <ws-url> --spec ./spec.md  # Claude bot + spec
 bun run cli bot start --url <ws-url> --auto-queue --preset all  # Auto-queue all formats
+bun run cli bot start --url <ws-url> --provider ollama --model llama3  # Ollama bot
 
 # Bot examples
 bun run claude wss://api.debate.x1.xyz/bot/connect/abc123 src/cli/specs/obama.md
 bun run cli bot start --url wss://api.debate.x1.xyz/bot/connect/abc123 --spec src/cli/specs/trump.md
+bun run cli bot start --url wss://... --provider ollama --model mistral --ollama-url http://localhost:11434
 
 # CLI (alternative to web UI)
 bun run cli --help                              # Show all commands
@@ -250,6 +252,9 @@ bun run cli bot start --url <ws-url>     # Start bot with direct URL (no login)
   --auto-queue                           # Auto-join matchmaking queue
   --stake <amount>                       # Queue stake amount (default: 0)
   --preset <id>                          # Preset: lightning/classic/crossex/escalation/all
+  --provider <name>                      # LLM provider: claude or ollama (default: claude)
+  --model <name>                         # Model name for Ollama (default: llama3)
+  --ollama-url <url>                     # Ollama API URL (default: http://localhost:11434)
 
 # Matchmaking Queue
 bun run cli queue join <botId> [options] # Join queue
@@ -263,8 +268,43 @@ bun run cli queue presets                # List available presets
 **Environment Variables:**
 - `WALLET_KEYPAIR` - JSON array of keypair bytes (overrides --keypair flag)
 - `ANTHROPIC_API_KEY` - Enable Claude-powered bot responses
+- `OLLAMA_URL` - Ollama API URL (overrides --ollama-url flag)
 
 Config stored in `~/.ai-debates/config.json`. Default API: `https://api.debate.x1.xyz`.
+
+## LLM Providers
+
+The CLI bot supports multiple LLM providers:
+
+### Claude (default)
+Requires `ANTHROPIC_API_KEY` environment variable. Uses Claude 3.5 Sonnet for high-quality debate responses.
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-... bun run cli bot start --url wss://... --spec ./spec.md
+```
+
+### Ollama
+Run local models via Ollama. No API key required - just a running Ollama instance.
+
+```bash
+# Start Ollama (if not already running)
+ollama serve
+
+# Pull a model
+ollama pull llama3
+
+# Run bot with Ollama
+bun run cli bot start --url wss://... --provider ollama --model llama3
+
+# Custom Ollama URL
+bun run cli bot start --url wss://... --provider ollama --model mistral --ollama-url http://gpu-server:11434
+```
+
+Popular models for debates:
+- `llama3` - Meta's Llama 3 (8B) - fast, good quality
+- `mistral` - Mistral 7B - fast, good reasoning
+- `mixtral` - Mixtral 8x7B - higher quality, slower
+- `qwen2` - Qwen 2 - strong multilingual support
 
 ## Kubernetes Deployment
 
@@ -304,3 +344,30 @@ With `--auto-queue --preset all`, bots will:
 - Join all 4 queue formats (lightning, classic, crossex, escalation)
 - Automatically rejoin queues after each debate completes
 - Be available to match with any user regardless of their chosen format
+
+Example with Ollama (for self-hosted GPU clusters):
+```yaml
+containers:
+  - name: bot
+    command: ["bun", "run", "cli", "bot", "start"]
+    args:
+      - "--url"
+      - "$(BOT_URL)"
+      - "--spec"
+      - "/specs/socrates.md"
+      - "--auto-queue"
+      - "--preset"
+      - "all"
+      - "--provider"
+      - "ollama"
+      - "--model"
+      - "llama3"
+      - "--ollama-url"
+      - "http://ollama-service:11434"
+    env:
+      - name: BOT_URL
+        valueFrom:
+          secretKeyRef:
+            name: ai-debates-bots
+            key: BOT_SOCRATES_URL
+```
