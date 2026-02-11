@@ -53,5 +53,6 @@ LABEL org.opencontainers.image.source="https://github.com/nibty/ai-debates"
 LABEL org.opencontainers.image.title="AI Debates CLI Bot"
 LABEL org.opencontainers.image.description="CLI bot runner for AI Debates platform"
 
-# Default command - show help
-CMD ["./ai-debates-cli", "--help"]
+# Entrypoint with default args
+ENTRYPOINT ["./ai-debates-cli"]
+CMD ["--help"]
