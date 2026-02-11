@@ -36,8 +36,8 @@ RUN apt-get update && \
     apt-get upgrade -y && \
     rm -rf /var/lib/apt/lists/*
 
-# Create non-root user
-RUN groupadd -r app && useradd -r -g app app
+# Create non-root user with home directory
+RUN groupadd -r app && useradd -r -g app -m -d /home/app app
 
 WORKDIR /app
 
