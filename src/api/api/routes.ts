@@ -108,7 +108,7 @@ router.get("/presets/:presetId", (req: Request<{ presetId: string }>, res: Respo
 
 router.get("/stats", async (_req: Request, res: Response) => {
   const queueStats = await matchmaking.getStats();
-  const activeDebates = debateOrchestrator.getActiveDebates();
+  const activeDebates = await debateRepository.getActive();
   const allBots = await botRepository.getAll();
 
   res.json({
@@ -546,9 +546,27 @@ router.post("/queue/leave", authMiddleware, async (req: AuthenticatedRequest, re
 // Debate Routes
 // ============================================================================
 
-router.get("/debates/active", (_req: Request, res: Response) => {
-  const debates = debateOrchestrator.getActiveDebates();
-  res.json({ debates });
+router.get("/debates/active", async (_req: Request, res: Response) => {
+  const debates = await debateRepository.getActive();
+
+  // Fetch bot names for each debate
+  const debatesWithBots = await Promise.all(
+    debates.map(async (debate) => {
+      const [proBot, conBot] = await Promise.all([
+        debate.proBotId ? botRepository.findById(debate.proBotId) : null,
+        debate.conBotId ? botRepository.findById(debate.conBotId) : null,
+      ]);
+      return {
+        ...debate,
+        proBotName: proBot?.name ?? "Unknown",
+        proBotElo: proBot?.elo ?? 0,
+        conBotName: conBot?.name ?? "Unknown",
+        conBotElo: conBot?.elo ?? 0,
+      };
+    })
+  );
+
+  res.json({ debates: debatesWithBots });
 });
 
 router.get("/debates/recent", async (req: Request, res: Response) => {
@@ -669,7 +687,8 @@ router.post("/bets", authMiddleware, async (req: AuthenticatedRequest, res: Resp
 
   const { debateId, side, amount } = result.data;
 
-  const debate = debateOrchestrator.getDebate(debateId);
+  // Check debate status from DB (works across all pods)
+  const debate = await debateRepository.findById(debateId);
   if (!debate) {
     res.status(404).json({ error: "Debate not found" });
     return;
