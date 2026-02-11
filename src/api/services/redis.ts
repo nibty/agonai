@@ -39,6 +39,8 @@ redis.on("reconnecting", () => logger.info("Redis reconnecting..."));
 
 redisSub.on("connect", () => logger.info("Redis subscriber connected"));
 redisSub.on("error", (err) => logger.error({ err: err.message }, "Redis subscriber error"));
+redisSub.on("subscribe", (channel, count) => logger.debug({ channel, count }, "Subscribed to channel"));
+redisSub.on("message", (channel) => logger.trace({ channel }, "Message received on channel"));
 
 redisPub.on("connect", () => logger.info("Redis publisher connected"));
 redisPub.on("error", (err) => logger.error({ err: err.message }, "Redis publisher error"));

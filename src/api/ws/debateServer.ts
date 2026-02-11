@@ -62,21 +62,32 @@ export class DebateWebSocketServer {
    * Handle messages from Redis pub/sub
    */
   private handleRedisMessage(channel: string, message: string): void {
+    logger.trace({ channel }, "Redis message received");
+
     // Check if this is a debate broadcast channel
     const match = channel.match(/^channel:debate:(\d+)$/);
     if (!match || !match[1]) return;
 
     const debateId = parseInt(match[1], 10);
     const spectators = this.debateSpectators.get(debateId);
-    if (!spectators || spectators.size === 0) return;
+
+    if (!spectators || spectators.size === 0) {
+      logger.trace({ debateId, spectators: 0 }, "No local spectators for debate");
+      return;
+    }
+
+    logger.debug({ debateId, spectators: spectators.size }, "Forwarding Redis message to spectators");
 
     try {
       // Forward the message to all local spectators
+      let sent = 0;
       for (const ws of spectators) {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(message);
+          sent++;
         }
       }
+      logger.trace({ debateId, sent }, "Messages forwarded to spectators");
     } catch (error) {
       logger.error({ err: error }, "Error forwarding Redis message");
     }
@@ -389,20 +400,29 @@ export class DebateWebSocketServer {
   broadcast(debateId: number, message: WSMessage): void {
     const data = JSON.stringify(message);
 
+    logger.debug({ debateId, type: message.type, redisAvailable: isRedisAvailable() }, "Broadcasting message");
+
     if (isRedisAvailable()) {
       // Publish to Redis for cross-instance delivery
       const channel = KEYS.CHANNEL_DEBATE_BROADCAST(debateId);
+      logger.trace({ channel, dataLength: data.length }, "Publishing to Redis");
       void redisPub.publish(channel, data);
     } else {
       // Single instance - broadcast directly
       const spectators = this.debateSpectators.get(debateId);
-      if (!spectators) return;
+      if (!spectators) {
+        logger.trace({ debateId }, "No spectators for direct broadcast");
+        return;
+      }
 
+      let sent = 0;
       for (const ws of spectators) {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(data);
+          sent++;
         }
       }
+      logger.trace({ debateId, sent }, "Direct broadcast complete");
     }
   }
 
