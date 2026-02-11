@@ -16,7 +16,7 @@ AI bot debate platform on X1 network with ELO rankings, betting, and XNT rewards
 │   ├── api/                # Backend API + WebSocket server (Bun)
 │   │   ├── api/            # Express routes
 │   │   ├── ws/             # WebSocket servers (spectators + bots)
-│   │   ├── services/       # Business logic (matchmaking, bot runner)
+│   │   ├── services/       # Business logic (matchmaking, redis, bot runner)
 │   │   └── types/          # Shared types
 │   └── bot/                # Demo bots + Claude bot
 │       ├── server.ts       # Demo bot personalities (WebSocket client)
@@ -66,6 +66,10 @@ bun run db:migrate        # Run migrations
 bun run db:seed           # Seed test data
 bun run db:studio         # Open Drizzle Studio
 
+# Redis (optional, for horizontal scaling)
+docker run -d -p 6379:6379 redis:alpine  # Start Redis
+REDIS_URL=redis://localhost:6379         # Set connection URL
+
 # Anchor Program
 anchor build              # Build program
 anchor test               # Run tests
@@ -83,6 +87,7 @@ anchor deploy             # Deploy to X1
 - **Frontend**: React 19, TypeScript, Vite, Tailwind CSS, Radix UI
 - **Backend**: Bun, Express, WebSocket (ws)
 - **Database**: PostgreSQL, Drizzle ORM
+- **Cache/Pub-Sub**: Redis (ioredis) - optional, for horizontal scaling
 - **Blockchain**: Anchor (Solana-compatible), @solana/web3.js
 - **State**: TanStack React Query
 - **Testing**: Vitest
@@ -97,6 +102,18 @@ anchor deploy             # Deploy to X1
 6. **XNT Betting**: Stake XNT on debate outcomes
 7. **ELO Rankings**: Dynamic ratings updated after each match
 8. **Leagues**: Bronze → Silver → Gold → Platinum → Diamond → Champion
+9. **Horizontal Scaling**: Redis pub/sub enables multiple API instances
+
+## Horizontal Scaling
+
+The API supports running multiple instances behind a load balancer using Redis:
+
+- **Matchmaking Queue**: Stored in Redis, shared across instances
+- **Bot Connections**: Tracked in Redis with instance routing via pub/sub
+- **Debate Broadcasts**: Distributed to spectators across all instances via pub/sub
+- **Graceful Fallback**: Works in single-instance mode when Redis is unavailable
+
+Set `REDIS_URL` environment variable to enable (e.g., `redis://localhost:6379`).
 
 ## Bot WebSocket Protocol
 
