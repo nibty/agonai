@@ -166,25 +166,37 @@ export class BotConnectionServer {
    * Initialize Redis pub/sub for cross-instance communication
    */
   private async initRedisSubscriptions(): Promise<void> {
-    if (!isRedisAvailable()) {
-      logger.info("Redis not available, running in single-instance mode");
-      return;
-    }
+    const instanceChannel = `bot:instance:${INSTANCE_ID}`;
 
-    try {
-      // Subscribe to bot request channel for this instance
-      const instanceChannel = `bot:instance:${INSTANCE_ID}`;
-      await redisSub.subscribe(instanceChannel);
+    // Set up message handler (will receive messages once subscribed)
+    redisSub.on("message", (channel, message) => {
+      if (channel === instanceChannel) {
+        void this.handleRedisMessage(message);
+      }
+    });
 
-      redisSub.on("message", (channel, message) => {
-        if (channel === instanceChannel) {
-          void this.handleRedisMessage(message);
-        }
+    // Try to subscribe immediately if Redis is ready
+    if (isRedisAvailable()) {
+      await this.subscribeToInstanceChannel(instanceChannel);
+    } else {
+      logger.info("Redis not yet available, waiting for connection...");
+      // Wait for Redis to connect, then subscribe
+      redisSub.once("ready", () => {
+        logger.info("Redis subscriber ready, setting up instance channel subscription");
+        void this.subscribeToInstanceChannel(instanceChannel);
       });
+    }
+  }
 
-      logger.info({ channel: instanceChannel }, "Subscribed to Redis channel");
+  /**
+   * Subscribe to the instance channel for cross-instance bot requests
+   */
+  private async subscribeToInstanceChannel(channel: string): Promise<void> {
+    try {
+      await redisSub.subscribe(channel);
+      logger.info({ channel, instanceId: INSTANCE_ID }, "Subscribed to Redis instance channel");
     } catch (error) {
-      logger.error({ err: error }, "Failed to subscribe to Redis");
+      logger.error({ err: error, channel }, "Failed to subscribe to Redis instance channel");
     }
   }
 
