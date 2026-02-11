@@ -56,6 +56,9 @@ server.on("upgrade", (request, socket, head) => {
 const DEBATE_OWNERSHIP_TTL = 300; // 5 minutes
 const RECOVERY_LOCK_TTL = 120; // 2 minutes lock for recovery process
 
+// Track active recovery locks for cleanup on shutdown
+const activeRecoveryLocks = new Map<string, string>(); // lockKey -> lockValue
+
 /**
  * Acquire a distributed lock for a debate recovery.
  * Uses Redis SETNX for atomic lock acquisition.
@@ -73,6 +76,9 @@ async function acquireRecoveryLock(debateId: number): Promise<(() => Promise<voi
     return null; // Lock held by another instance
   }
 
+  // Track the lock for cleanup on shutdown
+  activeRecoveryLocks.set(lockKey, lockValue);
+
   // Return release function
   return async () => {
     // Only release if we still own the lock (prevent releasing after expiry)
@@ -80,6 +86,7 @@ async function acquireRecoveryLock(debateId: number): Promise<(() => Promise<voi
     if (currentValue === lockValue) {
       await redis.del(lockKey);
     }
+    activeRecoveryLocks.delete(lockKey);
   };
 }
 
@@ -363,6 +370,22 @@ async function shutdown(signal: string): Promise<void> {
         // Ignore errors during shutdown
       }
     }
+  }
+
+  // Release all active recovery locks
+  if (activeRecoveryLocks.size > 0 && isRedisAvailable()) {
+    logger.info({ count: activeRecoveryLocks.size }, "Releasing recovery locks");
+    for (const [lockKey, lockValue] of activeRecoveryLocks) {
+      try {
+        const currentValue = await redis.get(lockKey);
+        if (currentValue === lockValue) {
+          await redis.del(lockKey);
+        }
+      } catch {
+        // Ignore errors during shutdown
+      }
+    }
+    activeRecoveryLocks.clear();
   }
 
   // Close HTTP server with timeout
