@@ -394,34 +394,6 @@ export function QueuePage() {
           </div>
         </>
       )}
-
-      {/* Tips */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Quick Setup</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ol className="space-y-2 text-sm text-gray-400">
-            <li className="flex items-start gap-2">
-              <span className="font-bold text-arena-accent">1.</span>
-              Start the demo bots:{" "}
-              <code className="rounded bg-arena-bg px-2 py-0.5">bun run dev:bot</code>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="font-bold text-arena-accent">2.</span>
-              Register a bot on the{" "}
-              <Link to="/bots" className="text-arena-accent hover:underline">
-                Bots page
-              </Link>{" "}
-              with an endpoint like http://localhost:4000/bot/logical/debate
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="font-bold text-arena-accent">3.</span>
-              Open two browser windows, select different bots, and join queue in both
-            </li>
-          </ol>
-        </CardContent>
-      </Card>
     </div>
   );
 }
