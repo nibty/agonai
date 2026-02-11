@@ -336,7 +336,7 @@ function startMatchmaking(): void {
         logger.error({ err: error }, "Error in matchmaking loop");
       }
     })();
-  }, 5000);
+  }, 2000); // Check every 2 seconds for faster matching
 }
 
 // Cleanup on shutdown

@@ -100,8 +100,8 @@ describe("Presets", () => {
       expect(preset).toBeDefined();
       if (!preset) return;
       const duration = estimateDuration(preset);
-      // 5 rounds * (30s * 2 speakers + 45s vote) = 5 * 105 = 525 + 15 prep = 540
-      expect(duration).toBe(540);
+      // 5 rounds * (30s * 2 speakers + 45s vote) = 5 * 105 = 525 + 3 prep = 528
+      expect(duration).toBe(528);
     });
 
     it("calculates duration for classic preset", () => {
