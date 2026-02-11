@@ -197,12 +197,36 @@ export class BotConnectionServer {
         | BotRequestPubSubMessage
         | { type: string; botId: number; debateId: number; won: boolean | null; eloChange: number };
 
+      logger.debug(
+        { messageType: data.type, messageLength: message.length },
+        "Received Redis pub/sub message"
+      );
+
       if (data.type === "bot_request") {
         const reqData = data as BotRequestPubSubMessage;
+        logger.info(
+          {
+            botId: reqData.botId,
+            requestId: reqData.requestId,
+            round: reqData.request.round,
+            sourceInstance: reqData.sourceInstance,
+          },
+          "Received cross-instance bot request via Redis"
+        );
+
         // Another instance is asking us to forward a request to a bot we have connected
         const bot = this.connectedBots.get(reqData.botId);
         if (!bot || bot.ws.readyState !== WebSocket.OPEN) {
           // Bot not connected to this instance anymore
+          logger.warn(
+            {
+              botId: reqData.botId,
+              requestId: reqData.requestId,
+              botExists: !!bot,
+              wsReadyState: bot?.ws.readyState,
+            },
+            "Bot not connected on this instance for cross-instance request"
+          );
           await this.sendResponseToInstance(reqData.requestId, undefined, "Bot not connected");
           return;
         }
@@ -214,6 +238,15 @@ export class BotConnectionServer {
           ...reqData.request,
         };
 
+        logger.info(
+          {
+            botId: reqData.botId,
+            botName: bot.botName,
+            requestId: reqData.requestId,
+            round: reqData.request.round,
+          },
+          "Forwarding cross-instance request to bot"
+        );
         bot.ws.send(JSON.stringify(requestMessage));
       } else if (data.type === "debate_complete_notification") {
         // Forward debate complete notification to locally connected bot
@@ -261,6 +294,17 @@ export class BotConnectionServer {
       response,
       error,
     };
+
+    logger.info(
+      {
+        requestId,
+        responseChannel,
+        hasResponse: !!response,
+        error: error ?? null,
+        responseLength: response?.message?.length ?? 0,
+      },
+      "Sending cross-instance response via Redis"
+    );
 
     await redisPub.publish(responseChannel, JSON.stringify(message));
   }
@@ -774,10 +818,19 @@ export class BotConnectionServer {
             redisSub.off("message", messageHandler);
 
             if (data.error) {
+              logger.warn(
+                { requestId, botId, error: data.error },
+                "Received cross-instance error response"
+              );
               reject(new Error(data.error));
             } else if (data.response) {
+              logger.info(
+                { requestId, botId, responseLength: data.response.message?.length ?? 0 },
+                "Received cross-instance response successfully"
+              );
               resolve(data.response);
             } else {
+              logger.error({ requestId, botId }, "Invalid cross-instance response");
               reject(new Error("Invalid response from bot"));
             }
           }
