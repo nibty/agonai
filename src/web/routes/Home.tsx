@@ -2,10 +2,9 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useWallet } from "@/hooks/useWallet";
 import { Button } from "@/components/ui/Button";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/Card";
+import { Card, CardContent, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { BotAvatar } from "@/components/ui/Avatar";
-import { DualProgress } from "@/components/ui/Progress";
 import { api, type Debate as ApiDebate } from "@/lib/api";
 import { getTierFromElo } from "@/types";
 
@@ -23,56 +22,47 @@ function StatCard({ label, value, suffix }: { label: string; value: number; suff
   );
 }
 
-function LiveDebateCard({ debate }: { debate: ApiDebate }) {
-  const roundResults = debate.roundResults || [];
-  const totalVotes = roundResults.reduce((sum, r) => sum + r.proVotes + r.conVotes, 0) || 1;
-  const proVotes = roundResults.reduce((sum, r) => sum + r.proVotes, 0);
+function LiveDebateRow({ debate }: { debate: ApiDebate }) {
   const proBotTier = getTierFromElo(debate.proBotElo || 1200);
   const conBotTier = getTierFromElo(debate.conBotElo || 1200);
 
   return (
-    <Card variant="glow" className="transition-transform hover:scale-[1.02]">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <Badge variant="live">LIVE</Badge>
-          <span className="text-sm text-gray-400">{debate.spectatorCount} watching</span>
+    <Link
+      to={`/arena/${debate.id}`}
+      className="flex items-center gap-4 rounded-xl border border-arena-border bg-arena-card px-4 py-4 transition-colors hover:border-arena-accent/50 hover:bg-arena-card/80 sm:px-5 sm:py-4"
+    >
+      {/* Live badge */}
+      <Badge variant="live" className="shrink-0">
+        LIVE
+      </Badge>
+
+      {/* Topic and bots info */}
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-medium text-arena-text sm:text-base">
+          {debate.topic}
         </div>
-        <CardTitle className="mt-2 line-clamp-2 text-lg">{debate.topic}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mt-1.5 flex items-center gap-3 text-xs text-arena-text-muted sm:text-sm">
           <div className="flex items-center gap-2">
-            <BotAvatar size="sm" alt={debate.proBotName || "Pro Bot"} tier={proBotTier} />
-            <div>
-              <div className="text-sm font-medium text-arena-pro">
-                {debate.proBotName || "Pro Bot"}
-              </div>
-              <div className="text-xs text-gray-400">ELO {debate.proBotElo || "—"}</div>
+            <div className="pr-1">
+              <BotAvatar size="xs" alt={debate.proBotName || "Pro"} tier={proBotTier} />
+            </div>
+            <span className="text-arena-pro">{debate.proBotName || "Pro"}</span>
+          </div>
+          <span className="text-arena-text-dim">vs</span>
+          <div className="flex items-center gap-2">
+            <span className="text-arena-con">{debate.conBotName || "Con"}</span>
+            <div className="pl-1">
+              <BotAvatar size="xs" alt={debate.conBotName || "Con"} tier={conBotTier} />
             </div>
           </div>
-          <div className="font-bold text-gray-400">VS</div>
-          <div className="flex items-center gap-2">
-            <div className="text-right">
-              <div className="text-sm font-medium text-arena-con">
-                {debate.conBotName || "Con Bot"}
-              </div>
-              <div className="text-xs text-gray-400">ELO {debate.conBotElo || "—"}</div>
-            </div>
-            <BotAvatar size="sm" alt={debate.conBotName || "Con Bot"} tier={conBotTier} />
-          </div>
         </div>
-        <DualProgress proValue={proVotes} conValue={totalVotes - proVotes} />
-        <div className="mt-2 flex justify-between text-xs text-gray-400">
-          <span className="capitalize">{debate.status}</span>
-          <span>{debate.stake.toLocaleString()} XNT staked</span>
-        </div>
-        <Link to={`/arena/${debate.id}`}>
-          <Button variant="outline" className="mt-4 w-full" size="sm">
-            Watch Debate
-          </Button>
-        </Link>
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Spectator count */}
+      <div className="shrink-0 text-right text-xs text-arena-text-muted sm:text-sm">
+        {debate.spectatorCount} <span className="hidden sm:inline">watching</span>
+      </div>
+    </Link>
   );
 }
 
@@ -153,18 +143,11 @@ export function HomePage() {
 
       {/* Live Debates Section */}
       <section>
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-arena-text">Live Debates</h2>
-          <Link to="/leaderboard">
-            <Button variant="ghost" size="sm">
-              View All
-            </Button>
-          </Link>
-        </div>
+        <h2 className="mb-6 text-2xl font-bold text-arena-text">Live Debates</h2>
         {liveDebates.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-3">
             {liveDebates.map((debate) => (
-              <LiveDebateCard key={debate.id} debate={debate} />
+              <LiveDebateRow key={debate.id} debate={debate} />
             ))}
           </div>
         ) : (
