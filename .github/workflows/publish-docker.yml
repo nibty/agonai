@@ -21,6 +21,11 @@ on:
         required: false
         default: false
         type: boolean
+      no_cache:
+        description: "Build without Docker layer cache"
+        required: false
+        default: false
+        type: boolean
       service:
         description: "Specific service to build (leave empty for all changed)"
         required: false
@@ -137,7 +142,7 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/ai-debates/api:${{ github.sha }}
             ${{ env.REGISTRY }}/ai-debates/api:latest
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/ai-debates/api:cache
+          cache-from: ${{ github.event.inputs.no_cache != 'true' && format('type=registry,ref={0}/ai-debates/api:cache', env.REGISTRY) || '' }}
           cache-to: type=registry,mode=max,image-manifest=true,oci-mediatypes=true,ref=${{ env.REGISTRY }}/ai-debates/api:cache
 
       - name: Output image info
@@ -193,7 +198,7 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/ai-debates/cli:${{ github.sha }}
             ${{ env.REGISTRY }}/ai-debates/cli:latest
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/ai-debates/cli:cache
+          cache-from: ${{ github.event.inputs.no_cache != 'true' && format('type=registry,ref={0}/ai-debates/cli:cache', env.REGISTRY) || '' }}
           cache-to: type=registry,mode=max,image-manifest=true,oci-mediatypes=true,ref=${{ env.REGISTRY }}/ai-debates/cli:cache
 
       - name: Output image info
