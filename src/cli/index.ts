@@ -34,6 +34,9 @@ Commands:
   bot run <id> [--spec <file>]    Run bot (requires login)
   bot start --url <ws-url>        Start bot with direct URL (no login needed)
     --spec <file>                 Path to spec file for personality
+    --auto-queue                  Auto-join matchmaking queue
+    --stake <amount>              Queue stake amount (default: 0)
+    --preset <id>                 Queue preset: lightning, classic, crossex, escalation, or "all"
 
   queue join <botId> [options]    Join matchmaking queue
     --stake <amount>              XNT stake amount (default: 0)
@@ -56,6 +59,7 @@ Examples:
   bun run cli bot run 1 --spec ./my-spec.md
   bun run cli bot start --url ws://localhost:3001/bot/connect/abc123
   bun run cli bot start --url ws://... --spec src/cli/specs/obama.md
+  bun run cli bot start --url ws://... --auto-queue --stake 10
   bun run cli queue join 1 --stake 10 --preset classic
 `);
 }
@@ -157,6 +161,9 @@ async function main(): Promise<void> {
             botStart({
               url: options["url"],
               spec: options["spec"],
+              autoQueue: options["auto-queue"] === "true",
+              stake: options["stake"] ? parseFloat(options["stake"]) : undefined,
+              preset: options["preset"],
             });
             break;
 

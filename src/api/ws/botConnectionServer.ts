@@ -13,6 +13,8 @@ import {
   isRedisAvailable,
 } from "../services/redis.js";
 import { createChildLogger } from "../services/logger.js";
+import { matchmaking } from "../services/matchmaking.js";
+import { getPresetIds } from "../types/index.js";
 
 const logger = createChildLogger({ service: "bot-ws" });
 
@@ -66,7 +68,46 @@ interface PongMessage {
   type: "pong";
 }
 
-type BotToServer = DebateResponseMessage | ResponseChunkMessage | PongMessage;
+interface QueueJoinMessage {
+  type: "queue_join";
+  stake?: number;
+  presetId?: string;
+}
+
+interface QueueLeaveMessage {
+  type: "queue_leave";
+}
+
+type BotToServer =
+  | DebateResponseMessage
+  | ResponseChunkMessage
+  | PongMessage
+  | QueueJoinMessage
+  | QueueLeaveMessage;
+
+// Server -> Bot queue messages
+interface QueueJoinedMessage {
+  type: "queue_joined";
+  queueIds: string[];
+  stake: number;
+  presetIds: string[];
+}
+
+interface QueueLeftMessage {
+  type: "queue_left";
+}
+
+interface QueueErrorMessage {
+  type: "queue_error";
+  error: string;
+}
+
+interface DebateCompleteMessage {
+  type: "debate_complete";
+  debateId: number;
+  won: boolean | null; // null = tie
+  eloChange: number;
+}
 
 // Redis pub/sub message types
 interface BotRequestPubSubMessage {
@@ -152,25 +193,51 @@ export class BotConnectionServer {
    */
   private async handleRedisMessage(message: string): Promise<void> {
     try {
-      const data = JSON.parse(message) as BotRequestPubSubMessage;
+      const data = JSON.parse(message) as
+        | BotRequestPubSubMessage
+        | { type: string; botId: number; debateId: number; won: boolean | null; eloChange: number };
 
       if (data.type === "bot_request") {
+        const reqData = data as BotRequestPubSubMessage;
         // Another instance is asking us to forward a request to a bot we have connected
-        const bot = this.connectedBots.get(data.botId);
+        const bot = this.connectedBots.get(reqData.botId);
         if (!bot || bot.ws.readyState !== WebSocket.OPEN) {
           // Bot not connected to this instance anymore
-          await this.sendResponseToInstance(data.requestId, undefined, "Bot not connected");
+          await this.sendResponseToInstance(reqData.requestId, undefined, "Bot not connected");
           return;
         }
 
         // Forward request to the bot
         const requestMessage: DebateRequestMessage = {
           type: "debate_request",
-          requestId: data.requestId,
-          ...data.request,
+          requestId: reqData.requestId,
+          ...reqData.request,
         };
 
         bot.ws.send(JSON.stringify(requestMessage));
+      } else if (data.type === "debate_complete_notification") {
+        // Forward debate complete notification to locally connected bot
+        const notifyData = data as {
+          type: string;
+          botId: number;
+          debateId: number;
+          won: boolean | null;
+          eloChange: number;
+        };
+        const bot = this.connectedBots.get(notifyData.botId);
+        if (bot && bot.ws.readyState === WebSocket.OPEN) {
+          const completeMsg: DebateCompleteMessage = {
+            type: "debate_complete",
+            debateId: notifyData.debateId,
+            won: notifyData.won,
+            eloChange: notifyData.eloChange,
+          };
+          bot.ws.send(JSON.stringify(completeMsg));
+          logger.debug(
+            { botId: notifyData.botId, debateId: notifyData.debateId },
+            "Forwarded debate_complete from Redis"
+          );
+        }
       }
     } catch (error) {
       logger.error({ err: error }, "Error handling Redis message");
@@ -291,6 +358,14 @@ export class BotConnectionServer {
           }
           break;
 
+        case "queue_join":
+          void this.handleQueueJoin(bot, message);
+          break;
+
+        case "queue_leave":
+          void this.handleQueueLeave(bot);
+          break;
+
         default:
           logger.warn(
             { botId: bot.botId, type: (message as { type: string }).type },
@@ -350,6 +425,140 @@ export class BotConnectionServer {
   private handleResponseChunk(_bot: ConnectedBot, _message: ResponseChunkMessage): void {
     // Streaming support - can be implemented later for real-time message display
     // For now, we wait for the complete response
+  }
+
+  /**
+   * Handle queue join request from a bot
+   */
+  private async handleQueueJoin(bot: ConnectedBot, message: QueueJoinMessage): Promise<void> {
+    const { stake = 0, presetId = "classic" } = message;
+
+    try {
+      // Get full bot info including owner
+      const botData = await botRepository.findById(bot.botId);
+      if (!botData) {
+        this.sendQueueError(bot, "Bot not found");
+        return;
+      }
+
+      // Determine which presets to join
+      const presetsToJoin = presetId === "all" ? getPresetIds() : [presetId];
+      const queueIds: string[] = [];
+      const joinedPresets: string[] = [];
+
+      // Add to queue for each preset
+      for (const preset of presetsToJoin) {
+        try {
+          const entry = await matchmaking.addToQueue(botData, botData.ownerId, stake, preset);
+          queueIds.push(entry.id);
+          joinedPresets.push(preset);
+        } catch (err) {
+          logger.warn({ botId: bot.botId, preset, err }, "Failed to join queue for preset");
+        }
+      }
+
+      if (queueIds.length === 0) {
+        this.sendQueueError(bot, "Failed to join any queues");
+        return;
+      }
+
+      logger.info(
+        { botId: bot.botId, botName: bot.botName, queueIds, stake, presets: joinedPresets },
+        "Bot joined queues"
+      );
+
+      // Send confirmation
+      const response: QueueJoinedMessage = {
+        type: "queue_joined",
+        queueIds,
+        stake,
+        presetIds: joinedPresets,
+      };
+      bot.ws.send(JSON.stringify(response));
+    } catch (error) {
+      logger.error({ botId: bot.botId, err: error }, "Error adding bot to queue");
+      this.sendQueueError(bot, error instanceof Error ? error.message : "Failed to join queue");
+    }
+  }
+
+  /**
+   * Handle queue leave request from a bot
+   */
+  private async handleQueueLeave(bot: ConnectedBot): Promise<void> {
+    try {
+      const removed = await matchmaking.removeFromQueue(bot.botId);
+
+      if (removed) {
+        logger.info({ botId: bot.botId, botName: bot.botName }, "Bot left queue");
+      }
+
+      const response: QueueLeftMessage = { type: "queue_left" };
+      bot.ws.send(JSON.stringify(response));
+    } catch (error) {
+      logger.error({ botId: bot.botId, err: error }, "Error removing bot from queue");
+      this.sendQueueError(bot, error instanceof Error ? error.message : "Failed to leave queue");
+    }
+  }
+
+  /**
+   * Send queue error to bot
+   */
+  private sendQueueError(bot: ConnectedBot, error: string): void {
+    const response: QueueErrorMessage = { type: "queue_error", error };
+    bot.ws.send(JSON.stringify(response));
+  }
+
+  /**
+   * Notify a bot that their debate has completed
+   * Called by the debate orchestrator when a debate ends
+   */
+  notifyDebateComplete(
+    botId: number,
+    debateId: number,
+    won: boolean | null,
+    eloChange: number
+  ): void {
+    const bot = this.connectedBots.get(botId);
+    if (!bot || bot.ws.readyState !== WebSocket.OPEN) {
+      // Bot not connected locally - could send via Redis for cross-instance
+      if (isRedisAvailable()) {
+        void this.sendDebateCompleteViaRedis(botId, debateId, won, eloChange);
+      }
+      return;
+    }
+
+    const message: DebateCompleteMessage = {
+      type: "debate_complete",
+      debateId,
+      won,
+      eloChange,
+    };
+    bot.ws.send(JSON.stringify(message));
+    logger.debug({ botId, debateId, won, eloChange }, "Sent debate_complete to bot");
+  }
+
+  /**
+   * Send debate complete notification via Redis for cross-instance delivery
+   */
+  private async sendDebateCompleteViaRedis(
+    botId: number,
+    debateId: number,
+    won: boolean | null,
+    eloChange: number
+  ): Promise<void> {
+    const targetInstance = await redis.get(KEYS.BOT_CONNECTED(botId));
+    if (!targetInstance) return;
+
+    await redisPub.publish(
+      `bot:instance:${targetInstance}`,
+      JSON.stringify({
+        type: "debate_complete_notification",
+        botId,
+        debateId,
+        won,
+        eloChange,
+      })
+    );
   }
 
   private async handleDisconnect(bot: ConnectedBot): Promise<void> {

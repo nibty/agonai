@@ -584,6 +584,36 @@ export class DebateOrchestratorService {
       payload: endPayload,
     });
 
+    // Notify bots that their debate has completed (for auto-queue feature)
+    const botServer = getBotConnectionServer();
+    if (botServer) {
+      const proEloChange =
+        winner === "pro"
+          ? eloChanges.winner.change
+          : winner === "con"
+            ? eloChanges.loser.change
+            : 0;
+      const conEloChange =
+        winner === "con"
+          ? eloChanges.winner.change
+          : winner === "pro"
+            ? eloChanges.loser.change
+            : 0;
+
+      botServer.notifyDebateComplete(
+        state.proBot.id,
+        state.debate.id,
+        winner === "pro" ? true : winner === "con" ? false : null,
+        proEloChange
+      );
+      botServer.notifyDebateComplete(
+        state.conBot.id,
+        state.debate.id,
+        winner === "con" ? true : winner === "pro" ? false : null,
+        conEloChange
+      );
+    }
+
     // Remove from active debates
     this.activeDebates.delete(state.debate.id);
   }

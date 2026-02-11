@@ -43,7 +43,37 @@ interface PingMessage {
   type: "ping";
 }
 
-type ServerMessage = DebateRequestMessage | ConnectedMessage | PingMessage;
+interface QueueJoinedMessage {
+  type: "queue_joined";
+  queueIds: string[];
+  stake: number;
+  presetIds: string[];
+}
+
+interface QueueLeftMessage {
+  type: "queue_left";
+}
+
+interface QueueErrorMessage {
+  type: "queue_error";
+  error: string;
+}
+
+interface DebateCompleteMessage {
+  type: "debate_complete";
+  debateId: number;
+  won: boolean | null;
+  eloChange: number;
+}
+
+type ServerMessage =
+  | DebateRequestMessage
+  | ConnectedMessage
+  | PingMessage
+  | QueueJoinedMessage
+  | QueueLeftMessage
+  | QueueErrorMessage
+  | DebateCompleteMessage;
 
 /**
  * Create a new bot
@@ -439,12 +469,31 @@ function connect(url: string): void {
   });
 }
 
+// Auto-queue configuration
+interface AutoQueueConfig {
+  enabled: boolean;
+  stake: number;
+  presetId: string;
+}
+
+let autoQueueConfig: AutoQueueConfig = {
+  enabled: false,
+  stake: 0,
+  presetId: "classic",
+};
+
 /**
  * Start a bot with a direct WebSocket URL (no login required)
  * This is the main entrypoint for K8s deployments with pre-registered bots
  */
-export function start(options: { url: string; spec?: string }): void {
-  const { url, spec } = options;
+export function start(options: {
+  url: string;
+  spec?: string;
+  autoQueue?: boolean;
+  stake?: number;
+  preset?: string;
+}): void {
+  const { url, spec, autoQueue = false, stake = 0, preset = "classic" } = options;
 
   // Validate URL
   if (!url) {
@@ -455,11 +504,15 @@ Usage: bun run cli bot start --url <ws-url> [options]
 Options:
   --url <ws-url>        WebSocket connection URL (required)
   --spec <file>         Path to spec file or directory (uses Claude API)
+  --auto-queue          Automatically join matchmaking queue
+  --stake <amount>      Stake amount for queue (default: 0)
+  --preset <id>         Debate preset ID (default: classic)
 
 Examples:
   bun run cli bot start --url ws://localhost:3001/bot/connect/abc123
   bun run cli bot start --url ws://... --spec ./my-spec.md
   bun run cli bot start --url ws://... --spec src/cli/specs/obama.md
+  bun run cli bot start --url ws://... --auto-queue --stake 10
 
 Requires ANTHROPIC_API_KEY environment variable.
 `);
@@ -473,6 +526,13 @@ Requires ANTHROPIC_API_KEY environment variable.
   }
 
   anthropic = new Anthropic();
+
+  // Configure auto-queue
+  autoQueueConfig = {
+    enabled: autoQueue,
+    stake,
+    presetId: preset,
+  };
 
   // Load spec if provided
   if (spec) {
@@ -488,9 +548,30 @@ Requires ANTHROPIC_API_KEY environment variable.
     }
   }
 
-  logger.info({ spec: spec ?? "none" }, "Starting Claude bot");
+  logger.info({ spec: spec ?? "none", autoQueue, stake, preset }, "Starting Claude bot");
   console.log(`\nConnecting to WebSocket...`);
+  if (autoQueue) {
+    console.log(`Auto-queue enabled (stake: ${stake}, preset: ${preset})`);
+  }
   connectDirect(url);
+}
+
+/**
+ * Send queue join request
+ */
+function sendQueueJoin(ws: WebSocket): void {
+  if (ws.readyState !== WebSocket.OPEN) return;
+
+  const message = {
+    type: "queue_join",
+    stake: autoQueueConfig.stake,
+    presetId: autoQueueConfig.presetId,
+  };
+  ws.send(JSON.stringify(message));
+  logger.info(
+    { stake: autoQueueConfig.stake, preset: autoQueueConfig.presetId },
+    "Sent queue_join request"
+  );
 }
 
 /**
@@ -521,11 +602,55 @@ function connectDirect(url: string): void {
               "Authenticated with server"
             );
             console.log(`Authenticated as: ${message.botName} (ID: ${message.botId})`);
+
+            // Auto-join queue if enabled
+            if (autoQueueConfig.enabled) {
+              sendQueueJoin(ws);
+            }
             break;
 
           case "ping":
             ws.send(JSON.stringify({ type: "pong" }));
             break;
+
+          case "queue_joined":
+            logger.info(
+              { queueIds: message.queueIds, stake: message.stake, presets: message.presetIds },
+              "Joined matchmaking queues"
+            );
+            console.log(
+              `Joined ${message.presetIds.length} queue(s): ${message.presetIds.join(", ")} (stake: ${message.stake})`
+            );
+            break;
+
+          case "queue_left":
+            logger.info({}, "Left matchmaking queue");
+            console.log("Left matchmaking queue");
+            break;
+
+          case "queue_error":
+            logger.error({ error: message.error }, "Queue error");
+            console.log(`Queue error: ${message.error}`);
+            break;
+
+          case "debate_complete": {
+            const resultStr =
+              message.won === true ? "Won" : message.won === false ? "Lost" : "Tied";
+            const eloStr =
+              message.eloChange >= 0 ? `+${message.eloChange}` : `${message.eloChange}`;
+            logger.info(
+              { debateId: message.debateId, won: message.won, eloChange: message.eloChange },
+              "Debate completed"
+            );
+            console.log(`\nDebate #${message.debateId} completed: ${resultStr} (ELO: ${eloStr})`);
+
+            // Auto-rejoin queue if enabled
+            if (autoQueueConfig.enabled) {
+              console.log("Rejoining queue...");
+              sendQueueJoin(ws);
+            }
+            break;
+          }
 
           case "debate_request": {
             logger.info(
