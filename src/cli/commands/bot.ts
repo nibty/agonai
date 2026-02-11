@@ -663,6 +663,15 @@ function connect(url: string): void {
     logger.info({ readyState: ws.readyState }, "WebSocket connected");
     console.log("Connected! Waiting for debates...");
     reconnectAttempts = 0;
+
+    // Log any stale in-flight requests from before reconnect
+    if (inFlightRequests.size > 0) {
+      logger.warn(
+        { count: inFlightRequests.size, requests: Array.from(inFlightRequests.keys()) },
+        "Found stale in-flight requests after reconnect - clearing"
+      );
+      inFlightRequests.clear();
+    }
   });
 
   ws.on("message", (data: Buffer) => {
@@ -673,55 +682,70 @@ function connect(url: string): void {
     );
 
     void (async () => {
-      try {
-        const message = JSON.parse(rawMessage) as ServerMessage;
-        logger.debug({ messageType: message.type }, "Parsed message type");
+      let parsedMessage: ServerMessage | null = null;
 
-        switch (message.type) {
+      try {
+        parsedMessage = JSON.parse(rawMessage) as ServerMessage;
+        logger.debug({ messageType: parsedMessage.type }, "Parsed message type");
+
+        switch (parsedMessage.type) {
           case "connected":
             logger.info(
-              { botName: message.botName, botId: message.botId },
+              { botName: parsedMessage.botName, botId: parsedMessage.botId },
               "Authenticated with server"
             );
-            console.log(`Authenticated as: ${message.botName} (ID: ${message.botId})`);
+            console.log(`Authenticated as: ${parsedMessage.botName} (ID: ${parsedMessage.botId})`);
             break;
 
           case "ping":
             logger.debug({}, "Received ping, sending pong");
-            ws.send(JSON.stringify({ type: "pong" }));
+            safeSend(ws, JSON.stringify({ type: "pong" }), {});
             break;
 
           case "debate_request": {
             const requestStartTime = Date.now();
+            const { requestId } = parsedMessage;
+
+            // Track this request
+            inFlightRequests.set(requestId, {
+              startTime: requestStartTime,
+              debateId: parsedMessage.debate_id,
+              round: parsedMessage.round,
+            });
+
             logger.info(
               {
-                requestId: message.requestId,
-                debateId: message.debate_id,
-                round: message.round,
-                position: message.position,
-                topic: message.topic,
-                timeLimitSeconds: message.time_limit_seconds,
-                wordLimit: message.word_limit,
+                requestId,
+                debateId: parsedMessage.debate_id,
+                round: parsedMessage.round,
+                position: parsedMessage.position,
+                topic: parsedMessage.topic,
+                timeLimitSeconds: parsedMessage.time_limit_seconds,
+                wordLimit: parsedMessage.word_limit,
+                inFlightCount: inFlightRequests.size,
               },
               "Received debate request - starting LLM call"
             );
-            console.log(`\nDebate request: ${message.round} round, position: ${message.position}`);
-            console.log(`Topic: ${message.topic}`);
+            console.log(
+              `\nDebate request: ${parsedMessage.round} round, position: ${parsedMessage.position}`
+            );
+            console.log(`Topic: ${parsedMessage.topic}`);
 
             let response: { message: string; confidence: number };
             try {
-              logger.debug(
-                { requestId: message.requestId, usingClaude: !!anthropic },
-                "Calling LLM provider"
-              );
+              logger.debug({ requestId, usingClaude: !!anthropic }, "Calling LLM provider");
               const llmStartTime = Date.now();
               response = anthropic
-                ? await getClaudeResponse(message)
-                : getSimpleResponse(message.round, message.topic, message.position);
+                ? await getClaudeResponse(parsedMessage)
+                : getSimpleResponse(
+                    parsedMessage.round,
+                    parsedMessage.topic,
+                    parsedMessage.position
+                  );
               const llmDuration = Date.now() - llmStartTime;
               logger.info(
                 {
-                  requestId: message.requestId,
+                  requestId,
                   llmDurationMs: llmDuration,
                   responseLength: response.message.length,
                 },
@@ -730,49 +754,90 @@ function connect(url: string): void {
             } catch (llmError) {
               logger.error(
                 {
-                  requestId: message.requestId,
+                  requestId,
                   error: llmError instanceof Error ? llmError.message : String(llmError),
                   stack: llmError instanceof Error ? llmError.stack : undefined,
                 },
                 "LLM response generation failed, using fallback"
               );
-              response = getSimpleResponse(message.round, message.topic, message.position);
+              response = getSimpleResponse(
+                parsedMessage.round,
+                parsedMessage.topic,
+                parsedMessage.position
+              );
             }
 
             const responsePayload = {
               type: "debate_response",
-              requestId: message.requestId,
+              requestId,
               message: response.message,
               confidence: response.confidence,
             };
+            const responseJson = JSON.stringify(responsePayload);
+
             logger.debug(
               {
-                requestId: message.requestId,
-                responsePayloadLength: JSON.stringify(responsePayload).length,
+                requestId,
+                responsePayloadLength: responseJson.length,
                 wsReadyState: ws.readyState,
               },
               "Sending response to server"
             );
 
-            ws.send(JSON.stringify(responsePayload));
+            const sent = safeSend(ws, responseJson, { requestId });
+
+            // Remove from in-flight tracking
+            inFlightRequests.delete(requestId);
 
             const totalDuration = Date.now() - requestStartTime;
-            logger.info(
-              { requestId: message.requestId, totalDurationMs: totalDuration },
-              "Response sent successfully"
-            );
-            console.log("Response sent!");
+            if (sent) {
+              logger.info(
+                { requestId, totalDurationMs: totalDuration, inFlightCount: inFlightRequests.size },
+                "Response sent successfully"
+              );
+              console.log("Response sent!");
+            } else {
+              logger.error(
+                { requestId, totalDurationMs: totalDuration },
+                "Failed to send response - WebSocket not available"
+              );
+            }
             break;
           }
 
           default:
             logger.warn(
-              { messageType: (message as { type: string }).type },
+              { messageType: (parsedMessage as { type: string }).type },
               "Unknown message type"
             );
         }
       } catch (error) {
-        logger.error({ error }, "Error handling message");
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        logger.error(
+          {
+            error: errorMsg,
+            stack: error instanceof Error ? error.stack : undefined,
+            rawMessagePreview: rawMessage.slice(0, 200),
+          },
+          "Error handling message"
+        );
+
+        // If this was a debate_request that failed, try to send error response
+        if (parsedMessage?.type === "debate_request") {
+          const debateMsg = parsedMessage;
+          const requestId = debateMsg.requestId;
+          logger.error({ requestId }, "Debate request handling failed - sending fallback");
+
+          const fallback = getSimpleResponse(debateMsg.round, debateMsg.topic, debateMsg.position);
+          const errorResponse = {
+            type: "debate_response",
+            requestId,
+            message: fallback.message,
+            confidence: fallback.confidence,
+          };
+          safeSend(ws, JSON.stringify(errorResponse), { requestId });
+          inFlightRequests.delete(requestId);
+        }
       }
     })();
   });
@@ -946,6 +1011,140 @@ function sendQueueJoin(ws: WebSocket): void {
   );
 }
 
+// Track in-flight requests for debugging
+const inFlightRequests = new Map<string, { startTime: number; debateId: string; round: string }>();
+
+/**
+ * Safely send a message via WebSocket with error handling
+ */
+function safeSend(ws: WebSocket, data: string, context: { requestId?: string }): boolean {
+  if (ws.readyState !== WebSocket.OPEN) {
+    logger.error(
+      { requestId: context.requestId, wsReadyState: ws.readyState },
+      "Cannot send - WebSocket not open"
+    );
+    return false;
+  }
+
+  try {
+    ws.send(data);
+    return true;
+  } catch (error) {
+    logger.error(
+      {
+        requestId: context.requestId,
+        error: error instanceof Error ? error.message : String(error),
+      },
+      "Failed to send WebSocket message"
+    );
+    return false;
+  }
+}
+
+/**
+ * Handle a debate request - extracted for cleaner error handling
+ */
+async function handleDebateRequest(ws: WebSocket, message: DebateRequestMessage): Promise<void> {
+  const requestStartTime = Date.now();
+  const { requestId } = message;
+
+  // Track this request
+  inFlightRequests.set(requestId, {
+    startTime: requestStartTime,
+    debateId: message.debate_id,
+    round: message.round,
+  });
+
+  logger.info(
+    {
+      requestId,
+      debateId: message.debate_id,
+      round: message.round,
+      position: message.position,
+      topic: message.topic,
+      timeLimitSeconds: message.time_limit_seconds,
+      wordLimit: message.word_limit,
+      opponentMessageLength: message.opponent_last_message?.length ?? 0,
+      messagesSoFar: message.messages_so_far?.length ?? 0,
+      inFlightCount: inFlightRequests.size,
+    },
+    "Received debate request - starting LLM call"
+  );
+  console.log(`\nDebate request: ${message.round} round, position: ${message.position}`);
+  console.log(`Topic: ${message.topic}`);
+
+  let response: { message: string; confidence: number };
+  try {
+    logger.debug({ requestId, provider: currentProvider }, "Calling LLM provider");
+    const llmStartTime = Date.now();
+    response = await getLLMResponse(message);
+    const llmDuration = Date.now() - llmStartTime;
+    logger.info(
+      {
+        requestId,
+        provider: currentProvider,
+        llmDurationMs: llmDuration,
+        responseLength: response.message.length,
+        responseWordCount: response.message.split(/\s+/).length,
+      },
+      "LLM response generated successfully"
+    );
+  } catch (llmError) {
+    logger.error(
+      {
+        requestId,
+        error: llmError instanceof Error ? llmError.message : String(llmError),
+        stack: llmError instanceof Error ? llmError.stack : undefined,
+      },
+      "LLM response generation failed, using fallback"
+    );
+    // Use fallback response to avoid timeout
+    response = getSimpleResponse(message.round, message.topic, message.position);
+  }
+
+  const responsePayload = {
+    type: "debate_response",
+    requestId,
+    message: response.message,
+    confidence: response.confidence,
+  };
+  const responseJson = JSON.stringify(responsePayload);
+
+  logger.debug(
+    {
+      requestId,
+      responsePayloadLength: responseJson.length,
+      wsReadyState: ws.readyState,
+    },
+    "Sending response to server"
+  );
+
+  const sent = safeSend(ws, responseJson, { requestId });
+
+  // Remove from in-flight tracking
+  inFlightRequests.delete(requestId);
+
+  const totalDuration = Date.now() - requestStartTime;
+  if (sent) {
+    logger.info(
+      {
+        requestId,
+        provider: currentProvider,
+        totalDurationMs: totalDuration,
+        responseLength: response.message.length,
+        inFlightCount: inFlightRequests.size,
+      },
+      "Response sent successfully"
+    );
+    console.log("Response sent!");
+  } else {
+    logger.error(
+      { requestId, totalDurationMs: totalDuration },
+      "Failed to send response - WebSocket not available"
+    );
+  }
+}
+
 /**
  * Connect directly with URL using Claude API
  */
@@ -960,6 +1159,15 @@ function connectDirect(url: string): void {
     logger.info({ readyState: ws.readyState }, "WebSocket connected");
     console.log("Connected! Waiting for debates...");
     reconnectAttempts = 0;
+
+    // Log any stale in-flight requests from before reconnect
+    if (inFlightRequests.size > 0) {
+      logger.warn(
+        { count: inFlightRequests.size, requests: Array.from(inFlightRequests.keys()) },
+        "Found stale in-flight requests after reconnect - clearing"
+      );
+      inFlightRequests.clear();
+    }
   });
 
   ws.on("message", (data: Buffer) => {
@@ -970,17 +1178,19 @@ function connectDirect(url: string): void {
     );
 
     void (async () => {
-      try {
-        const message = JSON.parse(rawMessage) as ServerMessage;
-        logger.debug({ messageType: message.type }, "Parsed message type");
+      let parsedMessage: ServerMessage | null = null;
 
-        switch (message.type) {
+      try {
+        parsedMessage = JSON.parse(rawMessage) as ServerMessage;
+        logger.debug({ messageType: parsedMessage.type }, "Parsed message type");
+
+        switch (parsedMessage.type) {
           case "connected":
             logger.info(
-              { botName: message.botName, botId: message.botId },
+              { botName: parsedMessage.botName, botId: parsedMessage.botId },
               "Authenticated with server"
             );
-            console.log(`Authenticated as: ${message.botName} (ID: ${message.botId})`);
+            console.log(`Authenticated as: ${parsedMessage.botName} (ID: ${parsedMessage.botId})`);
 
             // Auto-join queue if enabled
             if (autoQueueConfig.enabled) {
@@ -990,16 +1200,20 @@ function connectDirect(url: string): void {
 
           case "ping":
             logger.debug({}, "Received ping, sending pong");
-            ws.send(JSON.stringify({ type: "pong" }));
+            safeSend(ws, JSON.stringify({ type: "pong" }), {});
             break;
 
           case "queue_joined":
             logger.info(
-              { queueIds: message.queueIds, stake: message.stake, presets: message.presetIds },
+              {
+                queueIds: parsedMessage.queueIds,
+                stake: parsedMessage.stake,
+                presets: parsedMessage.presetIds,
+              },
               "Joined matchmaking queues"
             );
             console.log(
-              `Joined ${message.presetIds.length} queue(s): ${message.presetIds.join(", ")} (stake: ${message.stake})`
+              `Joined ${parsedMessage.presetIds.length} queue(s): ${parsedMessage.presetIds.join(", ")} (stake: ${parsedMessage.stake})`
             );
             break;
 
@@ -1009,20 +1223,28 @@ function connectDirect(url: string): void {
             break;
 
           case "queue_error":
-            logger.error({ error: message.error }, "Queue error");
-            console.log(`Queue error: ${message.error}`);
+            logger.error({ error: parsedMessage.error }, "Queue error");
+            console.log(`Queue error: ${parsedMessage.error}`);
             break;
 
           case "debate_complete": {
             const resultStr =
-              message.won === true ? "Won" : message.won === false ? "Lost" : "Tied";
+              parsedMessage.won === true ? "Won" : parsedMessage.won === false ? "Lost" : "Tied";
             const eloStr =
-              message.eloChange >= 0 ? `+${message.eloChange}` : `${message.eloChange}`;
+              parsedMessage.eloChange >= 0
+                ? `+${parsedMessage.eloChange}`
+                : `${parsedMessage.eloChange}`;
             logger.info(
-              { debateId: message.debateId, won: message.won, eloChange: message.eloChange },
+              {
+                debateId: parsedMessage.debateId,
+                won: parsedMessage.won,
+                eloChange: parsedMessage.eloChange,
+              },
               "Debate completed"
             );
-            console.log(`\nDebate #${message.debateId} completed: ${resultStr} (ELO: ${eloStr})`);
+            console.log(
+              `\nDebate #${parsedMessage.debateId} completed: ${resultStr} (ELO: ${eloStr})`
+            );
 
             // Auto-rejoin queue if enabled
             if (autoQueueConfig.enabled) {
@@ -1032,97 +1254,44 @@ function connectDirect(url: string): void {
             break;
           }
 
-          case "debate_request": {
-            const requestStartTime = Date.now();
-            logger.info(
-              {
-                requestId: message.requestId,
-                debateId: message.debate_id,
-                round: message.round,
-                position: message.position,
-                topic: message.topic,
-                timeLimitSeconds: message.time_limit_seconds,
-                wordLimit: message.word_limit,
-                opponentMessageLength: message.opponent_last_message?.length ?? 0,
-                messagesSoFar: message.messages_so_far?.length ?? 0,
-              },
-              "Received debate request - starting LLM call"
-            );
-            console.log(`\nDebate request: ${message.round} round, position: ${message.position}`);
-            console.log(`Topic: ${message.topic}`);
-
-            let response: { message: string; confidence: number };
-            try {
-              logger.debug(
-                { requestId: message.requestId, provider: currentProvider },
-                "Calling LLM provider"
-              );
-              const llmStartTime = Date.now();
-              response = await getLLMResponse(message);
-              const llmDuration = Date.now() - llmStartTime;
-              logger.info(
-                {
-                  requestId: message.requestId,
-                  provider: currentProvider,
-                  llmDurationMs: llmDuration,
-                  responseLength: response.message.length,
-                  responseWordCount: response.message.split(/\s+/).length,
-                },
-                "LLM response generated successfully"
-              );
-            } catch (llmError) {
-              logger.error(
-                {
-                  requestId: message.requestId,
-                  error: llmError instanceof Error ? llmError.message : String(llmError),
-                  stack: llmError instanceof Error ? llmError.stack : undefined,
-                },
-                "LLM response generation failed, using fallback"
-              );
-              // Use fallback response to avoid timeout
-              response = getSimpleResponse(message.round, message.topic, message.position);
-            }
-
-            const responsePayload = {
-              type: "debate_response",
-              requestId: message.requestId,
-              message: response.message,
-              confidence: response.confidence,
-            };
-            const responseJson = JSON.stringify(responsePayload);
-            logger.debug(
-              {
-                requestId: message.requestId,
-                responsePayloadLength: responseJson.length,
-                wsReadyState: ws.readyState,
-              },
-              "Sending response to server"
-            );
-
-            ws.send(responseJson);
-
-            const totalDuration = Date.now() - requestStartTime;
-            logger.info(
-              {
-                requestId: message.requestId,
-                provider: currentProvider,
-                totalDurationMs: totalDuration,
-                responseLength: response.message.length,
-              },
-              "Response sent successfully"
-            );
-            console.log("Response sent!");
+          case "debate_request":
+            // Handle in separate function with its own error handling
+            await handleDebateRequest(ws, parsedMessage);
             break;
-          }
 
           default:
             logger.warn(
-              { messageType: (message as { type: string }).type },
+              { messageType: (parsedMessage as { type: string }).type },
               "Unknown message type"
             );
         }
       } catch (error) {
-        logger.error({ error }, "Error handling message");
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        logger.error(
+          {
+            error: errorMsg,
+            stack: error instanceof Error ? error.stack : undefined,
+            rawMessagePreview: rawMessage.slice(0, 200),
+          },
+          "Error handling message"
+        );
+
+        // If this was a debate_request that failed, try to send error response
+        if (parsedMessage?.type === "debate_request") {
+          const debateMsg = parsedMessage;
+          const requestId = debateMsg.requestId;
+          logger.error({ requestId }, "Debate request handling failed - sending fallback");
+
+          const fallback = getSimpleResponse(debateMsg.round, debateMsg.topic, debateMsg.position);
+          const errorResponse = {
+            type: "debate_response",
+            requestId,
+            message: fallback.message,
+            confidence: fallback.confidence,
+          };
+          safeSend(ws, JSON.stringify(errorResponse), { requestId });
+          inFlightRequests.delete(requestId);
+        }
       }
     })();
   });
