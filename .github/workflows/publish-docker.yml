@@ -34,6 +34,7 @@ on:
       - main
     paths:
       - "src/api/**"
+      - "src/cli/**"
       - package.json
       - bun.lock
       - ".github/workflows/publish-docker.yml"
@@ -86,6 +87,7 @@ jobs:
           filters: |
             api:
               - 'src/api/**'
+              - 'src/cli/**'
               - package.json
               - bun.lock
 
