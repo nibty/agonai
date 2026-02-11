@@ -76,7 +76,10 @@ export class DebateWebSocketServer {
       return;
     }
 
-    logger.debug({ debateId, spectators: spectators.size }, "Forwarding Redis message to spectators");
+    logger.debug(
+      { debateId, spectators: spectators.size },
+      "Forwarding Redis message to spectators"
+    );
 
     try {
       // Forward the message to all local spectators
@@ -400,7 +403,10 @@ export class DebateWebSocketServer {
   broadcast(debateId: number, message: WSMessage): void {
     const data = JSON.stringify(message);
 
-    logger.debug({ debateId, type: message.type, redisAvailable: isRedisAvailable() }, "Broadcasting message");
+    logger.debug(
+      { debateId, type: message.type, redisAvailable: isRedisAvailable() },
+      "Broadcasting message"
+    );
 
     if (isRedisAvailable()) {
       // Publish to Redis for cross-instance delivery

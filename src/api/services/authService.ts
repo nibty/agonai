@@ -121,7 +121,10 @@ This signature will not trigger any blockchain transaction or cost any gas fees.
         .select()
         .from(authChallenges)
         .where(eq(authChallenges.walletAddress, walletAddress));
-      logger.debug({ walletAddress, totalChallenges: allChallenges.length }, "Total challenges for wallet");
+      logger.debug(
+        { walletAddress, totalChallenges: allChallenges.length },
+        "Total challenges for wallet"
+      );
       if (allChallenges.length > 0) {
         const latest = allChallenges[allChallenges.length - 1];
         logger.debug(

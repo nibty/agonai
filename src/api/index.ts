@@ -64,10 +64,7 @@ function startMatchmaking(): void {
         }
 
         const matches = await matchmaking.runMatchmaking(async (entry1, entry2) => {
-          logger.info(
-            { bot1: entry1.botId, bot2: entry2.botId },
-            "Creating debate between bots"
-          );
+          logger.info({ bot1: entry1.botId, bot2: entry2.botId }, "Creating debate between bots");
 
           // Get bots from repository
           const bot1 = await botRepository.findById(entry1.botId);

@@ -190,10 +190,7 @@ Word limit: ${word_limit.min}-${word_limit.max} words`;
     const latencyMs = Date.now() - startTime;
     const wordCount = responseText.split(/\s+/).filter((w) => w.length > 0).length;
 
-    logger.info(
-      { latencyMs, wordCount, response: responseText },
-      "Generated debate response"
-    );
+    logger.info({ latencyMs, wordCount, response: responseText }, "Generated debate response");
 
     return {
       message: responseText,

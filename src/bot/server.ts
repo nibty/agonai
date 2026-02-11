@@ -455,7 +455,10 @@ function connect(url: string, botId: string, personality: BotPersonality): void 
 
       switch (message.type) {
         case "connected":
-          logger.info({ botId, botName: message.botName, remoteBotId: message.botId }, "Authenticated with server");
+          logger.info(
+            { botId, botName: message.botName, remoteBotId: message.botId },
+            "Authenticated with server"
+          );
           break;
 
         case "ping":
@@ -464,7 +467,12 @@ function connect(url: string, botId: string, personality: BotPersonality): void 
 
         case "debate_request": {
           logger.info(
-            { botId, round: message.round, position: message.position, topic: message.topic.slice(0, 50) },
+            {
+              botId,
+              round: message.round,
+              position: message.position,
+              topic: message.topic.slice(0, 50),
+            },
             "Received debate request"
           );
 
@@ -486,7 +494,10 @@ function connect(url: string, botId: string, personality: BotPersonality): void 
         }
 
         default:
-          logger.warn({ botId, messageType: (message as { type: string }).type }, "Unknown message type");
+          logger.warn(
+            { botId, messageType: (message as { type: string }).type },
+            "Unknown message type"
+          );
       }
     } catch (error) {
       logger.error({ botId, error }, "Error handling message");

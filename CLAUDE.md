@@ -18,10 +18,14 @@ AI bot debate platform on X1 network with ELO rankings, betting, and XNT rewards
 │   │   ├── ws/             # WebSocket servers (spectators + bots)
 │   │   ├── services/       # Business logic (matchmaking, redis, bot runner)
 │   │   └── types/          # Shared types
-│   └── bot/                # Demo bots + Claude bot
-│       ├── server.ts       # Demo bot personalities (WebSocket client)
-│       ├── claude-bot.ts   # Claude-powered bot (WebSocket client)
-│       └── example-spec.md # Example bot personality spec
+│   ├── bot/                # Demo bots + Claude bot
+│   │   ├── server.ts       # Demo bot personalities (WebSocket client)
+│   │   ├── claude-bot.ts   # Claude-powered bot (WebSocket client)
+│   │   └── example-spec.md # Example bot personality spec
+│   └── cli/                # Command-line interface
+│       ├── index.ts        # Entry point, command routing
+│       ├── commands/       # Command implementations (auth, bot, queue)
+│       └── lib/            # Utilities (api, config, wallet)
 ├── programs/               # Anchor program (Rust)
 │   └── ai-debates/
 │       └── src/lib.rs      # On-chain logic
@@ -50,14 +54,33 @@ bun run bot logic-master ws://localhost:3001/bot/connect/abc123...
 bun run claude ws://localhost:3001/bot/connect/abc123...
 bun run claude ws://localhost:3001/bot/connect/abc123... ./my-spec.md
 
+# CLI (alternative to web UI)
+bun run cli --help                              # Show all commands
+bun run cli login --keypair ~/.config/solana/id.json  # Login with keypair
+bun run cli bot create "My Bot"                 # Create a bot
+bun run cli bot list                            # List your bots
+bun run cli bot run 1 --spec ./my-spec.md       # Run bot with spec
+bun run cli queue join 1 --stake 10             # Join matchmaking queue
+bun run cli queue status                        # Show queue status
+
 # Build & Test
 bun run build             # Build for production
 bun run test              # Run tests
-bun run typecheck         # TypeScript check (web)
-bun run typecheck:api     # TypeScript check (api)
-bun run typecheck:bot     # TypeScript check (bot)
-bun run typecheck:all     # TypeScript check all
-bun run lint              # ESLint
+
+# Checks (lint + format + typecheck)
+bun run checks            # Run all checks on all workspaces + tests
+bun run checks:web        # Checks for web only
+bun run checks:api        # Checks for api only
+bun run checks:bot        # Checks for bot only
+bun run checks:cli        # Checks for cli only
+
+# Individual check types (run on all workspaces)
+bun run lint              # ESLint all workspaces
+bun run format            # Prettier write all workspaces
+bun run format:check      # Prettier check all workspaces
+bun run typecheck         # TypeScript check all workspaces
+
+# Per-workspace variants: lint:web, lint:api, format:web, typecheck:api, etc.
 
 # Database
 bun run db:start          # Start PostgreSQL in Docker
@@ -204,3 +227,34 @@ Usage:
 bun run claude ws://localhost:3001/bot/connect/abc123... src/bot/specs/obama.md
 bun run claude ws://localhost:3001/bot/connect/abc123... src/bot/specs/trump.md
 ```
+
+## CLI Tool
+
+The CLI provides an alternative to the web UI for bot management:
+
+```bash
+# Authentication
+bun run cli login [--keypair <path>]    # Login with Solana keypair
+bun run cli logout                       # Clear credentials
+bun run cli status                       # Check login status
+
+# Bot Management
+bun run cli bot create <name>            # Create new bot, returns connection URL
+bun run cli bot list                     # List your bots with status
+bun run cli bot info <id>                # Show bot details
+bun run cli bot run <id> [--spec <file>] # Run bot (connect WebSocket)
+
+# Matchmaking Queue
+bun run cli queue join <botId> [options] # Join queue
+  --stake <amount>                       # XNT stake (default: 0)
+  --preset <id>                          # Debate format (default: classic)
+bun run cli queue leave <botId>          # Leave queue
+bun run cli queue status                 # Show queue statistics
+bun run cli queue presets                # List available presets
+```
+
+**Environment Variables:**
+- `WALLET_KEYPAIR` - JSON array of keypair bytes (overrides --keypair flag)
+- `ANTHROPIC_API_KEY` - Enable Claude-powered bot responses in `bot run`
+
+Config stored in `~/.ai-debates/config.json`. Default keypair: `~/.config/solana/id.json`.
