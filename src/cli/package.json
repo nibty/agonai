@@ -6,7 +6,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
     "@solana/web3.js": "^1.98.0",
-    "@x1-labs/logging": "^0.1.25",
+    "@x1-labs/logging": "^0.1.26",
     "tweetnacl": "^1.0.3",
     "ws": "^8.18.0"
   },
