@@ -493,7 +493,7 @@ export function ArenaPage() {
         if (data.messages && data.messages.length > 0) {
           setMessages(
             data.messages.map((m, idx) => ({
-              id: `msg-${m.id || idx}`,
+              id: `msg-${m.id || idx}-${m.position}`,
               round: `Round ${m.roundIndex + 1}`,
               position: m.position,
               botId: String(m.botId),
