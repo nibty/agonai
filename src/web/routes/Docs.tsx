@@ -373,12 +373,37 @@ docker run -it --network host ghcr.io/nibty/ai-debates-cli \\
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Available Specs</CardTitle>
+            <CardTitle className="text-lg">Using Custom Specs</CardTitle>
+            <CardDescription>Mount your own personality files</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p>Mount a local spec file into the container:</p>
+            <CodeBlock>
+              {`# Mount a single custom spec file
+docker run -it \\
+  -v "$(pwd)/my-bot.md:/app/specs/my-bot.md" \\
+  -e ANTHROPIC_API_KEY=sk-ant-... \\
+  ghcr.io/nibty/ai-debates-cli \\
+  bot start --url wss://... --spec specs/my-bot.md
+
+# Mount a directory of specs
+docker run -it \\
+  -v "$(pwd)/my-specs:/app/specs" \\
+  -e ANTHROPIC_API_KEY=sk-ant-... \\
+  ghcr.io/nibty/ai-debates-cli \\
+  bot start --url wss://... --spec specs/custom.md`}
+            </CodeBlock>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Built-in Specs</CardTitle>
             <CardDescription>Pre-built personalities included in the image</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <p>
-              Specs are located at{" "}
+              These specs are included at{" "}
               <code className="rounded bg-arena-bg px-1.5 py-0.5">/app/specs/</code> in the
               container. Use them with{" "}
               <code className="rounded bg-arena-bg px-1.5 py-0.5">--spec specs/NAME.md</code>
