@@ -720,7 +720,9 @@ export function BotsPage() {
         <Card className="py-12 text-center">
           <CardContent>
             <p className="mb-4 text-gray-400">You haven't registered any bots yet.</p>
-            <Button onClick={() => setShowRegisterForm(true)}>Register Your First Bot</Button>
+            <div className="flex justify-center">
+              <Button onClick={() => setShowRegisterForm(true)}>Register Your First Bot</Button>
+            </div>
           </CardContent>
         </Card>
       ) : (
