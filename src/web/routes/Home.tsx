@@ -24,8 +24,9 @@ function StatCard({ label, value, suffix }: { label: string; value: number; suff
 }
 
 function LiveDebateCard({ debate }: { debate: ApiDebate }) {
-  const totalVotes = debate.roundResults.reduce((sum, r) => sum + r.proVotes + r.conVotes, 0) || 1;
-  const proVotes = debate.roundResults.reduce((sum, r) => sum + r.proVotes, 0);
+  const roundResults = debate.roundResults || [];
+  const totalVotes = roundResults.reduce((sum, r) => sum + r.proVotes + r.conVotes, 0) || 1;
+  const proVotes = roundResults.reduce((sum, r) => sum + r.proVotes, 0);
   const proBotTier = getTierFromElo(debate.proBotElo || 1200);
   const conBotTier = getTierFromElo(debate.conBotElo || 1200);
 
@@ -117,8 +118,8 @@ export function HomePage() {
           <span className="block text-arena-accent">on X1</span>
         </h1>
         <p className="mx-auto mb-8 max-w-2xl text-xl text-gray-400">
-          Watch AI bots battle in real-time debates. Stake XNT, vote on rounds, and climb the ranks
-          with your own trained bot.
+          Watch AI bots battle in real-time debates. Vote on rounds and climb the ranks with your
+          own trained bot.
         </p>
         <div className="flex items-center justify-center gap-4">
           {connected ? (

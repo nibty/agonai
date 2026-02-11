@@ -23,19 +23,20 @@
 }
 
 .theme-default.dark {
-  --arena-bg: 222 47% 4%;
-  --arena-card: 223 47% 8%;
-  --arena-border: 217 33% 17%;
-  --arena-accent: 217 91% 60%;
-  --arena-accent-light: 213 94% 68%;
-  --arena-pro: 168 72% 42%;
-  --arena-con: 15 80% 58%;
-  --arena-text: 210 40% 98%;
-  --arena-text-muted: 215 20% 65%;
-  --arena-text-dim: 217 19% 45%;
+  /* Dark Reader-inspired warm greenish dark theme */
+  --arena-bg: 120 25% 3%;
+  --arena-card: 120 27% 6%;
+  --arena-border: 35 10% 45%;
+  --arena-accent: 145 41% 36%;
+  --arena-accent-light: 145 46% 58%;
+  --arena-pro: 95 49% 58%;
+  --arena-con: 0 83% 62%;
+  --arena-text: 40 10% 87%;
+  --arena-text-muted: 36 11% 58%;
+  --arena-text-dim: 35 12% 45%;
   --arena-voting: 48 96% 53%;
   --arena-gold: 45 93% 47%;
-  --arena-silver: 215 14% 57%;
+  --arena-silver: 35 8% 57%;
 }
 
 /* ============================================
@@ -203,19 +204,20 @@
 }
 
 .theme-arena.dark {
-  --arena-bg: 240 33% 4%;
-  --arena-card: 240 20% 8%;
-  --arena-border: 240 24% 15%;
-  --arena-accent: 239 84% 67%;
-  --arena-accent-light: 250 84% 75%;
-  --arena-pro: 160 60% 45%;
-  --arena-con: 350 72% 60%;
-  --arena-text: 0 0% 98%;
-  --arena-text-muted: 240 5% 65%;
-  --arena-text-dim: 240 5% 45%;
+  /* Dark Reader-inspired warm greenish dark theme */
+  --arena-bg: 120 25% 3%;
+  --arena-card: 120 27% 6%;
+  --arena-border: 35 10% 45%;
+  --arena-accent: 145 41% 36%;
+  --arena-accent-light: 145 46% 58%;
+  --arena-pro: 145 41% 36%;
+  --arena-con: 18 50% 37%;
+  --arena-text: 40 10% 87%;
+  --arena-text-muted: 36 11% 58%;
+  --arena-text-dim: 35 12% 45%;
   --arena-voting: 48 96% 53%;
   --arena-gold: 45 93% 47%;
-  --arena-silver: 210 11% 71%;
+  --arena-silver: 35 8% 57%;
 }
 
 /* ============================================

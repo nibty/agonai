@@ -549,24 +549,28 @@ router.post("/queue/leave", authMiddleware, async (req: AuthenticatedRequest, re
 router.get("/debates/active", async (_req: Request, res: Response) => {
   const debates = await debateRepository.getActive();
 
-  // Fetch bot names for each debate
-  const debatesWithBots = await Promise.all(
+  // Fetch bot names, topic, and round results for each debate
+  const debatesWithDetails = await Promise.all(
     debates.map(async (debate) => {
-      const [proBot, conBot] = await Promise.all([
+      const [proBot, conBot, topic, roundResults] = await Promise.all([
         debate.proBotId ? botRepository.findById(debate.proBotId) : null,
         debate.conBotId ? botRepository.findById(debate.conBotId) : null,
+        debate.topicId ? topicRepository.findById(debate.topicId) : null,
+        debateRepository.getRoundResults(debate.id),
       ]);
       return {
         ...debate,
+        topic: topic?.text ?? "Unknown Topic",
         proBotName: proBot?.name ?? "Unknown",
         proBotElo: proBot?.elo ?? 0,
         conBotName: conBot?.name ?? "Unknown",
         conBotElo: conBot?.elo ?? 0,
+        roundResults,
       };
     })
   );
 
-  res.json({ debates: debatesWithBots });
+  res.json({ debates: debatesWithDetails });
 });
 
 router.get("/debates/recent", async (req: Request, res: Response) => {
