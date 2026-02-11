@@ -10,6 +10,7 @@ import { ProfilePage } from "@/routes/Profile";
 import { BotsPage } from "@/routes/Bots";
 import { TopicsPage } from "@/routes/Topics";
 import { LeaderboardPage } from "@/routes/Leaderboard";
+import { DocsPage } from "@/routes/Docs";
 import { arenaTheme } from "@/lib/flowbiteTheme";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -73,6 +74,7 @@ export function App() {
                   />
                   <Route path="/topics" element={<TopicsPage />} />
                   <Route path="/leaderboard" element={<LeaderboardPage />} />
+                  <Route path="/docs" element={<DocsPage />} />
                 </Route>
               </Routes>
             </BrowserRouter>

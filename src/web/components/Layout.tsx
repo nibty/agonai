@@ -123,6 +123,7 @@ export function Layout() {
             <NavItem to="/queue" icon={<ListOrdered className="h-4 w-4" />} label="Queue" />
             <NavItem to="/leaderboard" icon={<Trophy className="h-4 w-4" />} label="Leaderboard" />
             <NavItem to="/topics" icon={<MessageSquare className="h-4 w-4" />} label="Topics" />
+            <NavItem to="/docs" icon={<BookOpen className="h-4 w-4" />} label="Docs" />
           </nav>
 
           {/* Right: Theme Toggle & Wallet Button */}
@@ -193,6 +194,12 @@ export function Layout() {
                 label="Topics"
                 onClick={closeSidebar}
               />
+              <SidebarLink
+                to="/docs"
+                icon={<BookOpen className="h-5 w-5" />}
+                label="Docs"
+                onClick={closeSidebar}
+              />
             </div>
 
             {isAuthenticated && (
@@ -241,17 +248,15 @@ export function Layout() {
 
             {/* Center: Links */}
             <nav className="flex items-center gap-6">
-              <a
-                href="https://docs.x1.xyz"
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                to="/docs"
                 className="flex items-center gap-2 text-sm text-arena-text-muted transition-colors hover:text-arena-text"
               >
                 <BookOpen className="h-4 w-4" />
                 <span>Docs</span>
-              </a>
+              </Link>
               <a
-                href="https://github.com/ai-debates"
+                href="https://github.com/nibty/ai-debates"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-sm text-arena-text-muted transition-colors hover:text-arena-text"
