@@ -862,6 +862,8 @@ interface AutoQueueConfig {
   stake: number;
   presetId: string;
   delaySeconds: number;
+  waitForOpponent: boolean;
+  apiBaseUrl: string;
 }
 
 let autoQueueConfig: AutoQueueConfig = {
@@ -869,7 +871,82 @@ let autoQueueConfig: AutoQueueConfig = {
   stake: 0,
   presetId: "classic",
   delaySeconds: 0,
+  waitForOpponent: false,
+  apiBaseUrl: "",
 };
+
+/**
+ * Derive API base URL from WebSocket URL
+ * e.g., wss://api.debate.x1.xyz/bot/connect/abc -> https://api.debate.x1.xyz/api
+ */
+function getApiBaseUrl(wsUrl: string): string {
+  const url = new URL(wsUrl);
+  const protocol = url.protocol === "wss:" ? "https:" : "http:";
+  return `${protocol}//${url.host}/api`;
+}
+
+/**
+ * Check how many bots are in the queue
+ */
+async function getQueueSize(): Promise<number> {
+  if (!autoQueueConfig.apiBaseUrl) return 0;
+
+  try {
+    const response = await fetch(`${autoQueueConfig.apiBaseUrl}/queue/stats`);
+    if (!response.ok) {
+      logger.warn({ status: response.status }, "Failed to fetch queue stats");
+      return 0;
+    }
+    const data = (await response.json()) as { queueSize: number };
+    return data.queueSize ?? 0;
+  } catch (error) {
+    logger.warn(
+      { error: error instanceof Error ? error.message : String(error) },
+      "Error fetching queue stats"
+    );
+    return 0;
+  }
+}
+
+/**
+ * Wait for an opponent to be in the queue before joining
+ */
+async function waitForOpponentAndJoin(ws: WebSocket): Promise<void> {
+  const pollInterval = 30000; // Check every 30 seconds
+  const maxWaitTime = 3600000; // Max 1 hour wait
+  const startTime = Date.now();
+
+  const checkAndJoin = async (): Promise<void> => {
+    if (ws.readyState !== WebSocket.OPEN) {
+      logger.info({}, "WebSocket closed, stopping opponent wait");
+      return;
+    }
+
+    const queueSize = await getQueueSize();
+    logger.debug({ queueSize }, "Checking queue for opponents");
+
+    if (queueSize > 0) {
+      console.log(`Found ${queueSize} bot(s) in queue, joining...`);
+      sendQueueJoin(ws);
+      return;
+    }
+
+    const elapsed = Date.now() - startTime;
+    if (elapsed >= maxWaitTime) {
+      logger.info({}, "Max wait time reached, joining queue anyway");
+      console.log("Max wait time reached, joining queue...");
+      sendQueueJoin(ws);
+      return;
+    }
+
+    const remainingMins = Math.round((maxWaitTime - elapsed) / 60000);
+    console.log(`No opponents in queue, checking again in 30s (${remainingMins}m remaining)...`);
+    setTimeout(() => void checkAndJoin(), pollInterval);
+  };
+
+  console.log("Waiting for opponent to join queue...");
+  await checkAndJoin();
+}
 
 /**
  * Start a bot with a direct WebSocket URL (no login required)
@@ -882,6 +959,7 @@ export function start(options: {
   stake?: number;
   preset?: string;
   queueDelay?: number;
+  waitForOpponent?: boolean;
   provider?: string;
   model?: string;
   ollamaUrl?: string;
@@ -893,6 +971,7 @@ export function start(options: {
     stake = 0,
     preset = "classic",
     queueDelay = 300,
+    waitForOpponent = false,
     provider = "claude",
     model = "kimi-k2.5:cloud",
     ollamaUrl = "http://localhost:11434",
@@ -911,6 +990,7 @@ Options:
   --stake <amount>      Stake amount for queue (default: 0)
   --preset <id>         Debate preset ID (default: classic)
   --queue-delay <sec>   Seconds to wait before rejoining queue (default: 300)
+  --wait-for-opponent   Only join queue when another bot is waiting
   --provider <name>     LLM provider: claude or ollama (default: claude)
   --model <name>        Model name for Ollama (default: kimi-k2.5:cloud)
   --ollama-url <url>    Ollama API URL (default: http://localhost:11434)
@@ -927,6 +1007,9 @@ Examples:
 
   # Auto-queue with 30 second delay between debates
   bun run cli bot start --url ws://... --auto-queue --stake 10 --queue-delay 30
+
+  # Wait for opponent before joining (saves API credits)
+  bun run cli bot start --url ws://... --auto-queue --wait-for-opponent
 
 Environment Variables:
   ANTHROPIC_API_KEY     Required for Claude provider
@@ -968,6 +1051,8 @@ Environment Variables:
     stake,
     presetId: preset,
     delaySeconds: queueDelay,
+    waitForOpponent,
+    apiBaseUrl: getApiBaseUrl(url),
   };
 
   // Load spec if provided
@@ -1200,7 +1285,11 @@ function connectDirect(url: string): void {
 
             // Auto-join queue if enabled
             if (autoQueueConfig.enabled) {
-              sendQueueJoin(ws);
+              if (autoQueueConfig.waitForOpponent) {
+                void waitForOpponentAndJoin(ws);
+              } else {
+                sendQueueJoin(ws);
+              }
             }
             break;
 
@@ -1255,17 +1344,22 @@ function connectDirect(url: string): void {
             // Auto-rejoin queue if enabled (with delay)
             if (autoQueueConfig.enabled) {
               const delay = autoQueueConfig.delaySeconds;
+              const rejoinQueue = (): void => {
+                if (ws.readyState !== WebSocket.OPEN) return;
+                if (autoQueueConfig.waitForOpponent) {
+                  console.log("Waiting for opponent before rejoining queue...");
+                  void waitForOpponentAndJoin(ws);
+                } else {
+                  console.log("Rejoining queue...");
+                  sendQueueJoin(ws);
+                }
+              };
+
               if (delay > 0) {
                 console.log(`Waiting ${delay} seconds before rejoining queue...`);
-                setTimeout(() => {
-                  if (ws.readyState === WebSocket.OPEN) {
-                    console.log("Rejoining queue...");
-                    sendQueueJoin(ws);
-                  }
-                }, delay * 1000);
+                setTimeout(rejoinQueue, delay * 1000);
               } else {
-                console.log("Rejoining queue...");
-                sendQueueJoin(ws);
+                rejoinQueue();
               }
             }
             break;

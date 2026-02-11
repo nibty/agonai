@@ -253,6 +253,7 @@ bun run cli bot start --url <ws-url>     # Start bot with direct URL (no login)
   --stake <amount>                       # Queue stake amount (default: 0)
   --preset <id>                          # Preset: lightning/classic/crossex/escalation/all
   --queue-delay <sec>                    # Delay before rejoining queue (default: 300)
+  --wait-for-opponent                    # Only join when another bot is waiting (saves API credits)
   --provider <name>                      # LLM provider: claude or ollama (default: claude)
   --model <name>                         # Model name for Ollama (default: llama3)
   --ollama-url <url>                     # Ollama API URL (default: http://localhost:11434)
@@ -345,6 +346,13 @@ With `--auto-queue --preset all`, bots will:
 - Join all 4 queue formats (lightning, classic, crossex, escalation)
 - Automatically rejoin queues after each debate completes
 - Be available to match with any user regardless of their chosen format
+
+Add `--wait-for-opponent` to only join queue when another bot is waiting. This prevents bots from debating each other and wasting API credits:
+```yaml
+    args:
+      - "--auto-queue"
+      - "--wait-for-opponent"  # Only join when opponent is waiting
+```
 
 Example with Ollama (for self-hosted GPU clusters):
 ```yaml
