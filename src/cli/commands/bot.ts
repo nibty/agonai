@@ -653,9 +653,12 @@ export async function run(botId: string, specPath?: string): Promise<void> {
 }
 
 function connect(url: string): void {
+  if (isShuttingDown) return;
+
   logger.info({ url }, "Connecting to WebSocket");
 
   const ws = new WebSocket(url);
+  activeWs = ws;
   let reconnectAttempts = 0;
   const maxReconnectDelay = 30000;
 
@@ -844,11 +847,18 @@ function connect(url: string): void {
 
   ws.on("close", (code, reason) => {
     logger.info({ code, reason: reason.toString() }, "Disconnected");
+
+    // Don't reconnect if shutting down
+    if (isShuttingDown) {
+      logger.info({}, "Not reconnecting - shutdown in progress");
+      return;
+    }
+
     console.log("Disconnected from server. Reconnecting...");
 
     const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), maxReconnectDelay);
     reconnectAttempts++;
-    setTimeout(() => connect(url), delay);
+    reconnectTimeout = setTimeout(() => connect(url), delay);
   });
 
   ws.on("error", (error) => {
@@ -1105,6 +1115,39 @@ function sendQueueJoin(ws: WebSocket): void {
 // Track in-flight requests for debugging
 const inFlightRequests = new Map<string, { startTime: number; debateId: string; round: string }>();
 
+// Track active WebSocket and timeouts for graceful shutdown
+let activeWs: WebSocket | null = null;
+let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+let isShuttingDown = false;
+
+function gracefulShutdown(signal: string): void {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+
+  logger.info({ signal }, "Shutting down bot...");
+  console.log("\nShutting down...");
+
+  // Clear any pending reconnect
+  if (reconnectTimeout) {
+    clearTimeout(reconnectTimeout);
+    reconnectTimeout = null;
+  }
+
+  // Close WebSocket gracefully
+  if (activeWs && activeWs.readyState === WebSocket.OPEN) {
+    activeWs.close(1000, "Graceful shutdown");
+  }
+
+  // Give a moment for close to complete
+  setTimeout(() => {
+    logger.info("Shutdown complete");
+    process.exit(0);
+  }, 100);
+}
+
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+
 /**
  * Safely send a message via WebSocket with error handling
  */
@@ -1240,9 +1283,12 @@ async function handleDebateRequest(ws: WebSocket, message: DebateRequestMessage)
  * Connect directly with URL using Claude API
  */
 function connectDirect(url: string): void {
+  if (isShuttingDown) return;
+
   logger.info({ url }, "Connecting to WebSocket");
 
   const ws = new WebSocket(url);
+  activeWs = ws;
   let reconnectAttempts = 0;
   const maxReconnectDelay = 30000;
 
@@ -1409,11 +1455,18 @@ function connectDirect(url: string): void {
 
   ws.on("close", (code, reason) => {
     logger.info({ code, reason: reason.toString() }, "Disconnected");
+
+    // Don't reconnect if shutting down
+    if (isShuttingDown) {
+      logger.info({}, "Not reconnecting - shutdown in progress");
+      return;
+    }
+
     console.log("Disconnected from server. Reconnecting...");
 
     const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), maxReconnectDelay);
     reconnectAttempts++;
-    setTimeout(() => connectDirect(url), delay);
+    reconnectTimeout = setTimeout(() => connectDirect(url), delay);
   });
 
   ws.on("error", (error) => {

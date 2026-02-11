@@ -333,10 +333,18 @@ function startMatchmaking(): void {
 }
 
 // Cleanup on shutdown
-async function shutdown(): Promise<void> {
-  logger.info("Shutting down...");
+let isShuttingDown = false;
 
-  // Stop intervals
+async function shutdown(signal: string): Promise<void> {
+  if (isShuttingDown) {
+    logger.debug({ signal }, "Shutdown already in progress, ignoring");
+    return;
+  }
+  isShuttingDown = true;
+
+  logger.info({ signal }, "Shutting down...");
+
+  // Stop intervals first
   clearInterval(matchmakingInterval);
   clearInterval(ownershipRefreshInterval);
   clearInterval(recoveryInterval);
@@ -349,18 +357,47 @@ async function shutdown(): Promise<void> {
       "Releasing debate ownerships for graceful recovery"
     );
     for (const debateId of activeDebateIds) {
-      await releaseDebateOwnership(debateId);
+      try {
+        await releaseDebateOwnership(debateId);
+      } catch {
+        // Ignore errors during shutdown
+      }
     }
   }
 
-  server.close();
-  await closeRedis();
-  await closeDatabase();
+  // Close HTTP server with timeout
+  await new Promise<void>((resolve) => {
+    const timeout = setTimeout(() => {
+      logger.warn("Server close timed out, forcing shutdown");
+      resolve();
+    }, 3000);
+
+    server.close(() => {
+      clearTimeout(timeout);
+      resolve();
+    });
+  });
+
+  // Close Redis connections gracefully
+  try {
+    await closeRedis();
+  } catch {
+    // Ignore Redis close errors during shutdown
+  }
+
+  // Close database
+  try {
+    await closeDatabase();
+  } catch {
+    // Ignore database close errors during shutdown
+  }
+
+  logger.info("Shutdown complete");
   process.exit(0);
 }
 
-process.on("SIGINT", () => void shutdown());
-process.on("SIGTERM", () => void shutdown());
+process.on("SIGINT", () => void shutdown("SIGINT"));
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
 
 // Start server
 server.listen(PORT, () => {
