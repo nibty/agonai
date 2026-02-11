@@ -69,18 +69,18 @@ function LiveDebateRow({ debate }: { debate: ApiDebate }) {
 export function HomePage() {
   const { connected, connect } = useWallet();
 
-  // Fetch stats from API
+  // Fetch stats from API - auto-refresh every 5s
   const { data: statsData } = useQuery({
     queryKey: ["stats"],
     queryFn: () => api.getStats(),
-    staleTime: 30_000, // 30 seconds
+    refetchInterval: 5000,
   });
 
-  // Fetch active debates from API
+  // Fetch active debates from API - auto-refresh every 5s
   const { data: debatesData } = useQuery({
     queryKey: ["debates", "active"],
     queryFn: () => api.getActiveDebates(),
-    staleTime: 10_000, // 10 seconds
+    refetchInterval: 5000,
   });
 
   const stats = {
