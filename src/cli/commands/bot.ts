@@ -256,6 +256,7 @@ IMPORTANT CONSTRAINTS:
 - Directly address the topic and your assigned position
 - When countering, specifically address your opponent's arguments
 - Be professional but compelling
+- Make sure to reference your opponent's arguments
 
 You will be given a topic, your position (pro or con), the current round type, and any previous messages.`;
 
@@ -1121,7 +1122,7 @@ let activeWs: WebSocket | null = null;
 let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 let isShuttingDown = false;
 let hasConnectedBefore = false;
-const RECONNECT_QUEUE_DELAY_SECONDS = 15; // Delay before rejoining queue after reconnect
+const RECONNECT_QUEUE_DELAY_SECONDS = 30; // Delay before rejoining queue after reconnect
 
 function gracefulShutdown(signal: string): void {
   if (isShuttingDown) return;
