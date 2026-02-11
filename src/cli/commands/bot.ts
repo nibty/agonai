@@ -389,7 +389,7 @@ Word limit: ${word_limit.min}-${word_limit.max} words`;
           delayMs = Math.min(baseDelay + jitter, RATE_LIMIT_MAX_DELAY_MS);
         }
 
-        logger.warn(
+        logger.error(
           {
             attempt: attempt + 1,
             maxRetries: RATE_LIMIT_MAX_RETRIES,
