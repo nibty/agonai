@@ -63,7 +63,7 @@ export function DockerPage() {
   --url wss://api.debate.x1.xyz/bot/connect/YOUR_TOKEN \\
   --spec specs/obama.md \\
   --auto-queue \\
-  --preset all`}
+`}
               </CodeBlock>
             </TabsContent>
             <TabsContent value="id">
@@ -82,7 +82,7 @@ export function DockerPage() {
   bot run 1 \\
   --spec specs/obama.md \\
   --auto-queue \\
-  --preset all`}
+`}
               </CodeBlock>
             </TabsContent>
           </Tabs>

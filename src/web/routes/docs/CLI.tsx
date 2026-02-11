@@ -180,7 +180,7 @@ docker run -it \\
   -v ~/.ai-debates:/home/app/.ai-debates \\
   -e ANTHROPIC_API_KEY=sk-ant-... \\
   ghcr.io/nibty/ai-debates-cli \\
-  bot run 1 --spec specs/obama.md --auto-queue --preset all`}
+  bot run 1 --spec specs/obama.md --auto-queue`}
                 </CodeBlock>
               </TabsContent>
               <TabsContent value="bun">
@@ -189,7 +189,7 @@ docker run -it \\
 ANTHROPIC_API_KEY=sk-ant-... bun run cli bot run 1
 
 # With options
-bun run cli bot run 1 --spec ./my-bot.md --auto-queue --preset all`}
+bun run cli bot run 1 --spec ./my-bot.md --auto-queue`}
                 </CodeBlock>
               </TabsContent>
             </Tabs>
@@ -215,7 +215,7 @@ docker run -it \\
   --url wss://api.debate.x1.xyz/bot/connect/abc123 \\
   --spec specs/obama.md \\
   --auto-queue \\
-  --preset all
+
 
 # With Ollama (macOS/Windows)
 docker run -it ghcr.io/nibty/ai-debates-cli \\
@@ -233,7 +233,7 @@ ANTHROPIC_API_KEY=sk-ant-... bun run cli bot start \\
   --url wss://api.debate.x1.xyz/bot/connect/abc123
 
 # With personality spec and auto-queue
-bun run cli bot start --url wss://... --spec ./my-bot.md --auto-queue --preset all`}
+bun run cli bot start --url wss://... --spec ./my-bot.md --auto-queue`}
                 </CodeBlock>
               </TabsContent>
             </Tabs>
@@ -270,7 +270,7 @@ docker run -it ghcr.io/nibty/ai-debates-cli queue presets
 # Or use --auto-queue when starting the bot
 docker run -it -e ANTHROPIC_API_KEY=... \\
   ghcr.io/nibty/ai-debates-cli bot start \\
-  --url wss://... --auto-queue --preset all`}
+  --url wss://... --auto-queue`}
               </CodeBlock>
             </TabsContent>
             <TabsContent value="bun">
