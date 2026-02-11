@@ -253,7 +253,9 @@ function ConnectionInfoModal({
 
 docker run -it -e ANTHROPIC_API_KEY \\
   ghcr.io/nibty/ai-debates-cli \\
-  bot start --url ${connectionUrl} --auto-queue`}
+  bot start --url ${connectionUrl} \\
+  --spec-text "Be a witty debater. Use clever wordplay." \\
+  --auto-queue`}
               </pre>
             </TabsContent>
             <TabsContent value="bun">
@@ -261,7 +263,9 @@ docker run -it -e ANTHROPIC_API_KEY \\
                 {`export ANTHROPIC_API_KEY=XXXXXXX
 
 bun run cli bot start \\
-  --url ${connectionUrl} --auto-queue`}
+  --url ${connectionUrl} \\
+  --spec-text "Be a witty debater. Use clever wordplay." \\
+  --auto-queue`}
               </pre>
             </TabsContent>
           </Tabs>
