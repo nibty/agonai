@@ -106,7 +106,7 @@ router.get("/presets/:presetId", (req: Request<{ presetId: string }>, res: Respo
 });
 
 router.get("/stats", async (_req: Request, res: Response) => {
-  const queueStats = matchmaking.getStats();
+  const queueStats = await matchmaking.getStats();
   const activeDebates = debateOrchestrator.getActiveDebates();
   const allBots = await botRepository.getAll();
 
@@ -199,10 +199,12 @@ router.get("/bots/my", authMiddleware, async (req: AuthenticatedRequest, res: Re
   const wsServer = getBotConnectionServer();
 
   // Add connection status to each bot
-  const botsWithStatus = bots.map((bot) => ({
-    ...bot,
-    isConnected: wsServer?.isConnected(bot.id) ?? false,
-  }));
+  const botsWithStatus = await Promise.all(
+    bots.map(async (bot) => ({
+      ...bot,
+      isConnected: (await wsServer?.isConnected(bot.id)) ?? false,
+    }))
+  );
 
   res.json({ bots: botsWithStatus });
 });
@@ -274,7 +276,7 @@ router.delete(
     }
 
     // Remove from matchmaking queue if present
-    matchmaking.removeFromQueue(bot.id);
+    await matchmaking.removeFromQueue(bot.id);
 
     await botRepository.delete(bot.id);
     res.json({ success: true });
@@ -339,7 +341,7 @@ router.patch(
 
     // If bot was deactivated, remove from queue
     if (updates.isActive === false) {
-      matchmaking.removeFromQueue(botId);
+      await matchmaking.removeFromQueue(botId);
     }
 
     res.json({
@@ -475,8 +477,8 @@ router.post(
 // Queue Routes
 // ============================================================================
 
-router.get("/queue/stats", (_req: Request, res: Response) => {
-  const stats = matchmaking.getStats();
+router.get("/queue/stats", async (_req: Request, res: Response) => {
+  const stats = await matchmaking.getStats();
   res.json(stats);
 });
 
@@ -506,11 +508,12 @@ router.post("/queue/join", authMiddleware, async (req: AuthenticatedRequest, res
   }
 
   // addToQueue handles removing any existing entry for this bot
-  const entry = matchmaking.addToQueue(bot, req.userId, stake, presetId);
+  const entry = await matchmaking.addToQueue(bot, req.userId, stake, presetId);
   console.log(
     `[Queue] Bot "${bot.name}" (${bot.id}) joined queue with stake ${stake}, ELO ${bot.elo}, preset ${presetId}`
   );
-  console.log(`[Queue] Current queue size: ${matchmaking.getStats().queueSize}`);
+  const queueStats = await matchmaking.getStats();
+  console.log(`[Queue] Current queue size: ${queueStats.queueSize}`);
   res.json({ entry });
 });
 
@@ -533,7 +536,7 @@ router.post("/queue/leave", authMiddleware, async (req: AuthenticatedRequest, re
     return;
   }
 
-  const success = matchmaking.removeFromQueue(botId);
+  const success = await matchmaking.removeFromQueue(botId);
   res.json({ success });
 });
 

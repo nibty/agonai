@@ -49,7 +49,8 @@ export class BotRunnerService {
       };
     }
 
-    if (!wsServer.isConnected(bot.id)) {
+    const isConnected = await wsServer.isConnected(bot.id);
+    if (!isConnected) {
       return {
         success: false,
         error: "Bot is not connected",
@@ -115,9 +116,10 @@ export class BotRunnerService {
   /**
    * Check if a bot is connected and ready
    */
-  isConnected(botId: number): boolean {
+  async isConnected(botId: number): Promise<boolean> {
     const wsServer = getBotConnectionServer();
-    return wsServer?.isConnected(botId) ?? false;
+    if (!wsServer) return false;
+    return wsServer.isConnected(botId);
   }
 }
 

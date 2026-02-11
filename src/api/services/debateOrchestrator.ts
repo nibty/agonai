@@ -480,7 +480,10 @@ export class DebateOrchestratorService {
 
     // Check if voting is active for this round
     if (state.debate.currentRoundIndex !== roundIndex) {
-      return { success: false, error: `Wrong round (expected ${state.debate.currentRoundIndex}, got ${roundIndex})` };
+      return {
+        success: false,
+        error: `Wrong round (expected ${state.debate.currentRoundIndex}, got ${roundIndex})`,
+      };
     }
     if (state.debate.roundStatus !== "voting") {
       return { success: false, error: `Voting not open (status: ${state.debate.roundStatus})` };

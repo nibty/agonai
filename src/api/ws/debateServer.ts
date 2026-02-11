@@ -257,7 +257,9 @@ export class DebateWebSocketServer {
       }
     }
 
-    console.log(`[DebateWS] Client joined debate ${debateId}, local spectators: ${spectators.size}, userId: ${userId}`);
+    console.log(
+      `[DebateWS] Client joined debate ${debateId}, local spectators: ${spectators.size}, userId: ${userId}`
+    );
   }
 
   private async handleLeaveDebate(client: Client): Promise<void> {
