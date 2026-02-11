@@ -8,6 +8,7 @@ import { matchmaking } from "./services/matchmaking.js";
 import { debateOrchestrator } from "./services/debateOrchestrator.js";
 import { topicRepository, botRepository } from "./repositories/index.js";
 import { closeDatabase } from "./db/index.js";
+import { closeRedis, INSTANCE_ID } from "./services/redis.js";
 
 const PORT = parseInt(process.env["PORT"] ?? "3001");
 
@@ -54,7 +55,7 @@ function startMatchmaking(): void {
   matchmakingInterval = setInterval(() => {
     void (async () => {
       try {
-        const stats = matchmaking.getStats();
+        const stats = await matchmaking.getStats();
         if (stats.queueSize > 0) {
           console.log(`[Matchmaking] Queue check: ${stats.queueSize} entries`);
         }
@@ -72,11 +73,11 @@ function startMatchmaking(): void {
             // Clean up stale queue entries for deleted bots
             if (!bot1) {
               console.warn(`[Matchmaking] Bot ${entry1.botId} not found, removing from queue`);
-              matchmaking.removeFromQueue(entry1.botId);
+              void matchmaking.removeFromQueue(entry1.botId);
             }
             if (!bot2) {
               console.warn(`[Matchmaking] Bot ${entry2.botId} not found, removing from queue`);
-              matchmaking.removeFromQueue(entry2.botId);
+              void matchmaking.removeFromQueue(entry2.botId);
             }
             throw new Error("Bot not found during matchmaking (stale entries cleaned)");
           }
@@ -129,6 +130,7 @@ async function shutdown(): Promise<void> {
   console.log("\nShutting down...");
   clearInterval(matchmakingInterval);
   server.close();
+  await closeRedis();
   await closeDatabase();
   process.exit(0);
 }
@@ -146,6 +148,7 @@ server.listen(PORT, () => {
 ║  WebSocket: ws://localhost:${PORT}/ws                        ║
 ║  Bot WS:    ws://localhost:${PORT}/bot/connect/:token        ║
 ║  Network:   X1 (https://rpc.mainnet.x1.xyz/)              ║
+║  Instance:  ${INSTANCE_ID.substring(0, 40).padEnd(40)}  ║
 ╚═══════════════════════════════════════════════════════════╝
 `);
 
