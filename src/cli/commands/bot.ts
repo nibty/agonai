@@ -45,6 +45,7 @@ interface ConnectedMessage {
   type: "connected";
   botId: number;
   botName: string;
+  hasActiveDebate?: boolean;
 }
 
 interface PingMessage {
@@ -1327,12 +1328,24 @@ function connectDirect(url: string): void {
           case "connected": {
             const isReconnect = hasConnectedBefore;
             hasConnectedBefore = true;
+            const hasActiveDebate = parsedMessage.hasActiveDebate ?? false;
 
             logger.info(
-              { botName: parsedMessage.botName, botId: parsedMessage.botId, isReconnect },
+              {
+                botName: parsedMessage.botName,
+                botId: parsedMessage.botId,
+                isReconnect,
+                hasActiveDebate,
+              },
               "Authenticated with server"
             );
             console.log(`Authenticated as: ${parsedMessage.botName} (ID: ${parsedMessage.botId})`);
+
+            // Don't auto-join queue if bot has active debates
+            if (hasActiveDebate) {
+              logger.info({}, "Bot has active debate, skipping queue join");
+              break;
+            }
 
             // Auto-join queue if enabled
             if (autoQueueConfig.enabled) {

@@ -43,6 +43,20 @@ export const debateRepository = {
       .orderBy(desc(debates.createdAt));
   },
 
+  async hasActiveDebate(botId: number): Promise<boolean> {
+    const result = await db
+      .select({ id: debates.id })
+      .from(debates)
+      .where(
+        and(
+          inArray(debates.status, ["pending", "in_progress", "voting"]),
+          sql`(${debates.proBotId} = ${botId} OR ${debates.conBotId} = ${botId})`
+        )
+      )
+      .limit(1);
+    return result.length > 0;
+  },
+
   async getRecent(limit = 20): Promise<Debate[]> {
     return db.select().from(debates).orderBy(desc(debates.createdAt)).limit(limit);
   },

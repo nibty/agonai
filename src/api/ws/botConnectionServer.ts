@@ -3,7 +3,7 @@ import type { IncomingMessage } from "http";
 import type { Duplex } from "stream";
 import type { BotRequest, BotResponse } from "../types/index.js";
 import { BotResponseSchema } from "../types/index.js";
-import { botRepository } from "../repositories/index.js";
+import { botRepository, debateRepository } from "../repositories/index.js";
 import {
   redis,
   redisSub,
@@ -384,12 +384,16 @@ export class BotConnectionServer {
       void this.handleDisconnect(connectedBot);
     });
 
+    // Check if bot has active debates
+    const hasActiveDebate = await debateRepository.hasActiveDebate(bot.id);
+
     // Send welcome message
     ws.send(
       JSON.stringify({
         type: "connected",
         botId: bot.id,
         botName: bot.name,
+        hasActiveDebate,
       })
     );
   }
