@@ -37,6 +37,9 @@ Commands:
     --auto-queue                  Auto-join matchmaking queue
     --stake <amount>              Queue stake amount (default: 0)
     --preset <id>                 Queue preset: lightning, classic, crossex, escalation, or "all"
+    --provider <name>             LLM provider: claude or ollama (default: claude)
+    --model <name>                Model name for Ollama (default: kimi-k2.5:cloud)
+    --ollama-url <url>            Ollama API URL (default: http://localhost:11434)
 
   queue join <botId> [options]    Join matchmaking queue
     --stake <amount>              XNT stake amount (default: 0)
@@ -51,6 +54,7 @@ Options:
 Environment Variables:
   WALLET_KEYPAIR                  JSON array of keypair bytes (overrides --keypair)
   ANTHROPIC_API_KEY               Enable Claude-powered bot responses
+  OLLAMA_URL                      Ollama API URL (overrides --ollama-url)
 
 Examples:
   bun run cli login --keypair ~/.config/solana/id.json
@@ -164,6 +168,9 @@ async function main(): Promise<void> {
               autoQueue: options["auto-queue"] === "true",
               stake: options["stake"] ? parseFloat(options["stake"]) : undefined,
               preset: options["preset"],
+              provider: options["provider"],
+              model: options["model"],
+              ollamaUrl: options["ollama-url"],
             });
             break;
 

@@ -6,6 +6,14 @@ import { createLogger } from "@x1-labs/logging";
 import { isLoggedIn } from "../lib/config.js";
 import { post, get, type CreateBotResponse, type BotsResponse } from "../lib/api.js";
 
+// Provider types
+type LLMProvider = "claude" | "ollama";
+
+interface OllamaConfig {
+  baseUrl: string;
+  model: string;
+}
+
 const logger = createLogger({ name: "cli-bot" });
 
 // Round types from the preset system
@@ -200,8 +208,10 @@ function getSimpleResponse(
   };
 }
 
-// Claude-powered response generation
+// LLM provider configuration
+let currentProvider: LLMProvider = "claude";
 let anthropic: Anthropic | null = null;
+let ollamaConfig: OllamaConfig | null = null;
 let botSpec: string | null = null;
 
 function loadBotSpec(specPath: string): string {
@@ -330,6 +340,7 @@ async function getClaudeResponse(
   request: DebateRequestMessage
 ): Promise<{ message: string; confidence: number }> {
   if (!anthropic) {
+    logger.debug({}, "No Anthropic client, using simple response");
     return getSimpleResponse(request.round, request.topic, request.position);
   }
 
@@ -349,9 +360,22 @@ Word limit: ${word_limit.min}-${word_limit.max} words`;
 
   const maxTokens = Math.min(2000, Math.max(200, word_limit.max * 2));
 
+  logger.debug(
+    {
+      round,
+      position,
+      maxTokens,
+      systemPromptLength: systemPrompt.length,
+      userPromptLength: userPrompt.length,
+      hasSpec: !!botSpec,
+    },
+    "Preparing Claude API request"
+  );
+
   // Retry loop with exponential backoff for rate limits
   for (let attempt = 0; attempt <= RATE_LIMIT_MAX_RETRIES; attempt++) {
     try {
+      logger.debug({ attempt, maxRetries: RATE_LIMIT_MAX_RETRIES }, "Calling Claude API");
       const startTime = Date.now();
       const message = await anthropic.messages.create({
         model: "claude-sonnet-4-20250514",
@@ -366,13 +390,37 @@ Word limit: ${word_limit.min}-${word_limit.max} words`;
       const latencyMs = Date.now() - startTime;
       const wordCount = responseText.split(/\s+/).filter((w) => w.length > 0).length;
 
-      logger.info({ latencyMs, wordCount, attempt }, "Generated Claude response");
+      logger.info(
+        {
+          latencyMs,
+          wordCount,
+          attempt,
+          model: message.model,
+          inputTokens: message.usage?.input_tokens,
+          outputTokens: message.usage?.output_tokens,
+          stopReason: message.stop_reason,
+        },
+        "Generated Claude response"
+      );
 
       return {
         message: responseText,
         confidence: 0.9,
       };
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorName = error instanceof Error ? error.name : "Unknown";
+
+      logger.debug(
+        {
+          attempt,
+          errorName,
+          errorMessage,
+          isRateLimit: isRateLimitError(error),
+        },
+        "Claude API error occurred"
+      );
+
       if (isRateLimitError(error)) {
         const headers = (error as { headers?: Record<string, string> }).headers || {};
         const rateLimitInfo = parseRateLimitHeaders(headers);
@@ -415,13 +463,143 @@ Word limit: ${word_limit.min}-${word_limit.max} words`;
       }
 
       // Non-rate-limit error
-      logger.error({ error }, "Error generating Claude response, using fallback");
+      logger.error(
+        {
+          errorName,
+          errorMessage,
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+        "Error generating Claude response, using fallback"
+      );
       return getSimpleResponse(round, topic, position);
     }
   }
 
   // Should not reach here, but just in case
+  logger.warn({}, "Exited retry loop unexpectedly, using fallback");
   return getSimpleResponse(round, topic, position);
+}
+
+// Ollama API response generation
+interface OllamaMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
+
+interface OllamaChatResponse {
+  model: string;
+  message: {
+    role: string;
+    content: string;
+  };
+  done: boolean;
+}
+
+async function getOllamaResponse(
+  request: DebateRequestMessage
+): Promise<{ message: string; confidence: number }> {
+  if (!ollamaConfig) {
+    return getSimpleResponse(request.round, request.topic, request.position);
+  }
+
+  const { round, topic, position, opponent_last_message, word_limit } = request;
+  const systemPrompt = buildSystemPrompt(word_limit);
+
+  let userPrompt = `Topic: "${topic}"
+Your position: ${position.toUpperCase()} (you must ${position === "pro" ? "support" : "oppose"} this proposition)
+Round type: ${round.toUpperCase()}
+Word limit: ${word_limit.min}-${word_limit.max} words`;
+
+  if (opponent_last_message) {
+    userPrompt += `\n\nYour opponent's last statement:\n"${opponent_last_message}"`;
+  }
+
+  userPrompt += `\n\n${getRoundInstructions(round)}`;
+
+  const messages: OllamaMessage[] = [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: userPrompt },
+  ];
+
+  // Retry loop with exponential backoff
+  for (let attempt = 0; attempt <= RATE_LIMIT_MAX_RETRIES; attempt++) {
+    try {
+      const startTime = Date.now();
+
+      const response = await fetch(`${ollamaConfig.baseUrl}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: ollamaConfig.model,
+          messages,
+          stream: false,
+        }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          // Rate limited - back off and retry
+          const baseDelay = RATE_LIMIT_BASE_DELAY_MS * Math.pow(2, attempt);
+          const jitter = Math.random() * 1000;
+          const delayMs = Math.min(baseDelay + jitter, RATE_LIMIT_MAX_DELAY_MS);
+
+          logger.error(
+            { attempt: attempt + 1, maxRetries: RATE_LIMIT_MAX_RETRIES, delayMs },
+            "Rate limited by Ollama, backing off"
+          );
+
+          if (attempt < RATE_LIMIT_MAX_RETRIES) {
+            await sleep(delayMs);
+            continue;
+          }
+
+          logger.error(
+            { attempts: attempt + 1 },
+            "Exhausted rate limit retries, using fallback response"
+          );
+          return getSimpleResponse(round, topic, position);
+        }
+
+        throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = (await response.json()) as OllamaChatResponse;
+      const responseText = data.message?.content || "I stand by my position.";
+
+      const latencyMs = Date.now() - startTime;
+      const wordCount = responseText.split(/\s+/).filter((w) => w.length > 0).length;
+
+      logger.info(
+        { latencyMs, wordCount, attempt, model: ollamaConfig.model },
+        "Generated Ollama response"
+      );
+
+      return {
+        message: responseText,
+        confidence: 0.85,
+      };
+    } catch (error) {
+      logger.error(
+        { error: error instanceof Error ? error.message : String(error) },
+        "Error generating Ollama response, using fallback"
+      );
+      return getSimpleResponse(round, topic, position);
+    }
+  }
+
+  return getSimpleResponse(round, topic, position);
+}
+
+// Unified LLM response function
+async function getLLMResponse(
+  request: DebateRequestMessage
+): Promise<{ message: string; confidence: number }> {
+  if (currentProvider === "ollama" && ollamaConfig) {
+    return getOllamaResponse(request);
+  } else if (anthropic) {
+    return getClaudeResponse(request);
+  }
+  return getSimpleResponse(request.round, request.topic, request.position);
 }
 
 /**
@@ -482,15 +660,22 @@ function connect(url: string): void {
   const maxReconnectDelay = 30000;
 
   ws.on("open", () => {
-    logger.info({}, "WebSocket connected");
+    logger.info({ readyState: ws.readyState }, "WebSocket connected");
     console.log("Connected! Waiting for debates...");
     reconnectAttempts = 0;
   });
 
   ws.on("message", (data: Buffer) => {
+    const rawMessage = data.toString("utf-8");
+    logger.debug(
+      { rawMessage: rawMessage.slice(0, 500), length: rawMessage.length },
+      "Raw message received"
+    );
+
     void (async () => {
       try {
-        const message = JSON.parse(data.toString("utf-8")) as ServerMessage;
+        const message = JSON.parse(rawMessage) as ServerMessage;
+        logger.debug({ messageType: message.type }, "Parsed message type");
 
         switch (message.type) {
           case "connected":
@@ -502,34 +687,80 @@ function connect(url: string): void {
             break;
 
           case "ping":
+            logger.debug({}, "Received ping, sending pong");
             ws.send(JSON.stringify({ type: "pong" }));
             break;
 
           case "debate_request": {
+            const requestStartTime = Date.now();
             logger.info(
               {
+                requestId: message.requestId,
+                debateId: message.debate_id,
                 round: message.round,
                 position: message.position,
-                topic: message.topic.slice(0, 50),
+                topic: message.topic,
+                timeLimitSeconds: message.time_limit_seconds,
+                wordLimit: message.word_limit,
               },
-              "Received debate request"
+              "Received debate request - starting LLM call"
             );
             console.log(`\nDebate request: ${message.round} round, position: ${message.position}`);
             console.log(`Topic: ${message.topic}`);
 
-            const response = anthropic
-              ? await getClaudeResponse(message)
-              : getSimpleResponse(message.round, message.topic, message.position);
+            let response: { message: string; confidence: number };
+            try {
+              logger.debug(
+                { requestId: message.requestId, usingClaude: !!anthropic },
+                "Calling LLM provider"
+              );
+              const llmStartTime = Date.now();
+              response = anthropic
+                ? await getClaudeResponse(message)
+                : getSimpleResponse(message.round, message.topic, message.position);
+              const llmDuration = Date.now() - llmStartTime;
+              logger.info(
+                {
+                  requestId: message.requestId,
+                  llmDurationMs: llmDuration,
+                  responseLength: response.message.length,
+                },
+                "LLM response generated successfully"
+              );
+            } catch (llmError) {
+              logger.error(
+                {
+                  requestId: message.requestId,
+                  error: llmError instanceof Error ? llmError.message : String(llmError),
+                  stack: llmError instanceof Error ? llmError.stack : undefined,
+                },
+                "LLM response generation failed, using fallback"
+              );
+              response = getSimpleResponse(message.round, message.topic, message.position);
+            }
 
-            ws.send(
-              JSON.stringify({
-                type: "debate_response",
+            const responsePayload = {
+              type: "debate_response",
+              requestId: message.requestId,
+              message: response.message,
+              confidence: response.confidence,
+            };
+            logger.debug(
+              {
                 requestId: message.requestId,
-                message: response.message,
-                confidence: response.confidence,
-              })
+                responsePayloadLength: JSON.stringify(responsePayload).length,
+                wsReadyState: ws.readyState,
+              },
+              "Sending response to server"
             );
-            logger.info({}, "Response sent");
+
+            ws.send(JSON.stringify(responsePayload));
+
+            const totalDuration = Date.now() - requestStartTime;
+            logger.info(
+              { requestId: message.requestId, totalDurationMs: totalDuration },
+              "Response sent successfully"
+            );
             console.log("Response sent!");
             break;
           }
@@ -583,8 +814,20 @@ export function start(options: {
   autoQueue?: boolean;
   stake?: number;
   preset?: string;
+  provider?: string;
+  model?: string;
+  ollamaUrl?: string;
 }): void {
-  const { url, spec, autoQueue = false, stake = 0, preset = "classic" } = options;
+  const {
+    url,
+    spec,
+    autoQueue = false,
+    stake = 0,
+    preset = "classic",
+    provider = "claude",
+    model = "kimi-k2.5:cloud",
+    ollamaUrl = "http://localhost:11434",
+  } = options;
 
   // Validate URL
   if (!url) {
@@ -594,29 +837,60 @@ Usage: bun run cli bot start --url <ws-url> [options]
 
 Options:
   --url <ws-url>        WebSocket connection URL (required)
-  --spec <file>         Path to spec file or directory (uses Claude API)
+  --spec <file>         Path to spec file or directory
   --auto-queue          Automatically join matchmaking queue
   --stake <amount>      Stake amount for queue (default: 0)
   --preset <id>         Debate preset ID (default: classic)
+  --provider <name>     LLM provider: claude or ollama (default: claude)
+  --model <name>        Model name for Ollama (default: kimi-k2.5:cloud)
+  --ollama-url <url>    Ollama API URL (default: http://localhost:11434)
 
 Examples:
+  # Claude (default)
   bun run cli bot start --url ws://localhost:3001/bot/connect/abc123
   bun run cli bot start --url ws://... --spec ./my-spec.md
-  bun run cli bot start --url ws://... --spec src/cli/specs/obama.md
+
+  # Ollama with Kimi
+  bun run cli bot start --url ws://... --provider ollama
+  bun run cli bot start --url ws://... --provider ollama --model kimi
+  bun run cli bot start --url ws://... --provider ollama --ollama-url http://192.168.1.100:11434
+
+  # Auto-queue
   bun run cli bot start --url ws://... --auto-queue --stake 10
 
-Requires ANTHROPIC_API_KEY environment variable.
+Environment Variables:
+  ANTHROPIC_API_KEY     Required for Claude provider
+  OLLAMA_URL            Override Ollama API URL (alternative to --ollama-url)
 `);
     process.exit(1);
   }
 
-  // Check for Claude API
-  if (!process.env["ANTHROPIC_API_KEY"]) {
-    logger.error({}, "ANTHROPIC_API_KEY environment variable is required");
+  // Validate and configure provider
+  const providerLower = provider.toLowerCase() as LLMProvider;
+  if (providerLower !== "claude" && providerLower !== "ollama") {
+    logger.error({ provider }, "Invalid provider. Use 'claude' or 'ollama'");
     process.exit(1);
   }
 
-  anthropic = new Anthropic();
+  currentProvider = providerLower;
+
+  if (currentProvider === "claude") {
+    // Check for Claude API key
+    if (!process.env["ANTHROPIC_API_KEY"]) {
+      logger.error({}, "ANTHROPIC_API_KEY environment variable is required for Claude provider");
+      process.exit(1);
+    }
+    anthropic = new Anthropic();
+    logger.info({}, "Configured Claude provider");
+  } else if (currentProvider === "ollama") {
+    // Configure Ollama
+    const resolvedOllamaUrl = process.env["OLLAMA_URL"] || ollamaUrl;
+    ollamaConfig = {
+      baseUrl: resolvedOllamaUrl,
+      model: model,
+    };
+    logger.info({ baseUrl: resolvedOllamaUrl, model }, "Configured Ollama provider");
+  }
 
   // Configure auto-queue
   autoQueueConfig = {
@@ -639,8 +913,15 @@ Requires ANTHROPIC_API_KEY environment variable.
     }
   }
 
-  logger.info({ spec: spec ?? "none", autoQueue, stake, preset }, "Starting Claude bot");
-  console.log(`\nConnecting to WebSocket...`);
+  const providerInfo =
+    currentProvider === "ollama"
+      ? `Ollama (${ollamaConfig?.model})`
+      : "Claude (claude-sonnet-4-20250514)";
+  logger.info(
+    { spec: spec ?? "none", autoQueue, stake, preset, provider: currentProvider },
+    `Starting ${providerInfo} bot`
+  );
+  console.log(`\nConnecting to WebSocket using ${providerInfo}...`);
   if (autoQueue) {
     console.log(`Auto-queue enabled (stake: ${stake}, preset: ${preset})`);
   }
@@ -676,15 +957,22 @@ function connectDirect(url: string): void {
   const maxReconnectDelay = 30000;
 
   ws.on("open", () => {
-    logger.info({}, "WebSocket connected");
+    logger.info({ readyState: ws.readyState }, "WebSocket connected");
     console.log("Connected! Waiting for debates...");
     reconnectAttempts = 0;
   });
 
   ws.on("message", (data: Buffer) => {
+    const rawMessage = data.toString("utf-8");
+    logger.debug(
+      { rawMessage: rawMessage.slice(0, 500), length: rawMessage.length },
+      "Raw message received"
+    );
+
     void (async () => {
       try {
-        const message = JSON.parse(data.toString("utf-8")) as ServerMessage;
+        const message = JSON.parse(rawMessage) as ServerMessage;
+        logger.debug({ messageType: message.type }, "Parsed message type");
 
         switch (message.type) {
           case "connected":
@@ -701,6 +989,7 @@ function connectDirect(url: string): void {
             break;
 
           case "ping":
+            logger.debug({}, "Received ping, sending pong");
             ws.send(JSON.stringify({ type: "pong" }));
             break;
 
@@ -744,28 +1033,84 @@ function connectDirect(url: string): void {
           }
 
           case "debate_request": {
+            const requestStartTime = Date.now();
             logger.info(
               {
+                requestId: message.requestId,
+                debateId: message.debate_id,
                 round: message.round,
                 position: message.position,
-                topic: message.topic.slice(0, 50),
+                topic: message.topic,
+                timeLimitSeconds: message.time_limit_seconds,
+                wordLimit: message.word_limit,
+                opponentMessageLength: message.opponent_last_message?.length ?? 0,
+                messagesSoFar: message.messages_so_far?.length ?? 0,
               },
-              "Received debate request"
+              "Received debate request - starting LLM call"
             );
             console.log(`\nDebate request: ${message.round} round, position: ${message.position}`);
             console.log(`Topic: ${message.topic}`);
 
-            const response = await getClaudeResponse(message);
+            let response: { message: string; confidence: number };
+            try {
+              logger.debug(
+                { requestId: message.requestId, provider: currentProvider },
+                "Calling LLM provider"
+              );
+              const llmStartTime = Date.now();
+              response = await getLLMResponse(message);
+              const llmDuration = Date.now() - llmStartTime;
+              logger.info(
+                {
+                  requestId: message.requestId,
+                  provider: currentProvider,
+                  llmDurationMs: llmDuration,
+                  responseLength: response.message.length,
+                  responseWordCount: response.message.split(/\s+/).length,
+                },
+                "LLM response generated successfully"
+              );
+            } catch (llmError) {
+              logger.error(
+                {
+                  requestId: message.requestId,
+                  error: llmError instanceof Error ? llmError.message : String(llmError),
+                  stack: llmError instanceof Error ? llmError.stack : undefined,
+                },
+                "LLM response generation failed, using fallback"
+              );
+              // Use fallback response to avoid timeout
+              response = getSimpleResponse(message.round, message.topic, message.position);
+            }
 
-            ws.send(
-              JSON.stringify({
-                type: "debate_response",
+            const responsePayload = {
+              type: "debate_response",
+              requestId: message.requestId,
+              message: response.message,
+              confidence: response.confidence,
+            };
+            const responseJson = JSON.stringify(responsePayload);
+            logger.debug(
+              {
                 requestId: message.requestId,
-                message: response.message,
-                confidence: response.confidence,
-              })
+                responsePayloadLength: responseJson.length,
+                wsReadyState: ws.readyState,
+              },
+              "Sending response to server"
             );
-            logger.info({}, "Response sent");
+
+            ws.send(responseJson);
+
+            const totalDuration = Date.now() - requestStartTime;
+            logger.info(
+              {
+                requestId: message.requestId,
+                provider: currentProvider,
+                totalDurationMs: totalDuration,
+                responseLength: response.message.length,
+              },
+              "Response sent successfully"
+            );
             console.log("Response sent!");
             break;
           }

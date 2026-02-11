@@ -381,6 +381,16 @@ export class BotConnectionServer {
     bot: ConnectedBot,
     message: DebateResponseMessage
   ): Promise<void> {
+    logger.info(
+      {
+        botId: bot.botId,
+        botName: bot.botName,
+        requestId: message.requestId,
+        messageLength: message.message?.length ?? 0,
+      },
+      "Received debate response from bot"
+    );
+
     // First check if this is a local pending request
     const pending = this.pendingRequests.get(message.requestId);
     if (pending) {
@@ -391,8 +401,16 @@ export class BotConnectionServer {
       });
 
       if (!parseResult.success) {
+        logger.error(
+          { botId: bot.botId, requestId: message.requestId, error: parseResult.error.message },
+          "Invalid bot response format"
+        );
         pending.reject(new Error(`Invalid bot response: ${parseResult.error.message}`));
       } else {
+        logger.info(
+          { botId: bot.botId, requestId: message.requestId },
+          "Successfully resolved bot response"
+        );
         pending.resolve(parseResult.data);
       }
 
@@ -632,8 +650,20 @@ export class BotConnectionServer {
 
     // Check if bot is connected locally
     const localBot = this.connectedBots.get(botId);
-    if (localBot && localBot.ws.readyState === WebSocket.OPEN) {
-      return this.sendLocalRequest(localBot, requestId, request, timeout);
+    if (localBot) {
+      if (localBot.ws.readyState === WebSocket.OPEN) {
+        return this.sendLocalRequest(localBot, requestId, request, timeout);
+      } else {
+        logger.warn(
+          {
+            botId,
+            botName: localBot.botName,
+            wsReadyState: localBot.ws.readyState,
+            round: request.round,
+          },
+          "Bot in connectedBots but WebSocket not OPEN"
+        );
+      }
     }
 
     // Check if bot is connected to another instance
@@ -642,6 +672,10 @@ export class BotConnectionServer {
       if (targetInstance && targetInstance !== INSTANCE_ID) {
         return this.sendCrossInstanceRequest(targetInstance, botId, requestId, request, timeout);
       }
+      logger.warn(
+        { botId, round: request.round, redisInstance: targetInstance ?? "none" },
+        "Bot not found locally or on another instance"
+      );
     }
 
     throw new Error("Bot is not connected");
@@ -659,6 +693,17 @@ export class BotConnectionServer {
     return new Promise<BotResponse>((resolve, reject) => {
       const timeoutHandle = setTimeout(() => {
         this.pendingRequests.delete(requestId);
+        logger.error(
+          {
+            botId: bot.botId,
+            botName: bot.botName,
+            requestId,
+            round: request.round,
+            timeoutMs: timeout,
+            wsReadyState: bot.ws.readyState,
+          },
+          "Bot request timed out - no response received"
+        );
         reject(new Error(`Bot timed out after ${timeout}ms`));
       }, timeout);
 
@@ -674,6 +719,18 @@ export class BotConnectionServer {
         ...request,
       };
 
+      logger.info(
+        {
+          botId: bot.botId,
+          botName: bot.botName,
+          requestId,
+          round: request.round,
+          debateId: request.debate_id,
+          timeoutMs: timeout,
+        },
+        "Sending debate request to bot"
+      );
+
       bot.ws.send(JSON.stringify(message));
     });
   }
@@ -688,10 +745,19 @@ export class BotConnectionServer {
     request: BotRequest,
     timeout: number
   ): Promise<BotResponse> {
+    logger.info(
+      { botId, requestId, targetInstance, round: request.round, timeoutMs: timeout },
+      "Sending cross-instance debate request via Redis"
+    );
+
     return new Promise<BotResponse>((resolve, reject) => {
       const responseChannel = KEYS.CHANNEL_BOT_RESPONSE(requestId);
 
       const timeoutHandle = setTimeout(() => {
+        logger.error(
+          { botId, requestId, targetInstance, round: request.round, timeoutMs: timeout },
+          "Cross-instance bot request timed out"
+        );
         void redisSub.unsubscribe(responseChannel);
         reject(new Error(`Bot timed out after ${timeout}ms`));
       }, timeout);
