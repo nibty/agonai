@@ -25,7 +25,7 @@ app.use(
     credentials: true,
   })
 );
-app.use(createExpressLogger({ name: "ai-debates-api" }));
+app.use(createExpressLogger({ name: "api-access" }));
 app.use(express.json());
 
 // API routes

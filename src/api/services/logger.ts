@@ -8,7 +8,7 @@ import { createLogger } from "@x1-labs/logging";
  * - LOG_FORMAT: json or pretty (default: pretty)
  * - LOG_OMIT_FIELDS: comma-separated fields to omit (default: pid,hostname)
  */
-export const logger = createLogger({ name: "ai-debates-api" });
+export const logger = createLogger({ name: "api" });
 
 /**
  * Create a child logger with additional context
