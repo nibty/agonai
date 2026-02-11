@@ -54,6 +54,34 @@ server.on("upgrade", (request, socket, head) => {
 
 // Debate ownership TTL in seconds
 const DEBATE_OWNERSHIP_TTL = 300; // 5 minutes
+const RECOVERY_LOCK_TTL = 120; // 2 minutes lock for recovery process
+
+/**
+ * Acquire a distributed lock for a debate recovery.
+ * Uses Redis SETNX for atomic lock acquisition.
+ * Returns a release function if lock acquired, null if lock held by another instance.
+ */
+async function acquireRecoveryLock(debateId: number): Promise<(() => Promise<void>) | null> {
+  if (!isRedisAvailable()) return async () => {};
+
+  const lockKey = `debate:recovery_lock:${debateId}`;
+  const lockValue = `${INSTANCE_ID}-${Date.now()}`;
+
+  const result = await redis.set(lockKey, lockValue, "EX", RECOVERY_LOCK_TTL, "NX");
+
+  if (result !== "OK") {
+    return null; // Lock held by another instance
+  }
+
+  // Return release function
+  return async () => {
+    // Only release if we still own the lock (prevent releasing after expiry)
+    const currentValue = await redis.get(lockKey);
+    if (currentValue === lockValue) {
+      await redis.del(lockKey);
+    }
+  };
+}
 
 /**
  * Claim ownership of a debate for recovery.
@@ -147,6 +175,81 @@ async function recoverStuckDebates(): Promise<void> {
 // Matchmaking loop - runs every 5 seconds
 let matchmakingInterval: ReturnType<typeof setInterval>;
 let ownershipRefreshInterval: ReturnType<typeof setInterval>;
+let recoveryInterval: ReturnType<typeof setInterval>;
+
+/**
+ * Check for and recover unowned debates.
+ * An unowned debate is one that is in_progress but has no owner in Redis.
+ * Thread-safe: uses atomic Redis SETNX to prevent multiple pods from recovering the same debate.
+ */
+async function recoverUnownedDebates(): Promise<void> {
+  if (!isRedisAvailable()) return;
+
+  try {
+    // Get all active debates from DB
+    const activeDebates = await debateRepository.getActive();
+
+    for (const debate of activeDebates) {
+      // Skip if already active on this instance
+      if (debateOrchestrator.isDebateActive(debate.id)) {
+        continue;
+      }
+
+      // Check if debate has an owner in Redis
+      const owner = await redis.get(KEYS.DEBATE_OWNER(debate.id));
+
+      if (!owner) {
+        // Acquire recovery lock to prevent concurrent recovery attempts
+        const releaseLock = await acquireRecoveryLock(debate.id);
+        if (!releaseLock) {
+          // Another instance is recovering this debate
+          continue;
+        }
+
+        try {
+          // Double-check ownership after acquiring lock
+          const currentOwner = await redis.get(KEYS.DEBATE_OWNER(debate.id));
+          if (currentOwner) {
+            // Someone claimed it while we were acquiring lock
+            continue;
+          }
+
+          // Try to claim ownership atomically (SETNX)
+          const claimed = await claimDebateOwnership(debate.id);
+          if (!claimed) {
+            // Another instance claimed it first
+            continue;
+          }
+
+          logger.info({ debateId: debate.id }, "Claiming unowned debate for recovery");
+
+          // Double-check the debate still exists and is in_progress (it may have completed)
+          const currentDebate = await debateRepository.findById(debate.id);
+          if (!currentDebate || currentDebate.status !== "in_progress") {
+            await releaseDebateOwnership(debate.id);
+            continue;
+          }
+
+          // Attempt recovery
+          const recovered = await debateOrchestrator.recoverDebate(debate.id, (debateId, message) =>
+            wsServer.broadcast(debateId, message)
+          );
+
+          if (recovered) {
+            logger.info({ debateId: debate.id }, "Successfully recovered unowned debate");
+          } else {
+            // Release ownership if recovery failed
+            await releaseDebateOwnership(debate.id);
+          }
+        } finally {
+          await releaseLock();
+        }
+      }
+    }
+  } catch (error) {
+    logger.error({ err: error }, "Error during unowned debate recovery");
+  }
+}
 
 function startMatchmaking(): void {
   matchmakingInterval = setInterval(() => {
@@ -200,6 +303,9 @@ function startMatchmaking(): void {
             presetId
           );
 
+          // Claim ownership of the debate in Redis
+          await claimDebateOwnership(debate.id);
+
           // Start debate in background
           void debateOrchestrator.startDebate(debate, proBot, conBot, topic, (debateId, message) =>
             wsServer.broadcast(debateId, message)
@@ -230,6 +336,7 @@ async function shutdown(): Promise<void> {
   // Stop intervals
   clearInterval(matchmakingInterval);
   clearInterval(ownershipRefreshInterval);
+  clearInterval(recoveryInterval);
 
   // Release ownership of all active debates so other instances can recover them
   const activeDebateIds = debateOrchestrator.getActiveDebateIds();
@@ -279,4 +386,9 @@ server.listen(PORT, () => {
   setTimeout(() => {
     void recoverStuckDebates();
   }, 5000);
+
+  // Periodically check for unowned debates (every 30 seconds)
+  recoveryInterval = setInterval(() => {
+    void recoverUnownedDebates();
+  }, 30000);
 });
