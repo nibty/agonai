@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Trophy, Clock, MessageSquare } from "lucide-react";
+import { Clock, MessageSquare } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/Card";
 import { RankBadge, TierBadge, Badge } from "@/components/ui/Badge";
 import { BotAvatar } from "@/components/ui/Avatar";
@@ -46,7 +46,7 @@ function LeaderboardRow({ bot, rank }: { bot: LeaderboardBot; rank: number }) {
   return (
     <div className="flex items-center gap-4 rounded-lg bg-arena-card/50 p-4 transition-colors hover:bg-arena-card">
       {/* Rank */}
-      <div className={`w-12 text-center text-lg font-bold ${getRankStyle(rank)}`}>
+      <div className={`w-12 shrink-0 text-center text-lg font-bold ${getRankStyle(rank)}`}>
         {getRankIcon(rank)}
       </div>
 
@@ -62,28 +62,26 @@ function LeaderboardRow({ bot, rank }: { bot: LeaderboardBot; rank: number }) {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="hidden items-center gap-6 md:flex">
-        <div className="text-center">
-          <div className="font-bold text-arena-accent">{bot.elo}</div>
-          <div className="text-xs text-gray-400">ELO</div>
+      {/* Stats - match header widths */}
+      <div className="hidden w-16 shrink-0 text-center md:block">
+        <div className="font-bold text-arena-accent">{bot.elo}</div>
+        <div className="text-xs text-gray-400">ELO</div>
+      </div>
+      <div className="hidden w-20 shrink-0 text-center md:block">
+        <div className="font-medium text-arena-text">{winRate}%</div>
+        <div className="text-xs text-gray-400">Win Rate</div>
+      </div>
+      <div className="hidden w-24 shrink-0 text-center md:block">
+        <div className="text-sm">
+          <span className="text-arena-pro">{bot.wins}W</span>
+          {" / "}
+          <span className="text-arena-con">{bot.losses}L</span>
         </div>
-        <div className="text-center">
-          <div className="font-medium text-arena-text">{winRate}%</div>
-          <div className="text-xs text-gray-400">Win Rate</div>
-        </div>
-        <div className="text-center">
-          <div className="text-sm">
-            <span className="text-arena-pro">{bot.wins}W</span>
-            {" / "}
-            <span className="text-arena-con">{bot.losses}L</span>
-          </div>
-          <div className="text-xs text-gray-400">Record</div>
-        </div>
+        <div className="text-xs text-gray-400">Record</div>
       </div>
 
       {/* Rank Badge */}
-      <div className="hidden sm:block">
+      <div className="hidden w-20 shrink-0 sm:block">
         <RankBadge rank={botRank} />
       </div>
     </div>
@@ -179,16 +177,6 @@ function RecentDebates() {
     }
   };
 
-  const getWinnerText = (debate: Debate) => {
-    if (debate.status !== "completed" || !debate.winner) return null;
-    const winnerName = debate.winner === "pro" ? debate.proBotName : debate.conBotName;
-    return (
-      <span className={debate.winner === "pro" ? "text-arena-pro" : "text-arena-con"}>
-        {winnerName} won
-      </span>
-    );
-  };
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -229,10 +217,11 @@ function RecentDebates() {
               <Link
                 key={debate.id}
                 to={`/arena/${debate.id}`}
-                className="flex items-center gap-4 rounded-lg bg-arena-card/50 p-4 transition-colors hover:bg-arena-card"
+                className="flex flex-col gap-2 rounded-lg bg-arena-card/50 p-3 transition-colors hover:bg-arena-card md:flex-row md:items-center md:gap-4 md:p-4"
               >
-                {/* Bots */}
-                <div className="flex min-w-0 flex-1 items-center gap-3">
+                {/* Row 1: Bots + Status (mobile) / Bots (desktop) */}
+                <div className="flex items-center justify-between gap-2 md:w-[240px] md:shrink-0 md:justify-start md:gap-3">
+                  {/* Bots */}
                   <div className="flex items-center gap-2">
                     <BotAvatar
                       size="sm"
@@ -243,7 +232,9 @@ function RecentDebates() {
                       <div className="truncate text-sm font-medium text-arena-pro">
                         {debate.proBotName}
                       </div>
-                      <div className="text-xs text-arena-text-dim">{debate.proBotElo} ELO</div>
+                      <div className="hidden text-xs text-arena-text-dim md:block">
+                        {debate.proBotElo} ELO
+                      </div>
                     </div>
                   </div>
                   <span className="text-arena-text-muted">vs</span>
@@ -257,28 +248,31 @@ function RecentDebates() {
                       <div className="truncate text-sm font-medium text-arena-con">
                         {debate.conBotName}
                       </div>
-                      <div className="text-xs text-arena-text-dim">{debate.conBotElo} ELO</div>
+                      <div className="hidden text-xs text-arena-text-dim md:block">
+                        {debate.conBotElo} ELO
+                      </div>
                     </div>
                   </div>
-                </div>
-
-                {/* Topic */}
-                <div className="hidden flex-1 md:block">
-                  <div className="truncate text-sm text-arena-text">{debate.topic}</div>
-                </div>
-
-                {/* Status & Result */}
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
+                  {/* Status on mobile only */}
+                  <div className="flex items-center gap-2 md:hidden">
                     {getStatusBadge(debate.status)}
-                    {debate.status === "completed" && (
-                      <div className="mt-1 flex items-center gap-1 text-xs">
-                        <Trophy className="h-3 w-3" />
-                        {getWinnerText(debate)}
-                      </div>
-                    )}
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-arena-text-dim">
+                </div>
+
+                {/* Row 2: Topic + Time (mobile) / Topic (desktop) */}
+                <div className="flex items-center justify-between gap-2 md:min-w-0 md:flex-1">
+                  <div className="min-w-0 flex-1 text-sm text-arena-text">{debate.topic}</div>
+                  {/* Time on mobile only */}
+                  <div className="flex shrink-0 items-center gap-1 text-xs text-arena-text-dim md:hidden">
+                    <Clock className="h-3 w-3" />
+                    {formatDate(debate.createdAt)}
+                  </div>
+                </div>
+
+                {/* Status & Time - desktop only */}
+                <div className="hidden w-[140px] shrink-0 items-center gap-2 md:flex">
+                  {getStatusBadge(debate.status)}
+                  <div className="flex shrink-0 items-center gap-1 text-xs text-arena-text-dim">
                     <Clock className="h-3 w-3" />
                     {formatDate(debate.createdAt)}
                   </div>

@@ -152,7 +152,7 @@ export function HomePage() {
           </div>
         ) : (
           <Card className="py-12 text-center">
-            <CardContent>
+            <CardContent className="flex flex-col items-center">
               <p className="text-gray-400">
                 No active debates right now. Start one from the queue!
               </p>

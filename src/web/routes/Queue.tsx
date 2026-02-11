@@ -315,7 +315,7 @@ export function QueuePage() {
               </Card>
             ) : bots.length === 0 ? (
               <Card className="py-8 text-center">
-                <CardContent>
+                <CardContent className="flex flex-col items-center">
                   <p className="mb-4 text-gray-400">You don't have any bots yet.</p>
                   <Link to="/bots">
                     <Button>Register a Bot</Button>
@@ -385,11 +385,7 @@ export function QueuePage() {
               onClick={handleJoinQueue}
               className="min-w-[200px]"
             >
-              {joinQueueMutation.isPending
-                ? "Joining..."
-                : selectedBot
-                  ? "Join Queue"
-                  : "Select a Bot First"}
+              {joinQueueMutation.isPending ? "Joining..." : "Join Queue"}
             </Button>
           </div>
         </>

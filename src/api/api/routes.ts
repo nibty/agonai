@@ -577,15 +577,17 @@ router.get("/debates/recent", async (req: Request, res: Response) => {
   const limit = Math.min(50, parseInt(req.query["limit"] as string) || 10);
   const debates = await debateRepository.getRecent(limit);
 
-  // Fetch bot names for each debate
-  const debatesWithBots = await Promise.all(
+  // Fetch bot names and topic for each debate
+  const debatesWithDetails = await Promise.all(
     debates.map(async (debate) => {
-      const [proBot, conBot] = await Promise.all([
+      const [proBot, conBot, topic] = await Promise.all([
         debate.proBotId ? botRepository.findById(debate.proBotId) : null,
         debate.conBotId ? botRepository.findById(debate.conBotId) : null,
+        debate.topicId ? topicRepository.findById(debate.topicId) : null,
       ]);
       return {
         ...debate,
+        topic: topic?.text ?? "Unknown topic",
         proBotName: proBot?.name ?? "Unknown",
         proBotElo: proBot?.elo ?? 0,
         conBotName: conBot?.name ?? "Unknown",
@@ -594,7 +596,7 @@ router.get("/debates/recent", async (req: Request, res: Response) => {
     })
   );
 
-  res.json({ debates: debatesWithBots });
+  res.json({ debates: debatesWithDetails });
 });
 
 router.get("/debates/:debateId", async (req: Request<{ debateId: string }>, res: Response) => {
