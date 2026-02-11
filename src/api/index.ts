@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { createServer } from "http";
+import { createExpressLogger } from "@x1-labs/logging-express";
 import { router } from "./api/routes.js";
 import { DebateWebSocketServer } from "./ws/debateServer.js";
 import { initBotConnectionServer } from "./ws/botConnectionServer.js";
@@ -9,6 +10,7 @@ import { debateOrchestrator } from "./services/debateOrchestrator.js";
 import { topicRepository, botRepository } from "./repositories/index.js";
 import { closeDatabase } from "./db/index.js";
 import { closeRedis, INSTANCE_ID } from "./services/redis.js";
+import { logger } from "./services/logger.js";
 
 const PORT = parseInt(process.env["PORT"] ?? "3001");
 
@@ -22,6 +24,7 @@ app.use(
     credentials: true,
   })
 );
+app.use(createExpressLogger({ name: "ai-debates-api" }));
 app.use(express.json());
 
 // API routes
@@ -57,12 +60,13 @@ function startMatchmaking(): void {
       try {
         const stats = await matchmaking.getStats();
         if (stats.queueSize > 0) {
-          console.log(`[Matchmaking] Queue check: ${stats.queueSize} entries`);
+          logger.debug({ queueSize: stats.queueSize }, "Matchmaking queue check");
         }
 
         const matches = await matchmaking.runMatchmaking(async (entry1, entry2) => {
-          console.log(
-            `[Matchmaking] Creating debate between bot ${entry1.botId} and ${entry2.botId}`
+          logger.info(
+            { bot1: entry1.botId, bot2: entry2.botId },
+            "Creating debate between bots"
           );
 
           // Get bots from repository
@@ -72,11 +76,11 @@ function startMatchmaking(): void {
           if (!bot1 || !bot2) {
             // Clean up stale queue entries for deleted bots
             if (!bot1) {
-              console.warn(`[Matchmaking] Bot ${entry1.botId} not found, removing from queue`);
+              logger.warn({ botId: entry1.botId }, "Bot not found, removing from queue");
               void matchmaking.removeFromQueue(entry1.botId);
             }
             if (!bot2) {
-              console.warn(`[Matchmaking] Bot ${entry2.botId} not found, removing from queue`);
+              logger.warn({ botId: entry2.botId }, "Bot not found, removing from queue");
               void matchmaking.removeFromQueue(entry2.botId);
             }
             throw new Error("Bot not found during matchmaking (stale entries cleaned)");
@@ -85,7 +89,7 @@ function startMatchmaking(): void {
           // Get random topic
           const topic = await topicRepository.getRandomTopic();
           if (!topic) {
-            console.error("[Matchmaking] No topics available!");
+            logger.error("No topics available for matchmaking");
             throw new Error("No topics available");
           }
 
@@ -110,16 +114,19 @@ function startMatchmaking(): void {
             wsServer.broadcast(debateId, message)
           );
 
-          console.log(`Match created: ${proBot.name} vs ${conBot.name} on "${topic.text}"`);
+          logger.info(
+            { proBot: proBot.name, conBot: conBot.name, topic: topic.text },
+            "Match created"
+          );
 
           return debate;
         });
 
         if (matches.length > 0) {
-          console.log(`Matchmaking: created ${matches.length} matches`);
+          logger.info({ count: matches.length }, "Matchmaking created matches");
         }
       } catch (error) {
-        console.error("[Matchmaking] Error in matchmaking loop:", error);
+        logger.error({ err: error }, "Error in matchmaking loop");
       }
     })();
   }, 5000);
@@ -127,7 +134,7 @@ function startMatchmaking(): void {
 
 // Cleanup on shutdown
 async function shutdown(): Promise<void> {
-  console.log("\nShutting down...");
+  logger.info("Shutting down...");
   clearInterval(matchmakingInterval);
   server.close();
   await closeRedis();
@@ -140,20 +147,19 @@ process.on("SIGTERM", () => void shutdown());
 
 // Start server
 server.listen(PORT, () => {
-  console.log(`
-╔═══════════════════════════════════════════════════════════╗
-║          AI DEBATES ARENA - Server                        ║
-╠═══════════════════════════════════════════════════════════╣
-║  API:       http://localhost:${PORT}/api                     ║
-║  WebSocket: ws://localhost:${PORT}/ws                        ║
-║  Bot WS:    ws://localhost:${PORT}/bot/connect/:token        ║
-║  Network:   X1 (https://rpc.mainnet.x1.xyz/)              ║
-║  Instance:  ${INSTANCE_ID.substring(0, 40).padEnd(40)}  ║
-╚═══════════════════════════════════════════════════════════╝
-`);
+  logger.info(
+    {
+      port: PORT,
+      instance: INSTANCE_ID,
+      api: `http://localhost:${PORT}/api`,
+      ws: `ws://localhost:${PORT}/ws`,
+      botWs: `ws://localhost:${PORT}/bot/connect/:token`,
+    },
+    "AI Debates Arena server started"
+  );
 
   // Start matchmaking
   startMatchmaking();
-  console.log("Matchmaking service started");
-  console.log("Database connected (PostgreSQL via Drizzle)");
+  logger.info("Matchmaking service started");
+  logger.info("Database connected (PostgreSQL via Drizzle)");
 });

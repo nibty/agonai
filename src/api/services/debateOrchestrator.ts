@@ -23,6 +23,7 @@ import {
 } from "../repositories/index.js";
 import { decryptToken } from "../repositories/botRepository.js";
 import type { Bot, Topic } from "../db/types.js";
+import { logger } from "./logger.js";
 
 type BroadcastFn = (debateId: number, message: WSMessage) => void;
 
@@ -682,7 +683,10 @@ export class DebateOrchestratorService {
     // Remove from active debates
     this.activeDebates.delete(state.debate.id);
 
-    console.log(`[Debate ${debateId}] ${loserBot.name} forfeited. ${winnerBot.name} wins!`);
+    logger.info(
+      { debateId, forfeitedBy: loserBot.name, winner: winnerBot.name },
+      "Debate forfeited"
+    );
 
     return { success: true };
   }

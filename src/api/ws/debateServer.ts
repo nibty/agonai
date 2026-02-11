@@ -12,6 +12,9 @@ import {
   INSTANCE_ID,
   isRedisAvailable,
 } from "../services/redis.js";
+import { createChildLogger } from "../services/logger.js";
+
+const logger = createChildLogger({ service: "debate-ws" });
 
 interface Client {
   ws: WebSocket;
@@ -52,7 +55,7 @@ export class DebateWebSocketServer {
       this.handleRedisMessage(channel, message);
     });
 
-    console.log(`[DebateWS] Server initialized (instance: ${INSTANCE_ID})`);
+    logger.info({ instance: INSTANCE_ID }, "Server initialized");
   }
 
   /**
@@ -75,7 +78,7 @@ export class DebateWebSocketServer {
         }
       }
     } catch (error) {
-      console.error(`[DebateWS] Error forwarding Redis message:`, error);
+      logger.error({ err: error }, "Error forwarding Redis message");
     }
   }
 
@@ -88,7 +91,7 @@ export class DebateWebSocketServer {
     const channel = KEYS.CHANNEL_DEBATE_BROADCAST(debateId);
     await redisSub.subscribe(channel);
     this.subscribedDebates.add(debateId);
-    console.log(`[DebateWS] Subscribed to debate ${debateId} channel`);
+    logger.debug({ debateId }, "Subscribed to debate channel");
   }
 
   /**
@@ -104,7 +107,7 @@ export class DebateWebSocketServer {
     const channel = KEYS.CHANNEL_DEBATE_BROADCAST(debateId);
     await redisSub.unsubscribe(channel);
     this.subscribedDebates.delete(debateId);
-    console.log(`[DebateWS] Unsubscribed from debate ${debateId} channel`);
+    logger.debug({ debateId }, "Unsubscribed from debate channel");
   }
 
   /**
@@ -134,7 +137,7 @@ export class DebateWebSocketServer {
     });
 
     ws.on("error", (error) => {
-      console.error("WebSocket error:", error);
+      logger.error({ err: error }, "WebSocket error");
       void this.handleDisconnect(client);
     });
   }
@@ -167,10 +170,10 @@ export class DebateWebSocketServer {
           break;
 
         default:
-          console.warn("Unknown message type:", message.type);
+          logger.warn({ type: message.type }, "Unknown message type");
       }
     } catch (error) {
-      console.error("Error handling message:", error);
+      logger.error({ err: error }, "Error handling message");
       client.ws.send(
         JSON.stringify({
           type: "error",
@@ -257,9 +260,7 @@ export class DebateWebSocketServer {
       }
     }
 
-    console.log(
-      `[DebateWS] Client joined debate ${debateId}, local spectators: ${spectators.size}, userId: ${userId}`
-    );
+    logger.debug({ debateId, spectators: spectators.size, userId }, "Client joined debate");
   }
 
   private async handleLeaveDebate(client: Client): Promise<void> {
@@ -279,7 +280,7 @@ export class DebateWebSocketServer {
       // Update spectator count
       await this.updateSpectatorCount(debateId);
 
-      console.log(`Client left debate ${debateId}, local spectators: ${spectators.size}`);
+      logger.debug({ debateId, spectators: spectators.size }, "Client left debate");
     }
 
     client.debateId = null;

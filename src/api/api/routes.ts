@@ -21,6 +21,7 @@ import { debateOrchestrator } from "../services/debateOrchestrator.js";
 import { authService } from "../services/authService.js";
 import { authRouter } from "./authRoutes.js";
 import { getBotConnectionServer } from "../ws/botConnectionServer.js";
+import { logger } from "../services/logger.js";
 
 const router = Router();
 
@@ -509,11 +510,12 @@ router.post("/queue/join", authMiddleware, async (req: AuthenticatedRequest, res
 
   // addToQueue handles removing any existing entry for this bot
   const entry = await matchmaking.addToQueue(bot, req.userId, stake, presetId);
-  console.log(
-    `[Queue] Bot "${bot.name}" (${bot.id}) joined queue with stake ${stake}, ELO ${bot.elo}, preset ${presetId}`
+  logger.info(
+    { botId: bot.id, botName: bot.name, stake, elo: bot.elo, presetId },
+    "Bot joined queue"
   );
   const queueStats = await matchmaking.getStats();
-  console.log(`[Queue] Current queue size: ${queueStats.queueSize}`);
+  logger.info({ queueSize: queueStats.queueSize }, "Queue status");
   res.json({ entry });
 });
 

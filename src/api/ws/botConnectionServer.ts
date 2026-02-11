@@ -12,6 +12,9 @@ import {
   INSTANCE_ID,
   isRedisAvailable,
 } from "../services/redis.js";
+import { createChildLogger } from "../services/logger.js";
+
+const logger = createChildLogger({ service: "bot-ws" });
 
 interface ConnectedBot {
   ws: WebSocket;
@@ -115,7 +118,7 @@ export class BotConnectionServer {
     // Initialize Redis subscriptions
     void this.initRedisSubscriptions();
 
-    console.log(`[BotWS] Server initialized (instance: ${INSTANCE_ID})`);
+    logger.info({ instance: INSTANCE_ID }, "Server initialized");
   }
 
   /**
@@ -123,7 +126,7 @@ export class BotConnectionServer {
    */
   private async initRedisSubscriptions(): Promise<void> {
     if (!isRedisAvailable()) {
-      console.log("[BotWS] Redis not available, running in single-instance mode");
+      logger.info("Redis not available, running in single-instance mode");
       return;
     }
 
@@ -138,9 +141,9 @@ export class BotConnectionServer {
         }
       });
 
-      console.log(`[BotWS] Subscribed to Redis channel: ${instanceChannel}`);
+      logger.info({ channel: instanceChannel }, "Subscribed to Redis channel");
     } catch (error) {
-      console.error("[BotWS] Failed to subscribe to Redis:", error);
+      logger.error({ err: error }, "Failed to subscribe to Redis");
     }
   }
 
@@ -170,7 +173,7 @@ export class BotConnectionServer {
         bot.ws.send(JSON.stringify(requestMessage));
       }
     } catch (error) {
-      console.error("[BotWS] Error handling Redis message:", error);
+      logger.error({ err: error }, "Error handling Redis message");
     }
   }
 
@@ -225,7 +228,7 @@ export class BotConnectionServer {
     // Check if bot is already connected (locally)
     const existing = this.connectedBots.get(bot.id);
     if (existing) {
-      console.log(`[BotWS] Bot "${bot.name}" (${bot.id}) reconnecting, closing old connection`);
+      logger.info({ botId: bot.id, botName: bot.name }, "Bot reconnecting, closing old connection");
       existing.ws.close(4003, "Replaced by new connection");
     }
 
@@ -243,7 +246,7 @@ export class BotConnectionServer {
       await redis.set(KEYS.BOT_CONNECTED(bot.id), INSTANCE_ID, "EX", 120); // TTL 2 minutes, refreshed by ping
     }
 
-    console.log(`[BotWS] Bot "${bot.name}" (${bot.id}) connected to instance ${INSTANCE_ID}`);
+    logger.info({ botId: bot.id, botName: bot.name, instance: INSTANCE_ID }, "Bot connected");
 
     ws.on("message", (data: Buffer) => {
       this.handleMessage(connectedBot, data.toString("utf-8"));
@@ -254,7 +257,7 @@ export class BotConnectionServer {
     });
 
     ws.on("error", (error) => {
-      console.error(`[BotWS] Error for bot ${bot.id}:`, error);
+      logger.error({ botId: bot.id, err: error }, "Bot WebSocket error");
       void this.handleDisconnect(connectedBot);
     });
 
@@ -289,13 +292,13 @@ export class BotConnectionServer {
           break;
 
         default:
-          console.warn(
-            `[BotWS] Unknown message type from bot ${bot.botId}:`,
-            (message as { type: string }).type
+          logger.warn(
+            { botId: bot.botId, type: (message as { type: string }).type },
+            "Unknown message type from bot"
           );
       }
     } catch (error) {
-      console.error(`[BotWS] Error parsing message from bot ${bot.botId}:`, error);
+      logger.error({ botId: bot.botId, err: error }, "Error parsing message from bot");
     }
   }
 
@@ -337,8 +340,9 @@ export class BotConnectionServer {
         await this.sendResponseToInstance(message.requestId, parseResult.data);
       }
     } else {
-      console.warn(
-        `[BotWS] Received response for unknown request ${message.requestId} from bot ${bot.botId}`
+      logger.warn(
+        { requestId: message.requestId, botId: bot.botId },
+        "Received response for unknown request"
       );
     }
   }
@@ -359,7 +363,7 @@ export class BotConnectionServer {
         await redis.del(KEYS.BOT_CONNECTED(bot.botId));
       }
 
-      console.log(`[BotWS] Bot "${bot.botName}" (${bot.botId}) disconnected`);
+      logger.info({ botId: bot.botId, botName: bot.botName }, "Bot disconnected");
     }
   }
 
@@ -378,7 +382,7 @@ export class BotConnectionServer {
         if (isRedisAvailable()) {
           void redis.del(KEYS.BOT_CONNECTED(botId));
         }
-        console.log(`[BotWS] Cleaned up stale connection for bot ${botId}`);
+        logger.debug({ botId }, "Cleaned up stale connection for bot");
       }
     }
   }
@@ -503,7 +507,7 @@ export class BotConnectionServer {
             }
           }
         } catch (error) {
-          console.error("[BotWS] Error parsing cross-instance response:", error);
+          logger.error({ err: error }, "Error parsing cross-instance response");
         }
       };
 

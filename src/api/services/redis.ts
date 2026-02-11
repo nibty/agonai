@@ -1,4 +1,7 @@
 import Redis from "ioredis";
+import { createLogger } from "@x1-labs/logging";
+
+const logger = createLogger({ name: "redis" });
 
 const REDIS_URL = process.env["REDIS_URL"] ?? "redis://localhost:6379";
 
@@ -7,7 +10,7 @@ export const redis = new Redis(REDIS_URL, {
   maxRetriesPerRequest: 3,
   retryStrategy(times) {
     if (times > 10) {
-      console.error("[Redis] Max retries reached, giving up");
+      logger.error("Max retries reached, giving up");
       return null;
     }
     const delay = Math.min(times * 100, 3000);
@@ -30,15 +33,15 @@ export const redisPub = new Redis(REDIS_URL, {
 });
 
 // Connection event handlers
-redis.on("connect", () => console.log("[Redis] Connected"));
-redis.on("error", (err) => console.error("[Redis] Error:", err.message));
-redis.on("reconnecting", () => console.log("[Redis] Reconnecting..."));
+redis.on("connect", () => logger.info("Redis connected"));
+redis.on("error", (err) => logger.error({ err: err.message }, "Redis error"));
+redis.on("reconnecting", () => logger.info("Redis reconnecting..."));
 
-redisSub.on("connect", () => console.log("[Redis Sub] Connected"));
-redisSub.on("error", (err) => console.error("[Redis Sub] Error:", err.message));
+redisSub.on("connect", () => logger.info("Redis subscriber connected"));
+redisSub.on("error", (err) => logger.error({ err: err.message }, "Redis subscriber error"));
 
-redisPub.on("connect", () => console.log("[Redis Pub] Connected"));
-redisPub.on("error", (err) => console.error("[Redis Pub] Error:", err.message));
+redisPub.on("connect", () => logger.info("Redis publisher connected"));
+redisPub.on("error", (err) => logger.error({ err: err.message }, "Redis publisher error"));
 
 // Graceful shutdown
 export async function closeRedis(): Promise<void> {

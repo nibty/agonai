@@ -2,6 +2,7 @@ import { nanoid } from "nanoid";
 import type { QueueEntry, Bot } from "../types/index.js";
 import { getExpandedMatchRange, isBalancedMatch } from "./elo.js";
 import { redis, KEYS, isRedisAvailable } from "./redis.js";
+import { logger } from "./logger.js";
 
 interface MatchResult<T> {
   entry1: QueueEntry;
@@ -381,7 +382,7 @@ export class MatchmakingService {
           // Remove from queue
           await this.removeEntries(entry, match);
         } catch (error) {
-          console.error("[Matchmaking] Failed to create debate:", error);
+          logger.error({ err: error }, "Failed to create debate");
           // Re-add entries to queue on failure
           matched.delete(entry.id);
           matched.delete(match.id);

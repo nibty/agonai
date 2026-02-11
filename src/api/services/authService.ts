@@ -6,6 +6,7 @@ import jwt from "jsonwebtoken";
 import nacl from "tweetnacl";
 import { PublicKey } from "@solana/web3.js";
 import { randomBytes } from "crypto";
+import { logger } from "./logger.js";
 
 const JWT_SECRET = process.env["JWT_SECRET"] ?? "dev-secret-change-in-production";
 const JWT_EXPIRY = "7d";
@@ -56,16 +57,24 @@ This signature will not trigger any blockchain transaction or cost any gas fees.
     if (stored) {
       const storedBytes = new TextEncoder().encode(stored.message);
       const storedChecksum = Array.from(storedBytes).reduce((a, b) => a + b, 0);
-      console.log(
-        `[Auth] Stored in DB - length: ${stored.message.length}, checksum: ${storedChecksum}`
+      logger.debug(
+        { messageLength: stored.message.length, checksum: storedChecksum },
+        "Challenge stored in DB"
       );
       if (stored.message !== message) {
-        console.log(`[Auth] WARNING: Message was modified during insert!`);
+        logger.warn({ walletAddress }, "Message was modified during insert");
         // Find first difference
         for (let i = 0; i < message.length; i++) {
           if (message[i] !== stored.message[i]) {
-            console.log(
-              `[Auth] First diff at index ${i}: original '${message[i]}' (${message.charCodeAt(i)}), stored '${stored.message[i]}' (${stored.message.charCodeAt(i)})`
+            logger.warn(
+              {
+                index: i,
+                originalChar: message[i],
+                originalCharCode: message.charCodeAt(i),
+                storedChar: stored.message[i],
+                storedCharCode: stored.message.charCodeAt(i),
+              },
+              "First character difference found"
             );
             break;
           }
@@ -76,7 +85,7 @@ This signature will not trigger any blockchain transaction or cost any gas fees.
     // Log checksum of message being sent to client
     const msgBytes = new TextEncoder().encode(message);
     const checksum = Array.from(msgBytes).reduce((a, b) => a + b, 0);
-    console.log(`[Auth] Created challenge - length: ${message.length}, checksum: ${checksum}`);
+    logger.debug({ messageLength: message.length, checksum }, "Challenge created");
 
     return { challenge: message, expiresAt };
   },
@@ -88,7 +97,7 @@ This signature will not trigger any blockchain transaction or cost any gas fees.
     walletAddress: string,
     signature: string
   ): Promise<{ token: string; user: User } | null> {
-    console.log(`[Auth] Looking for challenge for wallet: ${walletAddress.slice(0, 8)}...`);
+    logger.debug({ walletAddress: walletAddress.slice(0, 8) + "..." }, "Looking for challenge");
 
     // Find valid challenge
     const result = await db
@@ -106,17 +115,22 @@ This signature will not trigger any blockchain transaction or cost any gas fees.
 
     const challenge = result[0];
     if (!challenge) {
-      console.log(`[Auth] No valid challenge found (expired or already used)`);
+      logger.debug({ walletAddress }, "No valid challenge found (expired or already used)");
       // Check if any challenges exist at all for this wallet
       const allChallenges = await db
         .select()
         .from(authChallenges)
         .where(eq(authChallenges.walletAddress, walletAddress));
-      console.log(`[Auth] Total challenges for wallet: ${allChallenges.length}`);
+      logger.debug({ walletAddress, totalChallenges: allChallenges.length }, "Total challenges for wallet");
       if (allChallenges.length > 0) {
         const latest = allChallenges[allChallenges.length - 1];
-        console.log(
-          `[Auth] Latest challenge - used: ${latest?.used}, expires: ${latest?.expiresAt?.toISOString()}, now: ${new Date().toISOString()}`
+        logger.debug(
+          {
+            used: latest?.used,
+            expiresAt: latest?.expiresAt?.toISOString(),
+            now: new Date().toISOString(),
+          },
+          "Latest challenge details"
         );
       }
       return null;
@@ -125,28 +139,27 @@ This signature will not trigger any blockchain transaction or cost any gas fees.
     // Log checksum of message retrieved from database
     const dbMsgBytes = new TextEncoder().encode(challenge.message);
     const dbChecksum = Array.from(dbMsgBytes).reduce((a, b) => a + b, 0);
-    console.log(
-      `[Auth] Retrieved challenge from DB - length: ${challenge.message.length}, checksum: ${dbChecksum}`
+    logger.debug(
+      { messageLength: challenge.message.length, checksum: dbChecksum },
+      "Retrieved challenge from DB"
     );
 
     // Log detailed diff to find what changed
-    console.log(
-      `[Auth] DB message raw (first 100 chars): ${JSON.stringify(challenge.message.slice(0, 100))}`
-    );
-    console.log(
-      `[Auth] DB message raw (last 100 chars): ${JSON.stringify(challenge.message.slice(-100))}`
+    logger.debug(
+      { messageStart: challenge.message.slice(0, 100), messageEnd: challenge.message.slice(-100) },
+      "DB message raw content"
     );
 
-    console.log(`[Auth] Found challenge, verifying signature...`);
+    logger.debug({ walletAddress }, "Found challenge, verifying signature");
 
     // Verify signature
     const isValid = this.verifySignature(walletAddress, challenge.message, signature);
     if (!isValid) {
-      console.log(`[Auth] Signature verification FAILED`);
+      logger.warn({ walletAddress }, "Signature verification failed");
       return null;
     }
 
-    console.log(`[Auth] Signature verified successfully`);
+    logger.debug({ walletAddress }, "Signature verified successfully");
 
     // Mark challenge as used
     await db.update(authChallenges).set({ used: true }).where(eq(authChallenges.id, challenge.id));
@@ -172,13 +185,8 @@ This signature will not trigger any blockchain transaction or cost any gas fees.
       const publicKey = new PublicKey(walletAddress);
       const publicKeyBytes = publicKey.toBytes();
 
-      console.log(`[Auth BE] Message length: ${messageBytes.length}`);
-      console.log(
-        `[Auth BE] Message first 10 bytes: ${Array.from(messageBytes.slice(0, 10)).join(",")}`
-      );
       // Simple checksum for comparison
       const checksum = Array.from(messageBytes).reduce((a, b) => a + b, 0);
-      console.log(`[Auth BE] Message checksum: ${checksum}`);
       // Find all newline positions and their byte values
       const newlinePositions: string[] = [];
       for (let i = 0; i < messageBytes.length; i++) {
@@ -186,17 +194,25 @@ This signature will not trigger any blockchain transaction or cost any gas fees.
           newlinePositions.push(`${i}:${messageBytes[i]}`);
         }
       }
-      console.log(`[Auth BE] Newlines (pos:byte): ${newlinePositions.join(", ")}`);
-      console.log(`[Auth BE] Signature length: ${signatureBytes.length}`);
-      console.log(`[Auth BE] Public key bytes length: ${publicKeyBytes.length}`);
+      logger.debug(
+        {
+          messageLength: messageBytes.length,
+          messageFirst10Bytes: Array.from(messageBytes.slice(0, 10)).join(","),
+          checksum,
+          newlinePositions: newlinePositions.join(", "),
+          signatureLength: signatureBytes.length,
+          publicKeyBytesLength: publicKeyBytes.length,
+        },
+        "Verifying signature"
+      );
 
       // Try nacl verification
       const result = nacl.sign.detached.verify(messageBytes, signatureBytes, publicKeyBytes);
 
-      console.log(`[Auth BE] nacl.verify result: ${result}`);
+      logger.debug({ result }, "nacl.verify result");
       return result;
     } catch (err) {
-      console.error(`[Auth] Signature verification error:`, err);
+      logger.error({ err }, "Signature verification error");
       return false;
     }
   },

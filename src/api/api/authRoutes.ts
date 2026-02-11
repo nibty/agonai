@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { authService } from "../services/authService.js";
+import { logger } from "../services/logger.js";
 
 const router = Router();
 
@@ -36,19 +37,19 @@ router.post("/challenge", async (req: Request, res: Response) => {
 
   const { walletAddress } = result.data;
 
-  console.log(`[Auth] Challenge request for wallet: ${walletAddress.slice(0, 8)}...`);
+  logger.debug({ walletAddress: walletAddress.slice(0, 8) }, "Challenge request received");
 
   try {
     const { challenge, expiresAt } = await authService.createChallenge(walletAddress);
 
-    console.log(`[Auth] Challenge created, expires: ${expiresAt.toISOString()}`);
+    logger.debug({ expiresAt: expiresAt.toISOString() }, "Challenge created");
 
     res.json({
       challenge,
       expiresAt: expiresAt.toISOString(),
     });
   } catch (error) {
-    console.error("Failed to create challenge:", error);
+    logger.error({ err: error }, "Failed to create challenge");
     res.status(500).json({ error: "Failed to create challenge" });
   }
 });
@@ -67,18 +68,18 @@ router.post("/verify", async (req: Request, res: Response) => {
 
   const { walletAddress, signature } = result.data;
 
-  console.log(`[Auth] Verify request for wallet: ${walletAddress.slice(0, 8)}...`);
+  logger.debug({ walletAddress: walletAddress.slice(0, 8) }, "Verify request received");
 
   try {
     const authResult = await authService.verifyChallenge(walletAddress, signature);
 
     if (!authResult) {
-      console.log(`[Auth] Verification failed for wallet: ${walletAddress.slice(0, 8)}...`);
+      logger.warn({ walletAddress: walletAddress.slice(0, 8) }, "Verification failed");
       res.status(401).json({ error: "Invalid or expired challenge" });
       return;
     }
 
-    console.log(`[Auth] Verification successful for wallet: ${walletAddress.slice(0, 8)}...`);
+    logger.info({ walletAddress: walletAddress.slice(0, 8) }, "Verification successful");
 
     res.json({
       token: authResult.token,
@@ -93,7 +94,7 @@ router.post("/verify", async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error("Failed to verify challenge:", error);
+    logger.error({ err: error }, "Failed to verify challenge");
     res.status(500).json({ error: "Failed to verify challenge" });
   }
 });
