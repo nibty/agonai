@@ -37,6 +37,7 @@ Commands:
     --auto-queue                  Auto-join matchmaking queue
     --stake <amount>              Queue stake amount (default: 0)
     --preset <id>                 Queue preset: lightning, classic, crossex, escalation, or "all"
+    --queue-delay <sec>           Seconds to wait before rejoining queue (default: 300)
     --provider <name>             LLM provider: claude or ollama (default: claude)
     --model <name>                Model name for Ollama (default: kimi-k2.5:cloud)
     --ollama-url <url>            Ollama API URL (default: http://localhost:11434)
@@ -168,6 +169,7 @@ async function main(): Promise<void> {
               autoQueue: options["auto-queue"] === "true",
               stake: options["stake"] ? parseFloat(options["stake"]) : undefined,
               preset: options["preset"],
+              queueDelay: options["queue-delay"] ? parseInt(options["queue-delay"], 10) : undefined,
               provider: options["provider"],
               model: options["model"],
               ollamaUrl: options["ollama-url"],

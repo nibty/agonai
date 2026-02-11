@@ -252,6 +252,7 @@ bun run cli bot start --url <ws-url>     # Start bot with direct URL (no login)
   --auto-queue                           # Auto-join matchmaking queue
   --stake <amount>                       # Queue stake amount (default: 0)
   --preset <id>                          # Preset: lightning/classic/crossex/escalation/all
+  --queue-delay <sec>                    # Delay before rejoining queue (default: 300)
   --provider <name>                      # LLM provider: claude or ollama (default: claude)
   --model <name>                         # Model name for Ollama (default: llama3)
   --ollama-url <url>                     # Ollama API URL (default: http://localhost:11434)

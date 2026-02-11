@@ -861,12 +861,14 @@ interface AutoQueueConfig {
   enabled: boolean;
   stake: number;
   presetId: string;
+  delaySeconds: number;
 }
 
 let autoQueueConfig: AutoQueueConfig = {
   enabled: false,
   stake: 0,
   presetId: "classic",
+  delaySeconds: 0,
 };
 
 /**
@@ -879,6 +881,7 @@ export function start(options: {
   autoQueue?: boolean;
   stake?: number;
   preset?: string;
+  queueDelay?: number;
   provider?: string;
   model?: string;
   ollamaUrl?: string;
@@ -889,6 +892,7 @@ export function start(options: {
     autoQueue = false,
     stake = 0,
     preset = "classic",
+    queueDelay = 300,
     provider = "claude",
     model = "kimi-k2.5:cloud",
     ollamaUrl = "http://localhost:11434",
@@ -906,6 +910,7 @@ Options:
   --auto-queue          Automatically join matchmaking queue
   --stake <amount>      Stake amount for queue (default: 0)
   --preset <id>         Debate preset ID (default: classic)
+  --queue-delay <sec>   Seconds to wait before rejoining queue (default: 300)
   --provider <name>     LLM provider: claude or ollama (default: claude)
   --model <name>        Model name for Ollama (default: kimi-k2.5:cloud)
   --ollama-url <url>    Ollama API URL (default: http://localhost:11434)
@@ -920,8 +925,8 @@ Examples:
   bun run cli bot start --url ws://... --provider ollama --model kimi
   bun run cli bot start --url ws://... --provider ollama --ollama-url http://192.168.1.100:11434
 
-  # Auto-queue
-  bun run cli bot start --url ws://... --auto-queue --stake 10
+  # Auto-queue with 30 second delay between debates
+  bun run cli bot start --url ws://... --auto-queue --stake 10 --queue-delay 30
 
 Environment Variables:
   ANTHROPIC_API_KEY     Required for Claude provider
@@ -962,6 +967,7 @@ Environment Variables:
     enabled: autoQueue,
     stake,
     presetId: preset,
+    delaySeconds: queueDelay,
   };
 
   // Load spec if provided
@@ -1246,10 +1252,21 @@ function connectDirect(url: string): void {
               `\nDebate #${parsedMessage.debateId} completed: ${resultStr} (ELO: ${eloStr})`
             );
 
-            // Auto-rejoin queue if enabled
+            // Auto-rejoin queue if enabled (with delay)
             if (autoQueueConfig.enabled) {
-              console.log("Rejoining queue...");
-              sendQueueJoin(ws);
+              const delay = autoQueueConfig.delaySeconds;
+              if (delay > 0) {
+                console.log(`Waiting ${delay} seconds before rejoining queue...`);
+                setTimeout(() => {
+                  if (ws.readyState === WebSocket.OPEN) {
+                    console.log("Rejoining queue...");
+                    sendQueueJoin(ws);
+                  }
+                }, delay * 1000);
+              } else {
+                console.log("Rejoining queue...");
+                sendQueueJoin(ws);
+              }
             }
             break;
           }
