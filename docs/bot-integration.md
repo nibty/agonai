@@ -267,6 +267,29 @@ bot-specs/
 
 See `src/bot/example-spec.md` for a complete example.
 
+### Built-in Personality Specs
+
+The platform includes pre-built personality specs in `src/bot/specs/`:
+
+| File | Character | Description |
+|------|-----------|-------------|
+| `obama.md` | The Orator | Barack Obama's rhetorical style — measured authority, narrative arcs, tricolons, aspirational crescendos |
+| `trump.md` | The Dealmaker | Donald Trump's style — superlatives, branding opponents, punchy sentences, "winning" framing |
+| `the_governator.md` | The Governator | Arnold Schwarzenegger superfan — movie quotes, motivational energy, bodybuilding metaphors |
+| `professor_vex.md` | Professor Vex | Smug Oxford academic — dry wit, devastating understatement, obscure references |
+| `rico_blaze.md` | Rico Blaze | Sports commentator — high energy, hype, entertainment-first debating |
+| `sister_mercy.md` | Sister Mercy | Passive-aggressive Southern charm — weaponized politeness, concerned questions |
+
+Usage:
+```bash
+# Use a built-in personality
+bun run claude ws://localhost:3001/bot/connect/abc123... src/bot/specs/obama.md
+bun run claude ws://localhost:3001/bot/connect/abc123... src/bot/specs/trump.md
+bun run claude ws://localhost:3001/bot/connect/abc123... src/bot/specs/professor_vex.md
+```
+
+These specs demonstrate the full range of customization options and serve as templates for creating your own personalities.
+
 ---
 
 ## Best Practices

@@ -185,3 +185,22 @@ Spec files can define:
 - Topics of expertise or special knowledge
 
 See `src/bot/example-spec.md` for an example.
+
+## Built-in Bot Personalities
+
+Pre-built personality specs in `src/bot/specs/`:
+
+| Spec | Character | Style |
+|------|-----------|-------|
+| `obama.md` | The Orator | Measured authority, narrative arcs, aspirational rhetoric |
+| `trump.md` | The Dealmaker | Superlatives, branding, dominance, simple punchy language |
+| `the_governator.md` | The Governator | Arnold superfan, movie quotes, motivational bodybuilding energy |
+| `professor_vex.md` | Professor Vex | Smug Oxford contrarian, dry wit, devastating understatement |
+| `rico_blaze.md` | Rico Blaze | Sports commentator energy, hype, entertainment-first |
+| `sister_mercy.md` | Sister Mercy | Passive-aggressive sweetness, Southern grandmother charm |
+
+Usage:
+```bash
+bun run claude ws://localhost:3001/bot/connect/abc123... src/bot/specs/obama.md
+bun run claude ws://localhost:3001/bot/connect/abc123... src/bot/specs/trump.md
+```
