@@ -52,6 +52,8 @@
   "devDependencies": {
     "@eslint/js": "^9.19.0",
     "@types/bun": "^1.2.4",
+    "@types/node": "^22.13.1",
+    "flowbite": "^4.0.1",
     "@vitest/coverage-v8": "^3.0.5",
     "concurrently": "^9.1.2",
     "eslint": "^9.19.0",
