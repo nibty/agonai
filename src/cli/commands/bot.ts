@@ -212,6 +212,7 @@ function getSimpleResponse(
 // LLM provider configuration
 let currentProvider: LLMProvider = "claude";
 let anthropic: Anthropic | null = null;
+let claudeModel: string = "claude-sonnet-4-20250514";
 let ollamaConfig: OllamaConfig | null = null;
 let botSpec: string | null = null;
 
@@ -380,7 +381,7 @@ Word limit: ${word_limit.min}-${word_limit.max} words`;
       logger.debug({ attempt, maxRetries: RATE_LIMIT_MAX_RETRIES }, "Calling Claude API");
       const startTime = Date.now();
       const message = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
+        model: claudeModel,
         max_tokens: maxTokens,
         system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
@@ -989,7 +990,7 @@ export function start(options: {
     queueDelay = 300,
     waitForOpponent = false,
     provider = "claude",
-    model = "kimi-k2.5:cloud",
+    model,
     ollamaUrl = "http://localhost:11434",
   } = options;
 
@@ -1009,20 +1010,23 @@ Options:
   --queue-delay <sec>   Seconds to wait before rejoining queue (default: 300)
   --wait-for-opponent   Only join queue when another bot is waiting
   --provider <name>     LLM provider: claude or ollama (default: claude)
-  --model <name>        Model name for Ollama (default: kimi-k2.5:cloud)
+  --model <name>        Model name (Claude: claude-sonnet-4-20250514, claude-opus-4-20250514, etc.)
+                        (Ollama: llama3, mistral, etc.)
   --ollama-url <url>    Ollama API URL (default: http://localhost:11434)
 
 Examples:
-  # Claude (default)
+  # Claude with default model (claude-sonnet-4-20250514)
   bun run cli bot start --url ws://localhost:3001/bot/connect/abc123
   bun run cli bot start --url ws://... --spec ./my-spec.md
+
+  # Claude with Opus
+  bun run cli bot start --url ws://... --model claude-opus-4-20250514
 
   # Inline personality spec (no file needed)
   bun run cli bot start --url ws://... --spec-text "Be a know-it-all. Pompous and pretentious."
 
-  # Ollama with Kimi
-  bun run cli bot start --url ws://... --provider ollama
-  bun run cli bot start --url ws://... --provider ollama --model kimi
+  # Ollama
+  bun run cli bot start --url ws://... --provider ollama --model llama3
   bun run cli bot start --url ws://... --provider ollama --ollama-url http://192.168.1.100:11434
 
   # Auto-queue with 30 second delay between debates
@@ -1054,15 +1058,20 @@ Environment Variables:
       process.exit(1);
     }
     anthropic = new Anthropic();
-    logger.info({}, "Configured Claude provider");
+    // Set Claude model if provided (default: claude-sonnet-4-20250514)
+    if (model) {
+      claudeModel = model;
+    }
+    logger.info({ model: claudeModel }, "Configured Claude provider");
   } else if (currentProvider === "ollama") {
     // Configure Ollama
     const resolvedOllamaUrl = process.env["OLLAMA_URL"] || ollamaUrl;
+    const ollamaModel = model || "llama3";
     ollamaConfig = {
       baseUrl: resolvedOllamaUrl,
-      model: model,
+      model: ollamaModel,
     };
-    logger.info({ baseUrl: resolvedOllamaUrl, model }, "Configured Ollama provider");
+    logger.info({ baseUrl: resolvedOllamaUrl, model: ollamaModel }, "Configured Ollama provider");
   }
 
   // Configure auto-queue
@@ -1093,9 +1102,7 @@ Environment Variables:
   }
 
   const providerInfo =
-    currentProvider === "ollama"
-      ? `Ollama (${ollamaConfig?.model})`
-      : "Claude (claude-sonnet-4-20250514)";
+    currentProvider === "ollama" ? `Ollama (${ollamaConfig?.model})` : `Claude (${claudeModel})`;
   logger.info(
     { spec: spec ?? "none", autoQueue, stake, preset, provider: currentProvider },
     `Starting ${providerInfo} bot, connecting to WebSocket...`

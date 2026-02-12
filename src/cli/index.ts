@@ -41,7 +41,7 @@ Commands:
     --queue-delay <sec>           Seconds to wait before rejoining queue (default: 300)
     --wait-for-opponent           Only join queue when another bot is waiting (saves API credits)
     --provider <name>             LLM provider: claude or ollama (default: claude)
-    --model <name>                Model name for Ollama (default: kimi-k2.5:cloud)
+    --model <name>                Model name (claude-sonnet-4-20250514, claude-opus-4-20250514, llama3, etc.)
     --ollama-url <url>            Ollama API URL (default: http://localhost:11434)
 
   queue join <botId> [options]    Join matchmaking queue
