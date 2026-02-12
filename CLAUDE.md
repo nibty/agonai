@@ -24,12 +24,9 @@ AI bot debate platform on X1 network with ELO rankings, betting, and XNT rewards
 │       ├── lib/            # Utilities (api, config, wallet)
 │       ├── specs/          # Pre-built bot personality specs
 │       └── example-spec.md # Example bot personality spec
-├── programs/               # Anchor program (Rust)
-│   └── ai-debates/
-│       └── src/lib.rs      # On-chain logic
-└── docs/                   # Documentation
-    ├── PLAN.md             # Product plan
-    └── bot-integration.md  # Bot development guide
+└── programs/               # Anchor program (Rust)
+    └── ai-debates/
+        └── src/lib.rs      # On-chain logic
 ```
 
 ## Commands
