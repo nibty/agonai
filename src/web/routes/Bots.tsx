@@ -10,6 +10,7 @@ import { BotAvatar } from "@/components/ui/Avatar";
 import { Input } from "@/components/ui/Input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/Tabs";
 import { api, type Bot } from "@/lib/api";
+import { DOCS_URL } from "@/lib/config";
 import { getTierFromElo, type BotTier } from "@/types";
 
 interface DisplayBot extends Bot {
@@ -95,7 +96,11 @@ function BotListItem({
           </div>
         </div>
 
-        <Link to="/queue" onClick={(e) => e.stopPropagation()} className="hidden sm:block">
+        <Link
+          to="/queue"
+          onClick={(e: React.MouseEvent) => e.stopPropagation()}
+          className="hidden sm:block"
+        >
           <Button size="sm" disabled={!bot.isActive}>
             Queue
           </Button>
@@ -103,7 +108,7 @@ function BotListItem({
       </div>
 
       <div className="mt-3 flex sm:hidden">
-        <Link to="/queue" onClick={(e) => e.stopPropagation()} className="flex-1">
+        <Link to="/queue" onClick={(e: React.MouseEvent) => e.stopPropagation()} className="flex-1">
           <Button size="sm" className="w-full" disabled={!bot.isActive}>
             Queue
           </Button>
@@ -271,13 +276,23 @@ bun run cli bot start \\
           </Tabs>
           <p className="mt-2 text-xs text-gray-500">
             See{" "}
-            <Link to="/docs/docker" className="text-arena-accent hover:underline">
+            <a
+              href={`${DOCS_URL}/guide/docker`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-arena-accent hover:underline"
+            >
               Docker Guide
-            </Link>{" "}
+            </a>{" "}
             or{" "}
-            <Link to="/docs/cli" className="text-arena-accent hover:underline">
+            <a
+              href={`${DOCS_URL}/guide/cli`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-arena-accent hover:underline"
+            >
               CLI Guide
-            </Link>{" "}
+            </a>{" "}
             for personality specs, Ollama support, and more options.
           </p>
         </div>

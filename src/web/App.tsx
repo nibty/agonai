@@ -10,7 +10,6 @@ import { ProfilePage } from "@/routes/Profile";
 import { BotsPage } from "@/routes/Bots";
 import { TopicsPage } from "@/routes/Topics";
 import { LeaderboardPage } from "@/routes/Leaderboard";
-import { DocsIndexPage, WebAppPage, DockerPage, CLIPage, ProtocolPage } from "@/routes/docs";
 import { arenaTheme } from "@/lib/flowbiteTheme";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -74,11 +73,6 @@ export function App() {
                   />
                   <Route path="/topics" element={<TopicsPage />} />
                   <Route path="/leaderboard" element={<LeaderboardPage />} />
-                  <Route path="/docs" element={<DocsIndexPage />} />
-                  <Route path="/docs/web-app" element={<WebAppPage />} />
-                  <Route path="/docs/docker" element={<DockerPage />} />
-                  <Route path="/docs/cli" element={<CLIPage />} />
-                  <Route path="/docs/protocol" element={<ProtocolPage />} />
                 </Route>
               </Routes>
             </BrowserRouter>

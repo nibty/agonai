@@ -1,0 +1,223 @@
+/**
+ * AgonAI Dark Theme
+ * Based on Dark Reader-inspired warm greenish dark theme
+ */
+
+:root {
+  /* Force dark mode by default */
+  color-scheme: dark;
+
+  /* Brand colors */
+  --vp-c-brand-1: hsl(145 41% 36%);
+  --vp-c-brand-2: hsl(145 46% 45%);
+  --vp-c-brand-3: hsl(145 46% 58%);
+  --vp-c-brand-soft: hsl(145 41% 36% / 0.14);
+
+  /* Background */
+  --vp-c-bg: hsl(120 25% 3%);
+  --vp-c-bg-alt: hsl(120 27% 6%);
+  --vp-c-bg-elv: hsl(120 20% 8%);
+  --vp-c-bg-soft: hsl(120 20% 8%);
+
+  /* Borders */
+  --vp-c-border: hsl(120 10% 20%);
+  --vp-c-divider: hsl(120 10% 15%);
+  --vp-c-gutter: hsl(120 25% 3%);
+
+  /* Text */
+  --vp-c-text-1: hsl(40 10% 87%);
+  --vp-c-text-2: hsl(40 8% 65%);
+  --vp-c-text-3: hsl(40 8% 55%);
+
+  /* Neutral colors */
+  --vp-c-neutral: hsl(40 10% 87%);
+  --vp-c-neutral-inverse: hsl(120 25% 3%);
+
+  /* Default theme semantic colors */
+  --vp-c-default-1: hsl(120 10% 20%);
+  --vp-c-default-2: hsl(120 10% 15%);
+  --vp-c-default-3: hsl(120 10% 12%);
+  --vp-c-default-soft: hsl(120 10% 12% / 0.5);
+
+  /* Tip - using brand green */
+  --vp-c-tip-1: hsl(145 41% 36%);
+  --vp-c-tip-2: hsl(145 46% 45%);
+  --vp-c-tip-3: hsl(145 46% 58%);
+  --vp-c-tip-soft: hsl(145 41% 20% / 0.3);
+
+  /* Warning - warm amber */
+  --vp-c-warning-1: hsl(45 93% 47%);
+  --vp-c-warning-2: hsl(45 93% 55%);
+  --vp-c-warning-3: hsl(45 93% 65%);
+  --vp-c-warning-soft: hsl(45 93% 47% / 0.16);
+
+  /* Danger - muted red */
+  --vp-c-danger-1: hsl(0 62% 50%);
+  --vp-c-danger-2: hsl(0 62% 58%);
+  --vp-c-danger-3: hsl(0 62% 65%);
+  --vp-c-danger-soft: hsl(0 62% 50% / 0.16);
+
+  /* Code blocks */
+  --vp-code-block-bg: hsl(120 20% 5%);
+  --vp-code-block-divider-color: hsl(120 10% 15%);
+  --vp-code-line-highlight-color: hsl(145 41% 36% / 0.15);
+  --vp-code-line-number-color: hsl(40 8% 40%);
+  --vp-code-line-diff-add-color: hsl(145 41% 36% / 0.2);
+  --vp-code-line-diff-add-symbol-color: hsl(145 46% 58%);
+  --vp-code-line-diff-remove-color: hsl(0 62% 50% / 0.2);
+  --vp-code-line-diff-remove-symbol-color: hsl(0 62% 58%);
+  --vp-code-line-warning-color: hsl(45 93% 47% / 0.16);
+  --vp-code-line-error-color: hsl(0 62% 50% / 0.16);
+  --vp-code-copy-code-border-color: hsl(120 10% 20%);
+  --vp-code-copy-code-bg: hsl(120 20% 8%);
+  --vp-code-copy-code-hover-border-color: hsl(120 10% 30%);
+  --vp-code-copy-code-hover-bg: hsl(120 20% 12%);
+  --vp-code-copy-code-active-text: hsl(40 10% 87%);
+  --vp-code-tab-divider: hsl(120 10% 15%);
+  --vp-code-tab-text-color: hsl(40 8% 55%);
+  --vp-code-tab-active-text-color: hsl(40 10% 87%);
+  --vp-code-tab-hover-text-color: hsl(40 10% 87%);
+  --vp-code-tab-active-bar-color: hsl(145 41% 36%);
+
+  /* Inline code */
+  --vp-c-mute: hsl(120 20% 10%);
+  --vp-code-color: hsl(145 46% 58%);
+
+  /* Sidebar */
+  --vp-sidebar-bg-color: hsl(120 25% 3%);
+
+  /* Nav */
+  --vp-nav-bg-color: hsl(120 25% 3%);
+
+  /* Local nav (mobile) */
+  --vp-local-nav-bg-color: hsl(120 25% 3%);
+
+  /* Home hero */
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(
+    135deg,
+    hsl(145 46% 58%) 0%,
+    hsl(145 41% 36%) 100%
+  );
+  --vp-home-hero-image-background-image: linear-gradient(
+    135deg,
+    hsl(145 41% 36% / 0.3) 0%,
+    hsl(120 25% 3% / 0.3) 100%
+  );
+  --vp-home-hero-image-filter: blur(44px);
+
+  /* Buttons */
+  --vp-button-brand-border: transparent;
+  --vp-button-brand-text: hsl(120 25% 3%);
+  --vp-button-brand-bg: hsl(145 41% 36%);
+  --vp-button-brand-hover-border: transparent;
+  --vp-button-brand-hover-text: hsl(120 25% 3%);
+  --vp-button-brand-hover-bg: hsl(145 46% 45%);
+  --vp-button-brand-active-border: transparent;
+  --vp-button-brand-active-text: hsl(120 25% 3%);
+  --vp-button-brand-active-bg: hsl(145 46% 50%);
+
+  --vp-button-alt-border: hsl(120 10% 20%);
+  --vp-button-alt-text: hsl(40 10% 87%);
+  --vp-button-alt-bg: hsl(120 20% 8%);
+  --vp-button-alt-hover-border: hsl(120 10% 30%);
+  --vp-button-alt-hover-text: hsl(40 10% 87%);
+  --vp-button-alt-hover-bg: hsl(120 20% 12%);
+  --vp-button-alt-active-border: hsl(120 10% 35%);
+  --vp-button-alt-active-text: hsl(40 10% 87%);
+  --vp-button-alt-active-bg: hsl(120 20% 15%);
+
+  /* Carbon ads (if used) */
+  --vp-carbon-ads-text-color: hsl(40 8% 65%);
+  --vp-carbon-ads-poweredby-color: hsl(40 8% 45%);
+  --vp-carbon-ads-bg-color: hsl(120 20% 8%);
+  --vp-carbon-ads-hover-text-color: hsl(40 10% 87%);
+  --vp-carbon-ads-hover-poweredby-color: hsl(40 10% 87%);
+
+  /* Badge */
+  --vp-badge-info-border: transparent;
+  --vp-badge-info-text: hsl(40 10% 87%);
+  --vp-badge-info-bg: hsl(120 10% 15%);
+  --vp-badge-tip-border: transparent;
+  --vp-badge-tip-text: hsl(145 46% 58%);
+  --vp-badge-tip-bg: hsl(145 41% 20% / 0.3);
+  --vp-badge-warning-border: transparent;
+  --vp-badge-warning-text: hsl(45 93% 65%);
+  --vp-badge-warning-bg: hsl(45 93% 47% / 0.16);
+  --vp-badge-danger-border: transparent;
+  --vp-badge-danger-text: hsl(0 62% 65%);
+  --vp-badge-danger-bg: hsl(0 62% 50% / 0.16);
+
+  /* Custom props */
+  --vp-custom-block-info-border: hsl(120 10% 20%);
+  --vp-custom-block-info-bg: hsl(120 20% 8%);
+  --vp-custom-block-info-code-bg: hsl(120 20% 5%);
+}
+
+/* Override light mode styles since we're dark-only */
+.dark,
+html {
+  color-scheme: dark;
+}
+
+/* Make sure the HTML uses dark mode */
+html:not(.dark) {
+  --vp-c-bg: hsl(120 25% 3%);
+  --vp-c-bg-alt: hsl(120 27% 6%);
+  --vp-c-bg-elv: hsl(120 20% 8%);
+  --vp-c-bg-soft: hsl(120 20% 8%);
+  --vp-c-text-1: hsl(40 10% 87%);
+  --vp-c-text-2: hsl(40 8% 65%);
+  --vp-c-text-3: hsl(40 8% 55%);
+}
+
+/* Feature cards on home page */
+.VPFeature {
+  background-color: hsl(120 27% 6%) !important;
+  border-color: hsl(120 10% 20%) !important;
+}
+
+.VPFeature:hover {
+  border-color: hsl(145 41% 36%) !important;
+}
+
+/* Table styling */
+table {
+  border-collapse: collapse;
+}
+
+th {
+  background-color: hsl(120 20% 8%);
+}
+
+tr:nth-child(2n) {
+  background-color: hsl(120 25% 4%);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(120 25% 3%);
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(120 10% 20%);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(145 41% 36%);
+}
+
+/* Links */
+.vp-doc a {
+  color: hsl(145 46% 58%);
+}
+
+.vp-doc a:hover {
+  color: hsl(145 50% 65%);
+}
