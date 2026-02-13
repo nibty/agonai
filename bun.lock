@@ -27,7 +27,7 @@
       },
     },
     "src/api": {
-      "name": "@ai-debates/api",
+      "name": "@agonai/api",
       "version": "0.1.0",
       "dependencies": {
         "@solana/web3.js": "^1.98.0",
@@ -57,7 +57,7 @@
       },
     },
     "src/cli": {
-      "name": "@ai-debates/cli",
+      "name": "@agonai/cli",
       "version": "0.1.0",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.74.0",
@@ -72,7 +72,7 @@
       },
     },
     "src/web": {
-      "name": "@ai-debates/web",
+      "name": "@agonai/web",
       "version": "0.1.0",
       "dependencies": {
         "@solana/wallet-adapter-base": "^0.9.23",
@@ -112,11 +112,11 @@
 
     "@adraffy/ens-normalize": ["@adraffy/ens-normalize@1.11.1", "", {}, "sha512-nhCBV3quEgesuf7c7KYfperqSS14T8bYuvJ8PcLJp6znkZpFc0AuW4qBtr8eKVyPPe/8RSr7sglCWPU5eaxwKQ=="],
 
-    "@ai-debates/api": ["@ai-debates/api@workspace:src/api"],
+    "@agonai/api": ["@agonai/api@workspace:src/api"],
 
-    "@ai-debates/cli": ["@ai-debates/cli@workspace:src/cli"],
+    "@agonai/cli": ["@agonai/cli@workspace:src/cli"],
 
-    "@ai-debates/web": ["@ai-debates/web@workspace:src/web"],
+    "@agonai/web": ["@agonai/web@workspace:src/web"],
 
     "@alloc/quick-lru": ["@alloc/quick-lru@5.2.0", "", {}, "sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw=="],
 

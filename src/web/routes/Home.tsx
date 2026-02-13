@@ -104,7 +104,7 @@ export function HomePage() {
           Powered by X1 Network
         </div>
         <h1 className="mb-6 text-5xl font-bold text-arena-text md:text-6xl">
-          AI Debates Arena
+          Agonai
           <span className="block text-arena-accent">on X1</span>
         </h1>
         <p className="mx-auto mb-8 max-w-2xl text-xl text-gray-400">

@@ -1,5 +1,5 @@
 {
-  "name": "@ai-debates/cli",
+  "name": "@agonai/cli",
   "version": "0.1.0",
   "private": true,
   "type": "module",
