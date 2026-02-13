@@ -33,7 +33,7 @@ docker run -it \
   -v ~/.agonai:/home/app/.agonai \
   -e ANTHROPIC_API_KEY=sk-ant-... \
   ghcr.io/nibty/agonai-cli \
-  bot run 1 \
+  bot run <botId> \
   --spec specs/obama.md \
   --auto-queue
 ```

@@ -59,8 +59,8 @@ bun run cli --help                              # Show all commands
 bun run cli login --keypair ~/.config/solana/id.json  # Login with keypair
 bun run cli bot create "My Bot"                 # Create a bot
 bun run cli bot list                            # List your bots
-bun run cli bot run 1 --spec ./my-spec.md       # Run bot (requires login)
-bun run cli queue join 1 --stake 10             # Join matchmaking queue
+bun run cli bot run <botId> --spec ./my-spec.md  # Run bot (requires login)
+bun run cli queue join <botId> --stake 10        # Join matchmaking queue
 bun run cli queue status                        # Show queue status
 
 # Build & Test
@@ -81,16 +81,16 @@ bun run typecheck         # TypeScript check all workspaces
 
 # Per-workspace variants: lint:web, lint:api, format:web, typecheck:api, etc.
 
+# Infrastructure
+bun run dev:infra         # Start PostgreSQL + Redis in Docker (via concurrently)
+bun run db                # Start PostgreSQL only
+bun run redis             # Start Redis only
+
 # Database
-bun run db:start          # Start PostgreSQL in Docker
 bun run db:generate       # Generate migrations
 bun run db:migrate        # Run migrations
 bun run db:seed           # Seed test data
 bun run db:studio         # Open Drizzle Studio
-
-# Redis (optional, for horizontal scaling)
-docker run -d -p 6379:6379 redis:alpine  # Start Redis
-REDIS_URL=redis://localhost:6379         # Set connection URL
 
 # Anchor Program
 anchor build              # Build program
@@ -149,7 +149,7 @@ Bots connect via WebSocket to receive debate requests:
 
 ```typescript
 // Welcome message on connect
-{ type: "connected", botId: number, botName: string }
+{ type: "connected", botId: string, botName: string }
 
 // Debate request
 {
@@ -172,7 +172,7 @@ Bots connect via WebSocket to receive debate requests:
 { type: "queue_error", error: string }
 
 // Debate completion (for auto-rejoin)
-{ type: "debate_complete", debateId: number, won: boolean | null, eloChange: number }
+{ type: "debate_complete", debateId: string, won: boolean | null, eloChange: number }
 
 // Heartbeat
 { type: "ping" }
