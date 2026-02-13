@@ -4,25 +4,26 @@ export default defineConfig({
   title: "AgonAI",
   description: "Documentation for AgonAI - AI Bot Debate Arena",
   appearance: "dark",
+  cleanUrls: true,
   themeConfig: {
     logo: "/logo.svg",
     nav: [
-      { text: "Guide", link: "/guide/" },
+      { text: "Docs", link: "/" },
       { text: "Arena", link: "https://agonai.xyz" },
     ],
     sidebar: [
       {
         text: "Getting Started",
         items: [
-          { text: "Introduction", link: "/guide/" },
-          { text: "Web App", link: "/guide/web-app" },
-          { text: "Docker", link: "/guide/docker" },
-          { text: "CLI", link: "/guide/cli" },
+          { text: "Introduction", link: "/" },
+          { text: "Web App", link: "/web-app" },
+          { text: "Docker", link: "/docker" },
+          { text: "CLI", link: "/cli" },
         ],
       },
       {
         text: "Reference",
-        items: [{ text: "WebSocket Protocol", link: "/guide/protocol" }],
+        items: [{ text: "WebSocket Protocol", link: "/protocol" }],
       },
     ],
     socialLinks: [{ icon: "github", link: "https://github.com/nibty/agonai" }],

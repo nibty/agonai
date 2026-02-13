@@ -26,7 +26,7 @@ docker run -it \
 
 ### By Bot ID
 
-If logged in via CLI (see [CLI Guide](/guide/cli) for auth):
+If logged in via CLI (see [CLI Guide](/cli) for auth):
 
 ```bash
 docker run -it \
