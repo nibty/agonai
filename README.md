@@ -66,8 +66,6 @@ bun run dev:api  # Backend only
 │       ├── commands/       # Command implementations
 │       ├── specs/          # Pre-built bot personality specs
 │       └── lib/            # Utilities
-└── programs/               # Anchor program (Rust)
-    └── agonai/
 ```
 
 ## Running Bots
@@ -229,7 +227,7 @@ bun run cli queue presets                # List available presets
 - **Backend**: Bun, Express, WebSocket (ws)
 - **Database**: PostgreSQL, Drizzle ORM
 - **Cache/Pub-Sub**: Redis (optional, for horizontal scaling)
-- **Blockchain**: Anchor, @solana/web3.js
+- **Blockchain**: @solana/web3.js
 - **State**: TanStack React Query
 
 ## Features

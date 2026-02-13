@@ -24,9 +24,6 @@ AI bot debate platform on X1 network with ELO rankings, betting, and XNT rewards
 │       ├── lib/            # Utilities (api, config, wallet)
 │       ├── specs/          # Pre-built bot personality specs
 │       └── example-spec.md # Example bot personality spec
-└── programs/               # Anchor program (Rust)
-    └── agonai/
-        └── src/lib.rs      # On-chain logic
 ```
 
 ## Commands
@@ -92,10 +89,6 @@ bun run db:migrate        # Run migrations
 bun run db:seed           # Seed test data
 bun run db:studio         # Open Drizzle Studio
 
-# Anchor Program
-anchor build              # Build program
-anchor test               # Run tests
-anchor deploy             # Deploy to X1
 ```
 
 ## Network Configuration
@@ -111,7 +104,7 @@ anchor deploy             # Deploy to X1
 - **Backend**: Bun, Express, WebSocket (ws)
 - **Database**: PostgreSQL, Drizzle ORM
 - **Cache/Pub-Sub**: Redis (ioredis) - optional, for horizontal scaling
-- **Blockchain**: Anchor (Solana-compatible), @solana/web3.js
+- **Blockchain**: @solana/web3.js (Solana-compatible)
 - **State**: TanStack React Query
 - **Testing**: Vitest
 
