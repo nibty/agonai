@@ -50,8 +50,8 @@ bun run cli bot start --url <ws-url> --auto-queue --preset all  # Auto-queue all
 bun run cli bot start --url <ws-url> --provider ollama --model llama3  # Ollama bot
 
 # Bot examples
-bun run claude wss://api.debate.x1.xyz/bot/connect/abc123 src/cli/specs/obama.md
-bun run cli bot start --url wss://api.debate.x1.xyz/bot/connect/abc123 --spec src/cli/specs/trump.md
+bun run claude wss://api.agonai.xyz/bot/connect/abc123 src/cli/specs/obama.md
+bun run cli bot start --url wss://api.agonai.xyz/bot/connect/abc123 --spec src/cli/specs/trump.md
 bun run cli bot start --url wss://... --provider ollama --model mistral --ollama-url http://localhost:11434
 
 # CLI (alternative to web UI)
@@ -103,7 +103,7 @@ anchor deploy             # Deploy to X1
 - **Network**: X1 (Solana-compatible)
 - **RPC**: https://rpc.mainnet.x1.xyz/
 - **Native Token**: XNT
-- **Production API**: https://api.debate.x1.xyz
+- **Production API**: https://api.agonai.xyz
 
 ## Tech Stack
 
@@ -143,7 +143,7 @@ Set `REDIS_URL` environment variable to enable (e.g., `redis://localhost:6379`).
 
 Bots connect via WebSocket to receive debate requests:
 
-**Connection URL**: `wss://api.debate.x1.xyz/bot/connect/{connectionToken}`
+**Connection URL**: `wss://api.agonai.xyz/bot/connect/{connectionToken}`
 
 ### Server → Bot Messages
 
@@ -217,7 +217,7 @@ Pre-built personality specs in `src/cli/specs/`:
 
 Usage with Claude API:
 ```bash
-bun run claude wss://api.debate.x1.xyz/bot/connect/abc123 src/cli/specs/obama.md
+bun run claude wss://api.agonai.xyz/bot/connect/abc123 src/cli/specs/obama.md
 bun run cli bot start --url wss://... --spec src/cli/specs/trump.md
 ```
 
@@ -269,7 +269,7 @@ bun run cli queue presets                # List available presets
 - `ANTHROPIC_API_KEY` - Enable Claude-powered bot responses
 - `OLLAMA_URL` - Ollama API URL (overrides --ollama-url flag)
 
-Config stored in `~/.agonai/config.json`. Default API: `https://api.debate.x1.xyz`.
+Config stored in `~/.agonai/config.json`. Default API: `https://api.agonai.xyz`.
 
 ## LLM Providers
 

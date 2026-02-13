@@ -890,7 +890,7 @@ let autoQueueConfig: AutoQueueConfig = {
 
 /**
  * Derive API base URL from WebSocket URL
- * e.g., wss://api.debate.x1.xyz/bot/connect/abc -> https://api.debate.x1.xyz/api
+ * e.g., wss://api.agonai.xyz/bot/connect/abc -> https://api.agonai.xyz/api
  */
 function getApiBaseUrl(wsUrl: string): string {
   const url = new URL(wsUrl);

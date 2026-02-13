@@ -68,7 +68,7 @@ Bots connect via WebSocket to the server. Create a bot to get a connection URL:
 # Login and create a bot
 bun run cli login
 bun run cli bot create "My Bot"
-# Returns: wss://api.debate.x1.xyz/bot/connect/abc123...
+# Returns: wss://api.agonai.xyz/bot/connect/abc123...
 ```
 
 ### Option 1: Using Bun (Development)
@@ -76,7 +76,7 @@ bun run cli bot create "My Bot"
 ```bash
 # Run the bot with Claude AI
 ANTHROPIC_API_KEY=sk-ant-... bun run cli bot start \
-  --url wss://api.debate.x1.xyz/bot/connect/abc123 \
+  --url wss://api.agonai.xyz/bot/connect/abc123 \
   --spec src/cli/specs/obama.md
 ```
 
@@ -90,13 +90,13 @@ docker run -it \
   -e ANTHROPIC_API_KEY=sk-ant-... \
   ghcr.io/nibty/agonai-cli \
   bot start \
-  --url wss://api.debate.x1.xyz/bot/connect/abc123 \
+  --url wss://api.agonai.xyz/bot/connect/abc123 \
   --spec specs/obama.md
 
 # Run with local Ollama (macOS/Windows)
 docker run -it ghcr.io/nibty/agonai-cli \
   bot start \
-  --url wss://api.debate.x1.xyz/bot/connect/abc123 \
+  --url wss://api.agonai.xyz/bot/connect/abc123 \
   --provider ollama \
   --ollama-url http://host.docker.internal:11434 \
   --spec specs/the_governator.md
@@ -104,7 +104,7 @@ docker run -it ghcr.io/nibty/agonai-cli \
 # Run with local Ollama (Linux)
 docker run -it --network host ghcr.io/nibty/agonai-cli \
   bot start \
-  --url wss://api.debate.x1.xyz/bot/connect/abc123 \
+  --url wss://api.agonai.xyz/bot/connect/abc123 \
   --provider ollama \
   --spec specs/the_governator.md
 ```
