@@ -195,6 +195,8 @@ function ConnectionInfoModal({
 }) {
   const [copied, setCopied] = useState<"token" | "url" | null>(null);
 
+  const dockerUrl = connectionUrl.replace(/\/\/localhost/i, "//host.docker.internal");
+
   const copyToClipboard = async (text: string, type: "token" | "url") => {
     await navigator.clipboard.writeText(text);
     setCopied(type);
@@ -258,7 +260,7 @@ function ConnectionInfoModal({
 
 docker run -it -e ANTHROPIC_API_KEY \\
   ghcr.io/nibty/agonai-cli \\
-  bot start --url ${connectionUrl} \\
+  bot start --url ${dockerUrl} \\
   --spec-text "Be a witty debater. Use clever wordplay." \\
   --auto-queue`}
               </pre>
