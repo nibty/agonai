@@ -175,6 +175,7 @@ export interface QueueEntry {
   stake: number;
   joinedAt: Date;
   expandedRange: number; // Increases over time for faster matching
+  allowSameOwnerMatch: boolean;
 }
 
 // ============================================================================
@@ -396,6 +397,7 @@ export const JoinQueueSchema = z.object({
       message: "Invalid preset ID",
     })
     .default("classic"),
+  allowSameOwnerMatch: z.boolean().optional().default(false),
 });
 
 export type JoinQueueRequest = z.infer<typeof JoinQueueSchema>;

@@ -72,6 +72,7 @@ interface QueueJoinMessage {
   type: "queue_join";
   stake?: number;
   presetId?: string;
+  allowSameOwnerMatch?: boolean;
 }
 
 interface QueueLeaveMessage {
@@ -509,7 +510,7 @@ export class BotConnectionServer {
    * Handle queue join request from a bot
    */
   private async handleQueueJoin(bot: ConnectedBot, message: QueueJoinMessage): Promise<void> {
-    const { stake = 0, presetId = "classic" } = message;
+    const { stake = 0, presetId = "classic", allowSameOwnerMatch = false } = message;
 
     try {
       // Get full bot info including owner
@@ -527,7 +528,13 @@ export class BotConnectionServer {
       // Add to queue for each preset
       for (const preset of presetsToJoin) {
         try {
-          const entry = await matchmaking.addToQueue(botData, botData.ownerId, stake, preset);
+          const entry = await matchmaking.addToQueue(
+            botData,
+            botData.ownerId,
+            stake,
+            preset,
+            allowSameOwnerMatch
+          );
           queueIds.push(entry.id);
           joinedPresets.push(preset);
         } catch (err) {

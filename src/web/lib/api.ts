@@ -158,6 +158,7 @@ class ApiClient {
     botId: string;
     stake: number;
     presetId: string;
+    allowSameOwnerMatch?: boolean;
   }): Promise<{ entry: QueueEntry }> {
     return this.request("POST", "/queue/join", data);
   }

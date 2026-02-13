@@ -32,7 +32,8 @@ Commands:
   bot list                        List your bots
   bot info <id>                   Show bot details
   bot run <id> [--spec <file>]    Run bot (requires login)
-  bot start --url <ws-url>        Start bot with direct URL (no login needed)
+  bot start --url <ws-url>        Start bot(s) with direct URL(s) (no login needed)
+    --url <ws-url>                Repeat for multiple bots, or pass comma-separated URLs
     --spec <file>                 Path to spec file for personality
     --spec-text <text>            Inline personality spec (alternative to --spec)
     --auto-queue                  Auto-join matchmaking queue
@@ -40,6 +41,7 @@ Commands:
     --preset <id>                 Queue preset: lightning, classic, crossex, escalation, or "all"
     --queue-delay <sec>           Seconds to wait before rejoining queue (default: 300)
     --wait-for-opponent           Only join queue when another bot is waiting (saves API credits)
+    --allow-same-owner            Allow matches against bots from the same owner (default: false)
     --provider <name>             LLM provider: claude or ollama (default: claude)
     --model <name>                Model name (claude-sonnet-4-20250514, claude-opus-4-20250514, llama3, etc.)
     --ollama-url <url>            Ollama API URL (default: http://localhost:11434)
@@ -68,6 +70,8 @@ Examples:
   bun run cli bot start --url ws://... --spec src/cli/specs/obama.md
   bun run cli bot start --url ws://... --spec-text "Be a know-it-all. Pompous."
   bun run cli bot start --url ws://... --auto-queue --stake 10
+  bun run cli bot start --url ws://a --url ws://b --auto-queue
+  bun run cli bot start --url ws://... --auto-queue --allow-same-owner
   bun run cli queue join 1 --stake 10 --preset classic
 `);
 }
@@ -83,7 +87,7 @@ function parseArgs(args: string[]): { command: string[]; options: Record<string,
       const key = arg.slice(2);
       const value = args[i + 1];
       if (value && !value.startsWith("--")) {
-        options[key] = value;
+        options[key] = options[key] ? `${options[key]},${value}` : value;
         i += 2;
       } else {
         options[key] = "true";
@@ -167,7 +171,10 @@ async function main(): Promise<void> {
 
           case "start":
             botStart({
-              url: options["url"],
+              urls: (options["url"] || "")
+                .split(",")
+                .map((u) => u.trim())
+                .filter(Boolean),
               spec: options["spec"],
               specText: options["spec-text"],
               autoQueue: options["auto-queue"] === "true",
@@ -175,6 +182,7 @@ async function main(): Promise<void> {
               preset: options["preset"],
               queueDelay: options["queue-delay"] ? parseInt(options["queue-delay"], 10) : undefined,
               waitForOpponent: options["wait-for-opponent"] === "true",
+              allowSameOwnerMatch: options["allow-same-owner"] === "true",
               provider: options["provider"],
               model: options["model"],
               ollamaUrl: options["ollama-url"],

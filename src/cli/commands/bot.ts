@@ -661,7 +661,7 @@ function connect(url: string): void {
   logger.info({ url }, "Connecting to WebSocket");
 
   const ws = new WebSocket(url);
-  activeWs = ws;
+  activeSockets.add(ws);
   let reconnectAttempts = 0;
   const maxReconnectDelay = 30000;
 
@@ -850,6 +850,7 @@ function connect(url: string): void {
 
   ws.on("close", (code, reason) => {
     logger.info({ code, reason: reason.toString() }, "Disconnected");
+    activeSockets.delete(ws);
 
     // Don't reconnect if shutting down
     if (isShuttingDown) {
@@ -861,7 +862,8 @@ function connect(url: string): void {
 
     const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), maxReconnectDelay);
     reconnectAttempts++;
-    reconnectTimeout = setTimeout(() => connect(url), delay);
+    const t = setTimeout(() => connect(url), delay);
+    reconnectTimeouts.add(t);
   });
 
   ws.on("error", (error) => {
@@ -876,6 +878,7 @@ interface AutoQueueConfig {
   presetId: string;
   delaySeconds: number;
   waitForOpponent: boolean;
+  allowSameOwnerMatch: boolean;
   apiBaseUrl: string;
 }
 
@@ -885,6 +888,7 @@ let autoQueueConfig: AutoQueueConfig = {
   presetId: "classic",
   delaySeconds: 0,
   waitForOpponent: false,
+  allowSameOwnerMatch: false,
   apiBaseUrl: "",
 };
 
@@ -968,7 +972,7 @@ async function waitForOpponentAndJoin(ws: WebSocket): Promise<void> {
  * This is the main entrypoint for K8s deployments with pre-registered bots
  */
 export function start(options: {
-  url: string;
+  urls: string[];
   spec?: string;
   specText?: string;
   autoQueue?: boolean;
@@ -976,12 +980,13 @@ export function start(options: {
   preset?: string;
   queueDelay?: number;
   waitForOpponent?: boolean;
+  allowSameOwnerMatch?: boolean;
   provider?: string;
   model?: string;
   ollamaUrl?: string;
 }): void {
   const {
-    url,
+    urls,
     spec,
     specText,
     autoQueue = false,
@@ -989,19 +994,20 @@ export function start(options: {
     preset = "classic",
     queueDelay = 300,
     waitForOpponent = false,
+    allowSameOwnerMatch = false,
     provider = "claude",
     model,
     ollamaUrl = "http://localhost:11434",
   } = options;
 
-  // Validate URL
-  if (!url) {
-    logger.error({}, "WebSocket URL required. Use --url <ws-url>");
+  // Validate URLs
+  if (!urls || urls.length === 0) {
+    logger.error({}, "At least one WebSocket URL is required. Use --url <ws-url>");
     console.log(`
-Usage: bun run cli bot start --url <ws-url> [options]
+Usage: bun run cli bot start --url <ws-url> [--url <ws-url> ...] [options]
 
 Options:
-  --url <ws-url>        WebSocket connection URL (required)
+  --url <ws-url>        WebSocket connection URL (required, repeatable)
   --spec <file>         Path to spec file or directory
   --spec-text <text>    Inline personality spec (alternative to --spec)
   --auto-queue          Automatically join matchmaking queue
@@ -1009,6 +1015,7 @@ Options:
   --preset <id>         Debate preset ID (default: classic)
   --queue-delay <sec>   Seconds to wait before rejoining queue (default: 300)
   --wait-for-opponent   Only join queue when another bot is waiting
+  --allow-same-owner    Allow matches against your own bots (default: false)
   --provider <name>     LLM provider: claude or ollama (default: claude)
   --model <name>        Model name (Claude: claude-sonnet-4-20250514, claude-opus-4-20250514, etc.)
                         (Ollama: llama3, mistral, etc.)
@@ -1074,6 +1081,12 @@ Environment Variables:
     logger.info({ baseUrl: resolvedOllamaUrl, model: ollamaModel }, "Configured Ollama provider");
   }
 
+  const primaryUrl = urls[0];
+  if (!primaryUrl) {
+    logger.error({}, "At least one valid WebSocket URL is required");
+    process.exit(1);
+  }
+
   // Configure auto-queue
   autoQueueConfig = {
     enabled: autoQueue,
@@ -1081,7 +1094,8 @@ Environment Variables:
     presetId: preset,
     delaySeconds: queueDelay,
     waitForOpponent,
-    apiBaseUrl: getApiBaseUrl(url),
+    allowSameOwnerMatch,
+    apiBaseUrl: getApiBaseUrl(primaryUrl),
   };
 
   // Load spec if provided (specText takes precedence over spec file)
@@ -1104,13 +1118,27 @@ Environment Variables:
   const providerInfo =
     currentProvider === "ollama" ? `Ollama (${ollamaConfig?.model})` : `Claude (${claudeModel})`;
   logger.info(
-    { spec: spec ?? "none", autoQueue, stake, preset, provider: currentProvider },
-    `Starting ${providerInfo} bot, connecting to WebSocket...`
+    {
+      spec: spec ?? "none",
+      autoQueue,
+      stake,
+      preset,
+      provider: currentProvider,
+      urlCount: urls.length,
+      allowSameOwnerMatch,
+    },
+    `Starting ${providerInfo} bot(s), connecting to WebSockets...`
   );
   if (autoQueue) {
-    logger.info({ stake, preset }, `Auto-queue enabled (stake: ${stake}, preset: ${preset})`);
+    logger.info(
+      { stake, preset, allowSameOwnerMatch },
+      `Auto-queue enabled (stake: ${stake}, preset: ${preset}, allowSameOwnerMatch: ${allowSameOwnerMatch})`
+    );
   }
-  connectDirect(url);
+
+  for (const wsUrl of urls) {
+    connectDirect(wsUrl);
+  }
 }
 
 /**
@@ -1119,26 +1147,83 @@ Environment Variables:
 function sendQueueJoin(ws: WebSocket): void {
   if (ws.readyState !== WebSocket.OPEN) return;
 
+  const url = wsToUrl.get(ws) ?? "unknown";
+  if (queuedWsUrl || queueJoinPendingUrl) {
+    logger.debug(
+      { queuedWsUrl, queueJoinPendingUrl, requester: url },
+      "Queue slot already occupied"
+    );
+    return;
+  }
+
+  queueJoinPendingUrl = url;
   const message = {
     type: "queue_join",
     stake: autoQueueConfig.stake,
     presetId: autoQueueConfig.presetId,
+    allowSameOwnerMatch: autoQueueConfig.allowSameOwnerMatch,
   };
   ws.send(JSON.stringify(message));
   logger.info(
-    { stake: autoQueueConfig.stake, preset: autoQueueConfig.presetId },
+    {
+      url,
+      stake: autoQueueConfig.stake,
+      preset: autoQueueConfig.presetId,
+      allowSameOwnerMatch: autoQueueConfig.allowSameOwnerMatch,
+    },
     "Sent queue_join request"
   );
+}
+
+function getOpenSockets(): WebSocket[] {
+  return Array.from(activeSockets).filter((ws) => ws.readyState === WebSocket.OPEN);
+}
+
+function queueRandomBot(delaySeconds = 0): void {
+  if (!autoQueueConfig.enabled || isShuttingDown) return;
+
+  const action = () => {
+    if (queuedWsUrl || queueJoinPendingUrl || isShuttingDown) return;
+
+    const openSockets = getOpenSockets();
+    if (openSockets.length === 0) {
+      logger.warn({}, "No connected bots available to queue");
+      return;
+    }
+
+    const ws = openSockets[Math.floor(Math.random() * openSockets.length)];
+    const url = wsToUrl.get(ws) ?? "unknown";
+    logger.info(
+      { url, openConnections: openSockets.length },
+      "Randomly selected bot for queue join"
+    );
+
+    if (autoQueueConfig.waitForOpponent) {
+      void waitForOpponentAndJoin(ws);
+    } else {
+      sendQueueJoin(ws);
+    }
+  };
+
+  if (delaySeconds > 0) {
+    const t = setTimeout(action, delaySeconds * 1000);
+    reconnectTimeouts.add(t);
+  } else {
+    action();
+  }
 }
 
 // Track in-flight requests for debugging
 const inFlightRequests = new Map<string, { startTime: number; debateId: string; round: string }>();
 
-// Track active WebSocket and timeouts for graceful shutdown
-let activeWs: WebSocket | null = null;
-let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+// Track active WebSockets/timeouts for graceful shutdown
+const activeSockets = new Set<WebSocket>();
+const reconnectTimeouts = new Set<ReturnType<typeof setTimeout>>();
+const connectedUrls = new Set<string>();
+const wsToUrl = new WeakMap<WebSocket, string>();
+let queuedWsUrl: string | null = null;
+let queueJoinPendingUrl: string | null = null;
 let isShuttingDown = false;
-let hasConnectedBefore = false;
 const RECONNECT_QUEUE_DELAY_SECONDS = 30; // Delay before rejoining queue after reconnect
 
 function gracefulShutdown(signal: string): void {
@@ -1147,15 +1232,17 @@ function gracefulShutdown(signal: string): void {
 
   logger.info({ signal }, "Shutting down bot...");
 
-  // Clear any pending reconnect
-  if (reconnectTimeout) {
-    clearTimeout(reconnectTimeout);
-    reconnectTimeout = null;
+  // Clear pending reconnect / delayed queue timers
+  for (const t of reconnectTimeouts) {
+    clearTimeout(t);
   }
+  reconnectTimeouts.clear();
 
-  // Close WebSocket gracefully
-  if (activeWs && activeWs.readyState === WebSocket.OPEN) {
-    activeWs.close(1000, "Graceful shutdown");
+  // Close all WebSockets gracefully
+  for (const ws of activeSockets) {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.close(1000, "Graceful shutdown");
+    }
   }
 
   // Give a moment for close to complete
@@ -1305,7 +1392,8 @@ function connectDirect(url: string): void {
   logger.info({ url }, "Connecting to WebSocket");
 
   const ws = new WebSocket(url);
-  activeWs = ws;
+  wsToUrl.set(ws, url);
+  activeSockets.add(ws);
   let reconnectAttempts = 0;
   const maxReconnectDelay = 30000;
 
@@ -1339,8 +1427,8 @@ function connectDirect(url: string): void {
 
         switch (parsedMessage.type) {
           case "connected": {
-            const isReconnect = hasConnectedBefore;
-            hasConnectedBefore = true;
+            const isReconnect = connectedUrls.has(url);
+            connectedUrls.add(url);
             const hasActiveDebate = parsedMessage.hasActiveDebate ?? false;
 
             logger.info(
@@ -1359,26 +1447,16 @@ function connectDirect(url: string): void {
               break;
             }
 
-            // Auto-join queue if enabled
+            // Auto-join queue if enabled (one bot at a time across all connections)
             if (autoQueueConfig.enabled) {
-              const joinQueue = (): void => {
-                if (ws.readyState !== WebSocket.OPEN || isShuttingDown) return;
-                if (autoQueueConfig.waitForOpponent) {
-                  void waitForOpponentAndJoin(ws);
-                } else {
-                  sendQueueJoin(ws);
-                }
-              };
-
               if (isReconnect) {
-                // Delay rejoining queue after reconnect to let server stabilize
                 logger.info(
                   { delaySeconds: RECONNECT_QUEUE_DELAY_SECONDS },
-                  `Waiting ${RECONNECT_QUEUE_DELAY_SECONDS}s before rejoining queue (reconnect)`
+                  `Waiting ${RECONNECT_QUEUE_DELAY_SECONDS}s before considering rejoin (reconnect)`
                 );
-                setTimeout(joinQueue, RECONNECT_QUEUE_DELAY_SECONDS * 1000);
+                queueRandomBot(RECONNECT_QUEUE_DELAY_SECONDS);
               } else {
-                joinQueue();
+                queueRandomBot();
               }
             }
             break;
@@ -1389,9 +1467,13 @@ function connectDirect(url: string): void {
             safeSend(ws, JSON.stringify({ type: "pong" }), {});
             break;
 
-          case "queue_joined":
+          case "queue_joined": {
+            const wsUrl = wsToUrl.get(ws) ?? "unknown";
+            queuedWsUrl = wsUrl;
+            queueJoinPendingUrl = null;
             logger.info(
               {
+                url: wsUrl,
                 queueIds: parsedMessage.queueIds,
                 stake: parsedMessage.stake,
                 presets: parsedMessage.presetIds,
@@ -1399,14 +1481,28 @@ function connectDirect(url: string): void {
               `Joined ${parsedMessage.presetIds.length} queue(s): ${parsedMessage.presetIds.join(", ")} (stake: ${parsedMessage.stake})`
             );
             break;
+          }
 
-          case "queue_left":
-            logger.info({}, "Left matchmaking queue");
+          case "queue_left": {
+            const wsUrl = wsToUrl.get(ws) ?? "unknown";
+            if (queuedWsUrl === wsUrl) queuedWsUrl = null;
+            if (queueJoinPendingUrl === wsUrl) queueJoinPendingUrl = null;
+            logger.info({ url: wsUrl }, "Left matchmaking queue");
+            queueRandomBot();
             break;
+          }
 
-          case "queue_error":
-            logger.error({ error: parsedMessage.error }, `Queue error: ${parsedMessage.error}`);
+          case "queue_error": {
+            const wsUrl = wsToUrl.get(ws) ?? "unknown";
+            if (queueJoinPendingUrl === wsUrl) queueJoinPendingUrl = null;
+            if (queuedWsUrl === wsUrl) queuedWsUrl = null;
+            logger.error(
+              { url: wsUrl, error: parsedMessage.error },
+              `Queue error: ${parsedMessage.error}`
+            );
+            queueRandomBot(5);
             break;
+          }
 
           case "debate_complete": {
             const resultStr =
@@ -1424,25 +1520,21 @@ function connectDirect(url: string): void {
               `Debate #${parsedMessage.debateId} completed: ${resultStr} (ELO: ${eloStr})`
             );
 
-            // Auto-rejoin queue if enabled (with delay)
+            // Auto-rejoin queue if enabled (one bot at a time)
             if (autoQueueConfig.enabled) {
-              const delay = autoQueueConfig.delaySeconds;
-              const rejoinQueue = (): void => {
-                if (ws.readyState !== WebSocket.OPEN) return;
-                if (autoQueueConfig.waitForOpponent) {
-                  logger.info({}, "Waiting for opponent before rejoining queue");
-                  void waitForOpponentAndJoin(ws);
-                } else {
-                  logger.info({}, "Rejoining queue");
-                  sendQueueJoin(ws);
-                }
-              };
+              const wsUrl = wsToUrl.get(ws) ?? "unknown";
+              if (queuedWsUrl === wsUrl) queuedWsUrl = null;
+              if (queueJoinPendingUrl === wsUrl) queueJoinPendingUrl = null;
 
+              const delay = autoQueueConfig.delaySeconds;
               if (delay > 0) {
-                logger.info({ delaySeconds: delay }, `Waiting ${delay}s before rejoining queue`);
-                setTimeout(rejoinQueue, delay * 1000);
+                logger.info(
+                  { delaySeconds: delay },
+                  `Waiting ${delay}s before queueing another bot`
+                );
+                queueRandomBot(delay);
               } else {
-                rejoinQueue();
+                queueRandomBot();
               }
             }
             break;
@@ -1491,7 +1583,11 @@ function connectDirect(url: string): void {
   });
 
   ws.on("close", (code, reason) => {
-    logger.info({ code, reason: reason.toString() }, "Disconnected from server");
+    logger.info({ url, code, reason: reason.toString() }, "Disconnected from server");
+    activeSockets.delete(ws);
+
+    if (queuedWsUrl === url) queuedWsUrl = null;
+    if (queueJoinPendingUrl === url) queueJoinPendingUrl = null;
 
     // Don't reconnect if shutting down
     if (isShuttingDown) {
@@ -1499,11 +1595,13 @@ function connectDirect(url: string): void {
       return;
     }
 
-    logger.info({ reconnectAttempts }, "Reconnecting...");
+    logger.info({ url, reconnectAttempts }, "Reconnecting...");
 
     const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), maxReconnectDelay);
     reconnectAttempts++;
-    reconnectTimeout = setTimeout(() => connectDirect(url), delay);
+    const t = setTimeout(() => connectDirect(url), delay);
+    reconnectTimeouts.add(t);
+    queueRandomBot(1);
   });
 
   ws.on("error", (error) => {
