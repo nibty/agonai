@@ -13,6 +13,7 @@ import {
   isRedisAvailable,
 } from "../services/redis.js";
 import { createChildLogger } from "../services/logger.js";
+import { decodeId } from "../middleware/hashids.js";
 
 const logger = createChildLogger({ service: "debate-ws" });
 
@@ -202,10 +203,12 @@ export class DebateWebSocketServer {
     payload: { debateId: number | string; userId?: string }
   ): Promise<void> {
     const debateId =
-      typeof payload.debateId === "number" ? payload.debateId : parseInt(payload.debateId, 10);
+      typeof payload.debateId === "number"
+        ? payload.debateId
+        : decodeId("debate", payload.debateId);
     const { userId } = payload;
 
-    if (isNaN(debateId)) {
+    if (debateId === null) {
       client.ws.send(
         JSON.stringify({
           type: "error",

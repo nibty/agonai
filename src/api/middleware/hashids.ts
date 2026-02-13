@@ -38,9 +38,13 @@ export function encodeId(type: ResourceType, id: number): string {
  * Returns null if invalid.
  */
 export function decodeId(type: ResourceType, publicId: string): number | null {
-  const decoded = hashids[type].decode(publicId);
-  if (decoded.length !== 1) return null;
-  return decoded[0] as number;
+  try {
+    const decoded = hashids[type].decode(publicId);
+    if (decoded.length !== 1) return null;
+    return decoded[0] as number;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -66,14 +70,14 @@ function inferType(fieldName: string, parentKey?: string): ResourceType | null {
 /**
  * Recursively encode numeric IDs in an object for API responses
  */
-function encodeIds(obj: unknown, parentKey?: string): unknown {
+export function encodeIds(obj: unknown, parentKey?: string): unknown {
   if (obj === null || obj === undefined) return obj;
 
   if (Array.isArray(obj)) {
     return obj.map((item) => encodeIds(item, parentKey));
   }
 
-  if (typeof obj === "object") {
+  if (typeof obj === "object" && obj.constructor === Object) {
     const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
       if (typeof value === "number") {

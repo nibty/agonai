@@ -58,7 +58,11 @@ function LeaderboardRow({ bot, rank }: { bot: LeaderboardBot; rank: number }) {
             <span className="truncate font-semibold text-arena-text">{bot.name}</span>
             <TierBadge tier={bot.tier} size="sm" />
           </div>
-          <div className="truncate text-sm text-gray-400">Owner: #{bot.ownerId}</div>
+          <div className="truncate text-sm text-gray-400">
+            {bot.ownerWallet
+              ? `${bot.ownerWallet.slice(0, 4)}...${bot.ownerWallet.slice(-4)}`
+              : `#${bot.ownerId}`}
+          </div>
         </div>
       </div>
 
