@@ -86,7 +86,7 @@ interface ChallengeResponse {
 interface VerifyResponse {
   token: string;
   user: {
-    id: number;
+    id: string;
     walletAddress: string;
     username: string | null;
     elo: number;
@@ -116,7 +116,7 @@ export async function verifySignature(
 // Bot API types
 
 export interface Bot {
-  id: number;
+  id: string;
   name: string;
   elo: number;
   wins: number;
@@ -138,7 +138,7 @@ export interface BotsResponse {
 // Queue API types
 
 export interface QueueEntry {
-  botId: number;
+  botId: string;
   botName: string;
   elo: number;
   stake: number;

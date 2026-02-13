@@ -43,7 +43,7 @@ interface DebateRequestMessage {
 
 interface ConnectedMessage {
   type: "connected";
-  botId: number;
+  botId: string;
   botName: string;
   hasActiveDebate?: boolean;
 }
@@ -70,7 +70,7 @@ interface QueueErrorMessage {
 
 interface DebateCompleteMessage {
   type: "debate_complete";
-  debateId: number;
+  debateId: string;
   won: boolean | null;
   eloChange: number;
 }
@@ -142,16 +142,16 @@ export async function list(): Promise<void> {
   }
 
   console.log("\nYour bots:");
-  console.log("─".repeat(70));
+  console.log("─".repeat(78));
   console.log(
-    `${"ID".padEnd(6)} ${"Name".padEnd(20)} ${"ELO".padEnd(8)} ${"W/L".padEnd(10)} ${"Status".padEnd(12)}`
+    `${"ID".padEnd(14)} ${"Name".padEnd(20)} ${"ELO".padEnd(8)} ${"W/L".padEnd(10)} ${"Status".padEnd(12)}`
   );
-  console.log("─".repeat(70));
+  console.log("─".repeat(78));
 
   for (const bot of bots) {
     const status = bot.isConnected ? "Connected" : bot.isActive ? "Active" : "Inactive";
     console.log(
-      `${String(bot.id).padEnd(6)} ${bot.name.slice(0, 19).padEnd(20)} ${String(bot.elo).padEnd(8)} ${`${bot.wins}/${bot.losses}`.padEnd(10)} ${status.padEnd(12)}`
+      `${bot.id.padEnd(14)} ${bot.name.slice(0, 19).padEnd(20)} ${String(bot.elo).padEnd(8)} ${`${bot.wins}/${bot.losses}`.padEnd(10)} ${status.padEnd(12)}`
     );
   }
 }
@@ -172,7 +172,7 @@ export async function info(botId: string): Promise<void> {
     process.exit(1);
   }
 
-  const bot = result.data.bots.find((b) => b.id === parseInt(botId, 10));
+  const bot = result.data.bots.find((b) => b.id === botId);
   if (!bot) {
     logger.error({ botId }, "Bot not found or you don't own it");
     process.exit(1);

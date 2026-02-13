@@ -1,5 +1,5 @@
 import { eq, desc, sql } from "drizzle-orm";
-import { db, bots } from "../db/index.js";
+import { db, bots, users } from "../db/index.js";
 import type { Bot, NewBot, BotPublic } from "../db/types.js";
 import { createDecipheriv, randomBytes } from "crypto";
 
@@ -108,14 +108,18 @@ export const botRepository = {
     return result.map(toPublic);
   },
 
-  async getLeaderboard(limit = 100): Promise<BotPublic[]> {
+  async getLeaderboard(limit = 100) {
     const result = await db
-      .select()
+      .select({
+        bot: bots,
+        ownerWallet: users.walletAddress,
+      })
       .from(bots)
+      .innerJoin(users, eq(bots.ownerId, users.id))
       .where(eq(bots.isActive, true))
       .orderBy(desc(bots.elo))
       .limit(limit);
-    return result.map(toPublic);
+    return result.map((r) => ({ ...toPublic(r.bot), ownerWallet: r.ownerWallet }));
   },
 
   async updateStats(id: number, isWin: boolean, eloChange: number): Promise<Bot | undefined> {

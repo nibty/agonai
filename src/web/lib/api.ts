@@ -241,6 +241,7 @@ interface Bot {
 interface BotPublic {
   id: string;
   ownerId: string;
+  ownerWallet?: string;
   name: string;
   type?: BotType;
   elo: number;

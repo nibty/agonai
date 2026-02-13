@@ -22,6 +22,7 @@ import { authService } from "../services/authService.js";
 import { authRouter } from "./authRoutes.js";
 import { getBotConnectionServer } from "../ws/botConnectionServer.js";
 import { logger } from "../services/logger.js";
+import { decodeId } from "../middleware/hashids.js";
 
 const router = Router();
 
@@ -259,8 +260,8 @@ router.delete(
       return;
     }
 
-    const botId = parseInt(req.params.botId, 10);
-    if (isNaN(botId)) {
+    const botId = decodeId("bot", req.params.botId);
+    if (botId === null) {
       res.status(400).json({ error: "Invalid bot ID" });
       return;
     }
@@ -298,8 +299,8 @@ router.patch(
       return;
     }
 
-    const botId = parseInt(req.params.botId, 10);
-    if (isNaN(botId)) {
+    const botId = decodeId("bot", req.params.botId);
+    if (botId === null) {
       res.status(400).json({ error: "Invalid bot ID" });
       return;
     }
@@ -374,8 +375,8 @@ router.post(
       return;
     }
 
-    const botId = parseInt(req.params.botId, 10);
-    if (isNaN(botId)) {
+    const botId = decodeId("bot", req.params.botId);
+    if (botId === null) {
       res.status(400).json({ error: "Invalid bot ID" });
       return;
     }
@@ -456,8 +457,8 @@ router.post(
       return;
     }
 
-    const topicId = parseInt(req.params.topicId, 10);
-    if (isNaN(topicId)) {
+    const topicId = decodeId("topic", req.params.topicId);
+    if (topicId === null) {
       res.status(400).json({ error: "Invalid topic ID" });
       return;
     }
@@ -525,9 +526,9 @@ router.post("/queue/leave", authMiddleware, async (req: AuthenticatedRequest, re
     return;
   }
 
-  const botIdRaw = (req.body as { botId?: string | number }).botId;
-  const botId = typeof botIdRaw === "number" ? botIdRaw : parseInt(String(botIdRaw), 10);
-  if (isNaN(botId)) {
+  const botIdRaw = (req.body as { botId?: string }).botId;
+  const botId = botIdRaw ? decodeId("bot", botIdRaw) : null;
+  if (botId === null) {
     res.status(400).json({ error: "Missing or invalid botId" });
     return;
   }
@@ -600,8 +601,8 @@ router.get("/debates/recent", async (req: Request, res: Response) => {
 });
 
 router.get("/debates/:debateId", async (req: Request<{ debateId: string }>, res: Response) => {
-  const debateId = parseInt(req.params.debateId, 10);
-  if (isNaN(debateId)) {
+  const debateId = decodeId("debate", req.params.debateId);
+  if (debateId === null) {
     res.status(400).json({ error: "Invalid debate ID" });
     return;
   }
@@ -610,7 +611,10 @@ router.get("/debates/:debateId", async (req: Request<{ debateId: string }>, res:
   const activeDebate = debateOrchestrator.getDebate(debateId);
   if (activeDebate) {
     const preset = getPreset(activeDebate.presetId);
-    res.json({ debate: activeDebate, preset });
+    res.json({
+      debate: activeDebate,
+      preset,
+    });
     return;
   }
 
@@ -656,8 +660,8 @@ router.post(
       return;
     }
 
-    const debateId = parseInt(req.params.debateId, 10);
-    if (isNaN(debateId)) {
+    const debateId = decodeId("debate", req.params.debateId);
+    if (debateId === null) {
       res.status(400).json({ error: "Invalid debate ID" });
       return;
     }
@@ -716,8 +720,8 @@ router.post("/bets", authMiddleware, async (req: AuthenticatedRequest, res: Resp
 });
 
 router.get("/bets/:debateId", async (req: Request<{ debateId: string }>, res: Response) => {
-  const debateId = parseInt(req.params.debateId, 10);
-  if (isNaN(debateId)) {
+  const debateId = decodeId("debate", req.params.debateId);
+  if (debateId === null) {
     res.status(400).json({ error: "Invalid debate ID" });
     return;
   }

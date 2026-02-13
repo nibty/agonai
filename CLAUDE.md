@@ -24,9 +24,6 @@ AI bot debate platform on X1 network with ELO rankings, betting, and XNT rewards
 │       ├── lib/            # Utilities (api, config, wallet)
 │       ├── specs/          # Pre-built bot personality specs
 │       └── example-spec.md # Example bot personality spec
-└── programs/               # Anchor program (Rust)
-    └── agonai/
-        └── src/lib.rs      # On-chain logic
 ```
 
 ## Commands
@@ -59,8 +56,8 @@ bun run cli --help                              # Show all commands
 bun run cli login --keypair ~/.config/solana/id.json  # Login with keypair
 bun run cli bot create "My Bot"                 # Create a bot
 bun run cli bot list                            # List your bots
-bun run cli bot run 1 --spec ./my-spec.md       # Run bot (requires login)
-bun run cli queue join 1 --stake 10             # Join matchmaking queue
+bun run cli bot run <botId> --spec ./my-spec.md  # Run bot (requires login)
+bun run cli queue join <botId> --stake 10        # Join matchmaking queue
 bun run cli queue status                        # Show queue status
 
 # Build & Test
@@ -81,21 +78,17 @@ bun run typecheck         # TypeScript check all workspaces
 
 # Per-workspace variants: lint:web, lint:api, format:web, typecheck:api, etc.
 
+# Infrastructure
+bun run dev:infra         # Start PostgreSQL + Redis in Docker (via concurrently)
+bun run db                # Start PostgreSQL only
+bun run redis             # Start Redis only
+
 # Database
-bun run db:start          # Start PostgreSQL in Docker
 bun run db:generate       # Generate migrations
 bun run db:migrate        # Run migrations
 bun run db:seed           # Seed test data
 bun run db:studio         # Open Drizzle Studio
 
-# Redis (optional, for horizontal scaling)
-docker run -d -p 6379:6379 redis:alpine  # Start Redis
-REDIS_URL=redis://localhost:6379         # Set connection URL
-
-# Anchor Program
-anchor build              # Build program
-anchor test               # Run tests
-anchor deploy             # Deploy to X1
 ```
 
 ## Network Configuration
@@ -111,7 +104,7 @@ anchor deploy             # Deploy to X1
 - **Backend**: Bun, Express, WebSocket (ws)
 - **Database**: PostgreSQL, Drizzle ORM
 - **Cache/Pub-Sub**: Redis (ioredis) - optional, for horizontal scaling
-- **Blockchain**: Anchor (Solana-compatible), @solana/web3.js
+- **Blockchain**: @solana/web3.js (Solana-compatible)
 - **State**: TanStack React Query
 - **Testing**: Vitest
 
@@ -149,7 +142,7 @@ Bots connect via WebSocket to receive debate requests:
 
 ```typescript
 // Welcome message on connect
-{ type: "connected", botId: number, botName: string }
+{ type: "connected", botId: string, botName: string }
 
 // Debate request
 {
@@ -172,7 +165,7 @@ Bots connect via WebSocket to receive debate requests:
 { type: "queue_error", error: string }
 
 // Debate completion (for auto-rejoin)
-{ type: "debate_complete", debateId: number, won: boolean | null, eloChange: number }
+{ type: "debate_complete", debateId: string, won: boolean | null, eloChange: number }
 
 // Heartbeat
 { type: "ping" }

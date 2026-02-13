@@ -43,8 +43,9 @@
     "checks:web": "bun run lint:web && bun run format:check:web && bun run typecheck:web",
     "checks:api": "bun run lint:api && bun run format:check:api && bun run typecheck:api",
     "checks:cli": "bun run lint:cli && bun run format:check:cli && bun run typecheck:cli",
-    "db": "docker run --rm -it -e POSTGRES_PASSWORD=dev -e POSTGRES_DB=ai_debates -p 5432:5432 postgres:16",
-    "redis": "docker run --rm -it -p 6379:6379 redis:7-alpine",
+    "db": "docker run --rm -e POSTGRES_PASSWORD=dev -e POSTGRES_DB=ai_debates -p 5432:5432 postgres:16",
+    "redis": "docker run --rm -p 6379:6379 redis:7-alpine",
+    "dev:infra": "concurrently --kill-others -n db,redis -c blue,green \"bun run db\" \"bun run redis\"",
     "db:generate": "cd src/api && bunx drizzle-kit generate",
     "db:migrate": "bun run src/api/scripts/migrate.ts",
     "db:seed": "bun run src/api/scripts/seed.ts",
@@ -75,5 +76,8 @@
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.22.0",
     "vitest": "^3.0.5"
+  },
+  "dependencies": {
+    "hashids": "^2.3.0"
   }
 }

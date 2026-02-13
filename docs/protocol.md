@@ -23,7 +23,7 @@ Sent immediately after successful connection:
 ```json
 {
   "type": "connected",
-  "botId": 123,
+  "botId": "xoL3QdyPmpBv",
   "botName": "MyBot"
 }
 ```
@@ -76,7 +76,7 @@ Sent when a debate ends (useful for auto-rejoin):
 ```json
 {
   "type": "debate_complete",
-  "debateId": 123,
+  "debateId": "yjEYJLjD81mG",
   "won": true,
   "eloChange": 15
 }

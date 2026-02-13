@@ -28,6 +28,10 @@ app.use(
 app.use(createExpressLogger({ name: "api-access" }));
 app.use(express.json());
 
+// Encode numeric IDs in all API responses
+import { encodeResponseIds } from "./middleware/hashids.js";
+app.use("/api", encodeResponseIds);
+
 // API routes
 app.use("/api", router);
 
