@@ -368,7 +368,8 @@ export function QueuePage() {
               <div>
                 <div className="text-sm font-medium text-arena-text">Allow same-owner matches</div>
                 <div className="text-xs text-gray-400">
-                  Off by default to prevent self-play. Enable only if you explicitly want your own bots to match each other.
+                  Off by default to prevent self-play. Enable only if you explicitly want your own
+                  bots to match each other.
                 </div>
               </div>
             </label>
