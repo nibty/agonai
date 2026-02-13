@@ -138,17 +138,17 @@ jobs:
           push: ${{ github.event.inputs.dry_run != 'true' }}
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/ai-debates-api:${{ github.sha }}
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/ai-debates-api:latest
-          cache-from: ${{ github.event.inputs.no_cache != 'true' && format('type=registry,ref={0}/{1}/ai-debates-api:cache', env.REGISTRY, github.repository_owner) || '' }}
-          cache-to: type=registry,mode=max,image-manifest=true,oci-mediatypes=true,ref=${{ env.REGISTRY }}/${{ github.repository_owner }}/ai-debates-api:cache
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/agonai-api:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/agonai-api:latest
+          cache-from: ${{ github.event.inputs.no_cache != 'true' && format('type=registry,ref={0}/{1}/agonai-api:cache', env.REGISTRY, github.repository_owner) || '' }}
+          cache-to: type=registry,mode=max,image-manifest=true,oci-mediatypes=true,ref=${{ env.REGISTRY }}/${{ github.repository_owner }}/agonai-api:cache
 
       - name: Output image info
         run: |
           echo "## API Image Published" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Registry:** ${{ env.REGISTRY }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Image:** ${{ github.repository_owner }}/ai-debates-api" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** ${{ github.repository_owner }}/agonai-api" >> $GITHUB_STEP_SUMMARY
           echo "**SHA Tag:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "**Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
           if [[ "${{ github.event.inputs.dry_run }}" == "true" ]]; then
@@ -193,17 +193,17 @@ jobs:
           push: ${{ github.event.inputs.dry_run != 'true' }}
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/ai-debates-cli:${{ github.sha }}
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/ai-debates-cli:latest
-          cache-from: ${{ github.event.inputs.no_cache != 'true' && format('type=registry,ref={0}/{1}/ai-debates-cli:cache', env.REGISTRY, github.repository_owner) || '' }}
-          cache-to: type=registry,mode=max,image-manifest=true,oci-mediatypes=true,ref=${{ env.REGISTRY }}/${{ github.repository_owner }}/ai-debates-cli:cache
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/agonai-cli:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/agonai-cli:latest
+          cache-from: ${{ github.event.inputs.no_cache != 'true' && format('type=registry,ref={0}/{1}/agonai-cli:cache', env.REGISTRY, github.repository_owner) || '' }}
+          cache-to: type=registry,mode=max,image-manifest=true,oci-mediatypes=true,ref=${{ env.REGISTRY }}/${{ github.repository_owner }}/agonai-cli:cache
 
       - name: Output image info
         run: |
           echo "## CLI Image Published" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Registry:** ${{ env.REGISTRY }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Image:** ${{ github.repository_owner }}/ai-debates-cli" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** ${{ github.repository_owner }}/agonai-cli" >> $GITHUB_STEP_SUMMARY
           echo "**SHA Tag:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "**Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
           if [[ "${{ github.event.inputs.dry_run }}" == "true" ]]; then
@@ -260,7 +260,7 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          echo "Triggering deployment of ai-debates to mainnet"
+          echo "Triggering deployment of agonai to mainnet"
           echo "Image tag: ${{ github.sha }}"
           echo "Commit: ${{ github.sha }}"
           echo "Images: ${{ steps.images.outputs.images }}"
@@ -268,7 +268,7 @@ jobs:
           gh workflow run deploy-service.yml \
             --repo x1-labs/infrafc \
             --ref main \
-            -f service="ai-debates" \
+            -f service="agonai" \
             -f environment="mainnet" \
             -f image_tag="${{ github.sha }}" \
             -f commit_sha="${{ github.sha }}" \
