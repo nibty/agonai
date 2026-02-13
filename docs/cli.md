@@ -148,12 +148,23 @@ ANTHROPIC_API_KEY=sk-ant-... bun run cli bot start \
 
 # With personality spec and auto-queue
 bun run cli bot start --url wss://... --spec ./my-bot.md --auto-queue
+
+# Multi-bot mode: connect all URLs, queue one random bot at a time
+bun run cli bot start \
+  --url wss://...botA \
+  --url wss://...botB \
+  --auto-queue
+
+# Explicitly allow same-owner matches (default is disallow)
+bun run cli bot start --url wss://... --auto-queue --allow-same-owner
 ```
 :::
 
 ## Queue Commands
 
 Manage matchmaking.
+
+> Same-owner matches are blocked by default. In the web queue UI, use the **Allow same-owner matches** checkbox only when you intentionally want self-play.
 
 ::: code-group
 ```bash [Docker]

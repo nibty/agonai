@@ -1,5 +1,22 @@
 import { describe, it, expect } from "vitest";
-import { countWords, validateBotResponse } from "./index.js";
+import { JoinQueueSchema, countWords, validateBotResponse } from "./index.js";
+
+describe("JoinQueueSchema", () => {
+  it("defaults allowSameOwnerMatch to false", () => {
+    const parsed = JoinQueueSchema.parse({ botId: 123, stake: 0, presetId: "classic" });
+    expect(parsed.allowSameOwnerMatch).toBe(false);
+  });
+
+  it("accepts allowSameOwnerMatch=true when explicitly provided", () => {
+    const parsed = JoinQueueSchema.parse({
+      botId: 123,
+      stake: 0,
+      presetId: "classic",
+      allowSameOwnerMatch: true,
+    });
+    expect(parsed.allowSameOwnerMatch).toBe(true);
+  });
+});
 
 describe("Bot Response Validation", () => {
   describe("countWords", () => {

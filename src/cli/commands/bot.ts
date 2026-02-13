@@ -1149,7 +1149,10 @@ function sendQueueJoin(ws: WebSocket): void {
 
   const url = wsToUrl.get(ws) ?? "unknown";
   if (queuedWsUrl || queueJoinPendingUrl) {
-    logger.debug({ queuedWsUrl, queueJoinPendingUrl, requester: url }, "Queue slot already occupied");
+    logger.debug(
+      { queuedWsUrl, queueJoinPendingUrl, requester: url },
+      "Queue slot already occupied"
+    );
     return;
   }
 
@@ -1190,7 +1193,10 @@ function queueRandomBot(delaySeconds = 0): void {
 
     const ws = openSockets[Math.floor(Math.random() * openSockets.length)];
     const url = wsToUrl.get(ws) ?? "unknown";
-    logger.info({ url, openConnections: openSockets.length }, "Randomly selected bot for queue join");
+    logger.info(
+      { url, openConnections: openSockets.length },
+      "Randomly selected bot for queue join"
+    );
 
     if (autoQueueConfig.waitForOpponent) {
       void waitForOpponentAndJoin(ws);
@@ -1490,7 +1496,10 @@ function connectDirect(url: string): void {
             const wsUrl = wsToUrl.get(ws) ?? "unknown";
             if (queueJoinPendingUrl === wsUrl) queueJoinPendingUrl = null;
             if (queuedWsUrl === wsUrl) queuedWsUrl = null;
-            logger.error({ url: wsUrl, error: parsedMessage.error }, `Queue error: ${parsedMessage.error}`);
+            logger.error(
+              { url: wsUrl, error: parsedMessage.error },
+              `Queue error: ${parsedMessage.error}`
+            );
             queueRandomBot(5);
             break;
           }
@@ -1519,7 +1528,10 @@ function connectDirect(url: string): void {
 
               const delay = autoQueueConfig.delaySeconds;
               if (delay > 0) {
-                logger.info({ delaySeconds: delay }, `Waiting ${delay}s before queueing another bot`);
+                logger.info(
+                  { delaySeconds: delay },
+                  `Waiting ${delay}s before queueing another bot`
+                );
                 queueRandomBot(delay);
               } else {
                 queueRandomBot();

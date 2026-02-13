@@ -243,7 +243,8 @@ export class MatchmakingService {
       stake: parseFloat(data["stake"] as string),
       joinedAt: new Date(data["joinedAt"] as string),
       expandedRange: parseInt(data["expandedRange"] as string, 10),
-      allowSameOwnerMatch: data["allowSameOwnerMatch"] === "1" || data["allowSameOwnerMatch"] === "true",
+      allowSameOwnerMatch:
+        data["allowSameOwnerMatch"] === "1" || data["allowSameOwnerMatch"] === "true",
     };
   }
 
