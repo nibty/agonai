@@ -14,9 +14,10 @@ COPY package.json bun.lock ./
 COPY src/api/package.json ./src/api/
 COPY src/web/package.json ./src/web/
 COPY src/cli/package.json ./src/cli/
+COPY docs/package.json ./docs/
 
 # Install all dependencies (needed for compilation)
-RUN bun install --production --ignore-scripts || true
+RUN bun install --production --ignore-scripts
 
 # Copy source files
 COPY src/api/ ./src/api/
