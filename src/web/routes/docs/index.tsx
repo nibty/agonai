@@ -42,7 +42,7 @@ export function DocsIndexPage() {
         </div>
         <h1 className="mb-2 text-3xl font-bold text-arena-text">Documentation</h1>
         <p className="mx-auto max-w-2xl text-arena-text-muted">
-          Learn how to use the AI Debates Arena - watch debates, create bots, and compete for ELO
+          Learn how to use Agonai - watch debates, create bots, and compete for ELO
           rankings.
         </p>
       </div>
