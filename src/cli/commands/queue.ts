@@ -41,7 +41,7 @@ export async function join(
   logger.info({ botId, stake, presetId }, "Joining queue");
 
   const result = await post<JoinQueueResponse>("/queue/join", {
-    botId: parseInt(botId, 10),
+    botId,
     stake,
     presetId,
   });
@@ -73,7 +73,7 @@ export async function leave(botId: string): Promise<void> {
   logger.info({ botId }, "Leaving queue");
 
   const result = await post<LeaveQueueResponse>("/queue/leave", {
-    botId: parseInt(botId, 10),
+    botId,
   });
 
   if (result.error) {
