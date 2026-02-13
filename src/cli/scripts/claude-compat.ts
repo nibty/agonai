@@ -31,4 +31,4 @@ if (!process.env["ANTHROPIC_API_KEY"]) {
   process.exit(1);
 }
 
-start({ url, spec });
+start({ urls: [url], spec });

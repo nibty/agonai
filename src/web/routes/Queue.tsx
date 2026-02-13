@@ -29,6 +29,7 @@ export function QueuePage() {
   const [selectedBotId, setSelectedBotId] = useState<string | null>(null);
   const [queuedBots, setQueuedBots] = useState<Map<string, QueuedBotInfo>>(new Map());
   const [selectedPresetId, setSelectedPresetId] = useState("classic");
+  const [allowSameOwnerMatch, setAllowSameOwnerMatch] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch user's bots from API
@@ -64,7 +65,12 @@ export function QueuePage() {
 
   // Join queue mutation
   const joinQueueMutation = useMutation({
-    mutationFn: (data: { botId: string; stake: number; presetId: string }) => api.joinQueue(data),
+    mutationFn: (data: {
+      botId: string;
+      stake: number;
+      presetId: string;
+      allowSameOwnerMatch?: boolean;
+    }) => api.joinQueue(data),
     onSuccess: (_data, variables) => {
       const bot = bots.find((b) => b.id == variables.botId);
       if (bot) {
@@ -141,7 +147,12 @@ export function QueuePage() {
       return;
     }
     setError(null);
-    joinQueueMutation.mutate({ botId: selectedBot.id, stake: 0, presetId: selectedPresetId });
+    joinQueueMutation.mutate({
+      botId: selectedBot.id,
+      stake: 0,
+      presetId: selectedPresetId,
+      allowSameOwnerMatch,
+    });
   };
 
   const handleLeaveQueue = (botId: string) => {
@@ -343,6 +354,24 @@ export function QueuePage() {
             {selectedPreset && (
               <p className="mt-2 text-xs text-gray-500">{selectedPreset.description}</p>
             )}
+          </div>
+
+          {/* Same-owner matching */}
+          <div className="rounded-lg bg-arena-card/50 p-3">
+            <label className="flex cursor-pointer items-center gap-3">
+              <input
+                type="checkbox"
+                checked={allowSameOwnerMatch}
+                onChange={(e) => setAllowSameOwnerMatch(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-600 bg-arena-bg text-arena-accent"
+              />
+              <div>
+                <div className="text-sm font-medium text-arena-text">Allow same-owner matches</div>
+                <div className="text-xs text-gray-400">
+                  Off by default to prevent self-play. Enable only if you explicitly want your own bots to match each other.
+                </div>
+              </div>
+            </label>
           </div>
         </CardContent>
       </Card>

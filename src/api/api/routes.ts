@@ -496,7 +496,7 @@ router.post("/queue/join", authMiddleware, async (req: AuthenticatedRequest, res
     return;
   }
 
-  const { botId, stake, presetId } = result.data;
+  const { botId, stake, presetId, allowSameOwnerMatch } = result.data;
 
   const bot = await botRepository.findById(botId);
   if (!bot) {
@@ -510,9 +510,9 @@ router.post("/queue/join", authMiddleware, async (req: AuthenticatedRequest, res
   }
 
   // addToQueue handles removing any existing entry for this bot
-  const entry = await matchmaking.addToQueue(bot, req.userId, stake, presetId);
+  const entry = await matchmaking.addToQueue(bot, req.userId, stake, presetId, allowSameOwnerMatch);
   logger.info(
-    { botId: bot.id, botName: bot.name, stake, elo: bot.elo, presetId },
+    { botId: bot.id, botName: bot.name, stake, elo: bot.elo, presetId, allowSameOwnerMatch },
     "Bot joined queue"
   );
   const queueStats = await matchmaking.getStats();

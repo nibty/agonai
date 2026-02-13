@@ -34,7 +34,8 @@ export class MatchmakingService {
     bot: Bot,
     userId: number,
     stake: number,
-    presetId: string = "classic"
+    presetId: string = "classic",
+    allowSameOwnerMatch: boolean = false
   ): Promise<QueueEntry> {
     // Remove any existing entry for this bot
     await this.removeFromQueue(bot.id);
@@ -48,6 +49,7 @@ export class MatchmakingService {
       stake,
       joinedAt: new Date(),
       expandedRange: 100,
+      allowSameOwnerMatch,
     };
 
     if (this.useRedis()) {
@@ -63,6 +65,7 @@ export class MatchmakingService {
         stake: entry.stake.toString(),
         joinedAt: entry.joinedAt.toISOString(),
         expandedRange: entry.expandedRange.toString(),
+        allowSameOwnerMatch: entry.allowSameOwnerMatch ? "1" : "0",
       });
 
       // Add to sorted set (score = join timestamp)
@@ -240,6 +243,7 @@ export class MatchmakingService {
       stake: parseFloat(data["stake"] as string),
       joinedAt: new Date(data["joinedAt"] as string),
       expandedRange: parseInt(data["expandedRange"] as string, 10),
+      allowSameOwnerMatch: data["allowSameOwnerMatch"] === "1" || data["allowSameOwnerMatch"] === "true",
     };
   }
 
@@ -302,6 +306,14 @@ export class MatchmakingService {
 
       // Must match same preset
       if (candidate.presetId !== entry.presetId) {
+        continue;
+      }
+
+      // Owner matching policy (default: no same-owner matches)
+      if (
+        entry.userId === candidate.userId &&
+        (!entry.allowSameOwnerMatch || !candidate.allowSameOwnerMatch)
+      ) {
         continue;
       }
 
