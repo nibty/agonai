@@ -113,7 +113,7 @@ export function Layout() {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-arena-accent">
                 <Zap className="h-5 w-5 text-white" />
               </div>
-              <span className="text-xl font-bold">AI Debates</span>
+              <span className="text-xl font-bold">Agonai</span>
             </Link>
           </div>
 
@@ -157,7 +157,7 @@ export function Layout() {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-arena-accent">
                 <Zap className="h-5 w-5 text-white" />
               </div>
-              <span className="text-xl font-bold">AI Debates</span>
+              <span className="text-xl font-bold">Agonai</span>
             </Link>
             <Button variant="ghost" size="sm" onClick={closeSidebar} aria-label="Close menu">
               <X className="h-5 w-5" />
