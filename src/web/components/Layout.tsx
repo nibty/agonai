@@ -27,6 +27,7 @@ import { WalletButton } from "@/components/WalletButton";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import { DOCS_URL } from "@/lib/config";
 
 interface NavItemProps {
   to: string;
@@ -123,7 +124,15 @@ export function Layout() {
             <NavItem to="/queue" icon={<ListOrdered className="h-4 w-4" />} label="Queue" />
             <NavItem to="/leaderboard" icon={<Trophy className="h-4 w-4" />} label="Leaderboard" />
             <NavItem to="/topics" icon={<MessageSquare className="h-4 w-4" />} label="Topics" />
-            <NavItem to="/docs" icon={<BookOpen className="h-4 w-4" />} label="Docs" />
+            <a
+              href={DOCS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-arena-text-muted transition-colors hover:bg-arena-border/50 hover:text-arena-text"
+            >
+              <BookOpen className="h-4 w-4" />
+              <span>Docs</span>
+            </a>
           </nav>
 
           {/* Right: Theme Toggle & Wallet Button */}
@@ -194,12 +203,16 @@ export function Layout() {
                 label="Topics"
                 onClick={closeSidebar}
               />
-              <SidebarLink
-                to="/docs"
-                icon={<BookOpen className="h-5 w-5" />}
-                label="Docs"
+              <a
+                href={DOCS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
                 onClick={closeSidebar}
-              />
+                className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-arena-text-muted transition-colors hover:bg-arena-border/50 hover:text-arena-text"
+              >
+                <BookOpen className="h-5 w-5" />
+                <span>Docs</span>
+              </a>
             </div>
 
             {isAuthenticated && (
@@ -248,13 +261,15 @@ export function Layout() {
 
             {/* Center: Links */}
             <nav className="flex items-center gap-6">
-              <Link
-                to="/docs"
+              <a
+                href={DOCS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex items-center gap-2 text-sm text-arena-text-muted transition-colors hover:text-arena-text"
               >
                 <BookOpen className="h-4 w-4" />
                 <span>Docs</span>
-              </Link>
+              </a>
               <a
                 href="https://github.com/nibty/ai-debates"
                 target="_blank"

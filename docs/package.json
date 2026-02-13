@@ -1,0 +1,14 @@
+{
+  "name": "agonai-docs",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bunx vitepress dev",
+    "build": "bunx vitepress build",
+    "preview": "bunx vitepress preview"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.4"
+  }
+}
