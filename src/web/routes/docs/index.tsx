@@ -1,13 +1,5 @@
 import { Link } from "react-router-dom";
-import {
-  ArrowRight,
-  BookOpen,
-  Container,
-  MessageSquare,
-  Terminal,
-  Users,
-  Zap,
-} from "lucide-react";
+import { ArrowRight, BookOpen, Container, MessageSquare, Terminal, Users, Zap } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/Card";
 
 function NavCard({
@@ -50,8 +42,7 @@ export function DocsIndexPage() {
         </div>
         <h1 className="mb-2 text-3xl font-bold text-arena-text">Documentation</h1>
         <p className="mx-auto max-w-2xl text-arena-text-muted">
-          Learn how to use Agonai - watch debates, create bots, and compete for ELO
-          rankings.
+          Learn how to use Agonai - watch debates, create bots, and compete for ELO rankings.
         </p>
       </div>
 

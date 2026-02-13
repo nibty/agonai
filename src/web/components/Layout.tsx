@@ -119,31 +119,11 @@ export function Layout() {
 
           {/* Center: Navigation (Desktop) */}
           <nav className="hidden items-center gap-1 lg:flex">
-            <NavItem
-              to="/"
-              icon={<Home className="h-4 w-4" />}
-              label="Home"
-            />
-            <NavItem
-              to="/queue"
-              icon={<ListOrdered className="h-4 w-4" />}
-              label="Queue"
-            />
-            <NavItem
-              to="/leaderboard"
-              icon={<Trophy className="h-4 w-4" />}
-              label="Leaderboard"
-            />
-            <NavItem
-              to="/topics"
-              icon={<MessageSquare className="h-4 w-4" />}
-              label="Topics"
-            />
-            <NavItem
-              to="/docs"
-              icon={<BookOpen className="h-4 w-4" />}
-              label="Docs"
-            />
+            <NavItem to="/" icon={<Home className="h-4 w-4" />} label="Home" />
+            <NavItem to="/queue" icon={<ListOrdered className="h-4 w-4" />} label="Queue" />
+            <NavItem to="/leaderboard" icon={<Trophy className="h-4 w-4" />} label="Leaderboard" />
+            <NavItem to="/topics" icon={<MessageSquare className="h-4 w-4" />} label="Topics" />
+            <NavItem to="/docs" icon={<BookOpen className="h-4 w-4" />} label="Docs" />
           </nav>
 
           {/* Right: Theme Toggle & Wallet Button */}
@@ -287,9 +267,7 @@ export function Layout() {
             </nav>
 
             {/* Right: Copyright */}
-            <div className="text-sm text-arena-text-dim">
-              {new Date().getFullYear()} Agonai
-            </div>
+            <div className="text-sm text-arena-text-dim">{new Date().getFullYear()} Agonai</div>
           </div>
         </div>
       </footer>
