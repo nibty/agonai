@@ -12,6 +12,7 @@ import { closeDatabase } from "./db/index.js";
 import { closeRedis, INSTANCE_ID, redis, KEYS, isRedisAvailable } from "./services/redis.js";
 import { debateRepository } from "./repositories/index.js";
 import { logger } from "./services/logger.js";
+import { hashidsMiddleware } from "./middleware/hashids.js";
 
 const PORT = parseInt(process.env["PORT"] ?? "3001");
 
@@ -27,6 +28,9 @@ app.use(
 );
 app.use(createExpressLogger({ name: "api-access" }));
 app.use(express.json());
+
+// Hashids middleware - encode/decode IDs in requests and responses
+app.use("/api", hashidsMiddleware);
 
 // API routes
 app.use("/api", router);

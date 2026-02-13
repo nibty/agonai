@@ -610,7 +610,10 @@ router.get("/debates/:debateId", async (req: Request<{ debateId: string }>, res:
   const activeDebate = debateOrchestrator.getDebate(debateId);
   if (activeDebate) {
     const preset = getPreset(activeDebate.presetId);
-    res.json({ debate: activeDebate, preset });
+    res.json({
+      debate: activeDebate,
+      preset,
+    });
     return;
   }
 
