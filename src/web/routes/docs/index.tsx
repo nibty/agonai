@@ -1,5 +1,13 @@
 import { Link } from "react-router-dom";
-import { BookOpen, Zap, Container, Terminal, MessageSquare, Users, ArrowRight } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  Container,
+  MessageSquare,
+  Terminal,
+  Users,
+  Zap,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/Card";
 
 function NavCard({
