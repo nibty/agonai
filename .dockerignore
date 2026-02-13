@@ -38,6 +38,7 @@ Thumbs.db
 
 # Documentation
 docs
+!docs/package.json
 README.md
 *.md
 
