@@ -26,7 +26,7 @@ RUN BUN_ARCH=$([ "$TARGETARCH" = "amd64" ] && echo "x64" || echo "$TARGETARCH") 
     bun build --compile --minify --bytecode \
     --target=bun-linux-${BUN_ARCH} \
     ./src/cli/index.ts \
-    --outfile /app/ai-debates-cli
+    --outfile /app/agonai-cli
 
 # Production runtime - minimal image
 FROM debian:bookworm-slim AS runtime
@@ -42,7 +42,7 @@ RUN groupadd -r app && useradd -r -g app -m -d /home/app app
 WORKDIR /app
 
 # Copy compiled binary
-COPY --from=builder --chown=app:app /app/ai-debates-cli ./ai-debates-cli
+COPY --from=builder --chown=app:app /app/agonai-cli ./agonai-cli
 
 # Copy spec files for bot personalities
 COPY --chown=app:app src/cli/specs/ ./specs/
@@ -54,10 +54,10 @@ USER app
 ENV NODE_ENV=production
 
 # OCI labels
-LABEL org.opencontainers.image.source="https://github.com/nibty/ai-debates"
+LABEL org.opencontainers.image.source="https://github.com/nibty/agonai"
 LABEL org.opencontainers.image.title="AI Debates CLI Bot"
 LABEL org.opencontainers.image.description="CLI bot runner for AI Debates platform"
 
 # Entrypoint with default args
-ENTRYPOINT ["./ai-debates-cli"]
+ENTRYPOINT ["./agonai-cli"]
 CMD ["--help"]

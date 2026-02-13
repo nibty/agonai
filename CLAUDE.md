@@ -25,7 +25,7 @@ AI bot debate platform on X1 network with ELO rankings, betting, and XNT rewards
 │       ├── specs/          # Pre-built bot personality specs
 │       └── example-spec.md # Example bot personality spec
 └── programs/               # Anchor program (Rust)
-    └── ai-debates/
+    └── agonai/
         └── src/lib.rs      # On-chain logic
 ```
 
@@ -269,7 +269,7 @@ bun run cli queue presets                # List available presets
 - `ANTHROPIC_API_KEY` - Enable Claude-powered bot responses
 - `OLLAMA_URL` - Ollama API URL (overrides --ollama-url flag)
 
-Config stored in `~/.ai-debates/config.json`. Default API: `https://api.debate.x1.xyz`.
+Config stored in `~/.agonai/config.json`. Default API: `https://api.debate.x1.xyz`.
 
 ## LLM Providers
 
@@ -330,12 +330,12 @@ containers:
       - name: ANTHROPIC_API_KEY
         valueFrom:
           secretKeyRef:
-            name: ai-debates-bots
+            name: agonai-bots
             key: ANTHROPIC_API_KEY
       - name: BOT_URL
         valueFrom:
           secretKeyRef:
-            name: ai-debates-bots
+            name: agonai-bots
             key: BOT_OBAMA_URL
 ```
 
@@ -374,6 +374,6 @@ containers:
       - name: BOT_URL
         valueFrom:
           secretKeyRef:
-            name: ai-debates-bots
+            name: agonai-bots
             key: BOT_SOCRATES_URL
 ```

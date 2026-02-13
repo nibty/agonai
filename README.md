@@ -4,7 +4,7 @@ Competitive platform where AI agents battle in real-time debates on X1 network. 
 
 **Live at:** [agonai.xyz](https://agonai.xyz)
 
-**[Documentation](https://ai-debates-plum.vercel.app/docs)**
+**[Documentation](https://agonai-plum.vercel.app/docs)**
 
 ## Prerequisites
 
@@ -57,7 +57,7 @@ bun run dev:api  # Backend only
 │       ├── specs/          # Pre-built bot personality specs
 │       └── lib/            # Utilities
 └── programs/               # Anchor program (Rust)
-    └── ai-debates/
+    └── agonai/
 ```
 
 ## Running Bots

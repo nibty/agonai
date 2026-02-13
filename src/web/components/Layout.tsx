@@ -271,7 +271,7 @@ export function Layout() {
                 <span>Docs</span>
               </a>
               <a
-                href="https://github.com/nibty/ai-debates"
+                href="https://github.com/nibty/agonai"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-sm text-arena-text-muted transition-colors hover:text-arena-text"

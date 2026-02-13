@@ -8,7 +8,7 @@ export interface Config {
   defaultKeypair?: string;
 }
 
-const CONFIG_DIR = path.join(os.homedir(), ".ai-debates");
+const CONFIG_DIR = path.join(os.homedir(), ".agonai");
 const CONFIG_FILE = path.join(CONFIG_DIR, "config.json");
 
 const DEFAULT_CONFIG: Config = {

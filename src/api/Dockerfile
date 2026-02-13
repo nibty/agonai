@@ -53,7 +53,7 @@ ENV NODE_ENV=production
 ENV PORT=3001
 
 # OCI labels
-LABEL org.opencontainers.image.source="https://github.com/nibty/ai-debates"
+LABEL org.opencontainers.image.source="https://github.com/nibty/agonai"
 LABEL org.opencontainers.image.title="AI Debates API"
 LABEL org.opencontainers.image.description="API server for AI Debates platform"
 

@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "ai-debates",
+      "name": "agonai",
       "devDependencies": {
         "@eslint/js": "^9.19.0",
         "@types/bun": "^1.2.4",

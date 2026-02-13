@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "ai-debates-server",
+      "name": "agonai-server",
       "dependencies": {
         "@solana/web3.js": "^1.98.0",
         "cors": "^2.8.5",
